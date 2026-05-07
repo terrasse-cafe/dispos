@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Café — Planification bénévoles</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
 :root{
@@ -64,6 +66,7 @@ main{flex:1;padding:1rem 1.25rem;max-width:1400px;width:100%;margin:0 auto}
 .day-tabs{display:flex;gap:4px;margin-bottom:1.25rem}
 .day-tab{padding:5px 16px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);font-size:13px;cursor:pointer;color:var(--text-2);transition:all .12s}
 .day-tab:hover{background:var(--bg)}.day-tab.active{background:var(--text);color:#fff;border-color:var(--text)}
+.day-tab-closed{color:#DC2626;border-color:#FECACA;background:#FEF2F2}.day-tab-closed.active{background:#DC2626;border-color:#DC2626;color:#fff}
 .org-tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:1.25rem}
 .org-tab{padding:7px 18px;border-radius:var(--radius-sm) var(--radius-sm) 0 0;border:1px solid transparent;border-bottom:none;background:transparent;font-size:13px;cursor:pointer;color:var(--text-2);transition:all .12s;margin-bottom:-1px}
 .org-tab.active{background:var(--surface);border-color:var(--border);border-bottom-color:var(--surface);color:var(--text);font-weight:500}
@@ -98,6 +101,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .b-toggle-track{position:absolute;inset:0;background:var(--border);border-radius:13px;transition:background .2s}
 .b-toggle input:checked~.b-toggle-track{background:var(--green)}
 .b-toggle-thumb{position:absolute;top:3px;left:3px;width:20px;height:20px;background:#fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.18);transition:transform .2s}
+.b-day-card.readonly{opacity:.65;pointer-events:none}
+.b-readonly-week{opacity:.5;cursor:not-allowed}
 .b-toggle input:checked~.b-toggle-thumb{transform:translateX(20px)}
 .b-summary{font-size:12px;color:var(--text-2);margin-top:6px;min-height:18px;font-family:var(--mono);max-width:680px}
 .b-actions{display:flex;gap:8px;margin-top:1rem;align-items:center}
@@ -140,7 +145,9 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .prog-track{height:4px;background:var(--border-light);border-radius:2px;overflow:hidden}
 .prog-fill{height:4px;background:var(--green);border-radius:2px;transition:width .4s}
 .prog-lbl{font-size:11px;color:var(--text-2);margin-top:5px;text-align:right;font-family:var(--mono)}
-.vol-panel{border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow);overflow:hidden;position:sticky;top:72px;max-height:calc(100vh - 90px);display:flex;flex-direction:column}
+.vol-panel{border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow);overflow:hidden;position:sticky;top:72px;max-height:calc(100vh - 90px);display:flex;flex-direction:column;transition:outline .1s}
+.vol-cards{transition:outline .1s}
+.emp-cards{transition:outline .1s}
 .vp-head{padding:8px 12px;background:var(--bg);border-bottom:1px solid var(--border);font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;flex-shrink:0}
 .vol-cards{padding:6px;display:flex;flex-direction:column;gap:4px;overflow-y:auto;flex:1;min-height:0}
 .emp-section{border-top:1px solid var(--border);flex-shrink:0}
@@ -154,6 +161,12 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .vc-name{font-size:12px;font-weight:600;line-height:1.4}
 .vc-time{font-size:10px;font-family:var(--mono);line-height:1.4;margin-top:1px}
 .no-avail{font-size:11px;color:var(--text-3);font-style:italic;padding:8px 10px;text-align:center}
+.vc-quota{display:flex;align-items:center;gap:3px;margin-top:4px}
+.vc-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;transition:background .2s}
+.vc-dot.filled{background:currentColor;opacity:.85}
+.vc-dot.empty{background:transparent;border:1.5px solid currentColor;opacity:.45}
+.vc-inf{font-size:13px;line-height:1;opacity:.55}
+.vol-card.quota-full{border-width:2px !important;opacity:.75}
 .hint-box{margin-top:8px;font-size:11px;color:var(--text-3);line-height:1.6}
 
 /* ── RÉPERTOIRE ── */
@@ -199,6 +212,9 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .tp-btn.p{background:var(--text);color:#fff;border-color:var(--text)}.tp-btn.p:hover{background:#292524}
 .tp-remove{width:100%;margin-top:6px;padding:4px;border:none;background:none;font-size:11px;color:#DC2626;cursor:pointer}
 .tp-remove:hover{text-decoration:underline}
+#np-text:focus{border-color:var(--accent)}
+.chip-note-btn{display:inline-flex;align-items:center;justify-content:center}
+.tp-remove:hover{text-decoration:underline}
 </style>
 </head>
 <body>
@@ -215,7 +231,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 
 <!-- ═══ BÉNÉVOLE ═══ -->
 <div id="pane-benevole" class="pane visible">
-  <div style="max-width:680px">
+  <div style="max-width:680px;margin:0 auto">
 
     <!-- EMPTY STATE -->
     <div id="b-empty-state" style="margin-top:3rem;text-align:center;padding:2.5rem 2rem;border:1px solid var(--border);border-radius:16px;background:var(--surface);box-shadow:var(--shadow)">
@@ -250,6 +266,12 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <div style="margin-bottom:1.5rem">
         <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:10px">Combien de quarts souhaitez-vous faire cette semaine ?</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap" id="b-shift-chips"></div>
+      </div>
+      <!-- READ-ONLY BANNER (semaine passée ou confirmée) -->
+      <div id="b-readonly-banner" style="display:none;margin-bottom:1.25rem;padding:12px 16px;background:var(--blue-light);border:1px solid #BFDBFE;border-radius:var(--radius);font-size:13px;color:var(--blue)">
+        <div style="font-weight:600;margin-bottom:4px" id="b-readonly-title">📋 Horaire confirmé</div>
+        <div id="b-readonly-msg" style="color:var(--text-2);font-size:12px">L'organisatrice a finalisé l'horaire pour cette semaine.</div>
+        <a id="b-readonly-pdf" href="#" target="_blank" style="display:none;margin-top:8px;display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--blue);font-weight:500">⬇ Voir l'horaire PDF</a>
       </div>
       <div id="b-week-section" style="display:none">
         <div class="b-days-wrap" id="b-days-wrap"></div>
@@ -314,7 +336,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       </div>
       <span class="pill" id="o-stat">—</span>
       <button class="btn btn-sm" id="auto-btn" onclick="openAutoAssign()" style="display:flex;align-items:center;gap:5px">⚡ Assignation auto</button>
-      <button class="btn btn-green btn-sm" onclick="openNotify()">✉ Notifier les bénévoles</button>
+      <button class="btn btn-sm" id="finaliser-btn" onclick="openFinaliser()" style="display:flex;align-items:center;gap:5px;background:var(--blue);color:#fff;border-color:var(--blue)">✓ Finaliser l'horaire</button>
+      <span id="confirm-badge" style="display:none;font-size:11px;padding:2px 8px;border-radius:10px;background:var(--green-light);color:var(--green);font-weight:500">✓ Officiel</span>
       <span id="o-sync-badge" class="sync-badge offline" style="display:none"></span>
     </div>
     <div class="day-tabs" id="o-daytabs"></div>
@@ -373,6 +396,21 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   <button class="tp-remove" onclick="removeAssignTP()">Retirer ce bénévole</button>
 </div>
 
+<!-- NOTE POPOVER -->
+<div class="time-pop" id="note-pop" style="width:260px">
+  <div class="tp-name" id="np-name">—</div>
+  <div class="tp-role" id="np-role">—</div>
+  <div style="margin:10px 0 8px">
+    <label style="font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px">Note / renfort</label>
+    <textarea id="np-text" rows="3" placeholder="ex: + Marie 17h-19h en renfort" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;resize:vertical;outline:none;line-height:1.5"></textarea>
+  </div>
+  <div class="tp-btns">
+    <button class="tp-btn p" onclick="saveNote()">Confirmer</button>
+    <button class="tp-btn" onclick="closeNotePop()">Annuler</button>
+  </div>
+  <button class="tp-remove" id="np-clear" onclick="clearNote()" style="display:none">Supprimer la note</button>
+</div>
+
 <!-- PERSON MODAL -->
 <div class="overlay" id="person-overlay" onclick="if(event.target===this)closePersonModal()">
   <div class="modal-box">
@@ -398,20 +436,50 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   </div>
 </div>
 
-<!-- NOTIFY MODAL -->
-<div class="overlay" id="notify-overlay" onclick="if(event.target===this)closeNotify()">
-  <div class="modal-box wide">
-    <div class="modal-title">Notifier les bénévoles — <span id="notify-week" style="font-weight:400;color:var(--text-2)"></span></div>
-    <div class="modal-sub" id="notify-sub">—</div>
-    <div class="email-nav">
-      <button class="btn btn-sm" onclick="prevEmail()">&#8592;</button>
-      <span id="email-idx">1 / 1</span>
-      <button class="btn btn-sm" onclick="nextEmail()">&#8594;</button>
+<!-- FINALISER MODAL -->
+<div class="overlay" id="finaliser-overlay" onclick="if(event.target===this)closeFinaliser()">
+  <div class="modal-box" style="width:900px;max-width:97vw;padding:0;overflow:hidden;display:flex;flex-direction:column;max-height:92vh">
+    <div style="padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0">
+      <div class="modal-title" style="margin:0">Finaliser l'horaire</div>
+      <span id="fin-week-lbl" style="font-size:13px;color:var(--text-2)"></span>
+      <button class="btn btn-sm" onclick="closeFinaliser()" style="margin-left:auto">✕ Fermer</button>
     </div>
-    <div class="email-preview" id="email-preview"></div>
-    <div class="modal-btns">
-      <button class="btn btn-sm" onclick="closeNotify()">Fermer</button>
-      <button class="btn btn-green btn-sm" onclick="sendCurrent()">Ouvrir dans Gmail ↗</button>
+    <div style="display:grid;grid-template-columns:1fr 340px;flex:1;min-height:0;overflow:hidden">
+      <!-- LEFT: PDF preview -->
+      <div style="border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden">
+        <div style="padding:10px 14px;background:var(--bg);border-bottom:1px solid var(--border);font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;flex-shrink:0">Aperçu de l'horaire</div>
+        <div id="fin-preview" style="flex:1;overflow-y:auto;padding:16px;font-size:12px;font-family:var(--mono);line-height:1.7"></div>
+      </div>
+      <!-- RIGHT: Actions -->
+      <div style="display:flex;flex-direction:column;overflow-y:auto">
+        <!-- Confirm toggle -->
+        <div style="padding:14px 16px;border-bottom:1px solid var(--border)">
+          <div style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Statut</div>
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+            <div class="b-toggle" style="flex-shrink:0">
+              <input type="checkbox" id="fin-confirm-chk" onchange="toggleConfirm()">
+              <span class="b-toggle-track"></span>
+              <span class="b-toggle-thumb"></span>
+            </div>
+            <div>
+              <div style="font-size:13px;font-weight:500" id="fin-confirm-lbl">Marquer comme officiel</div>
+              <div style="font-size:11px;color:var(--text-3);margin-top:2px">Les bénévoles voient leurs dispos en lecture seule</div>
+            </div>
+          </label>
+        </div>
+        <!-- PDF download -->
+        <div style="padding:14px 16px;border-bottom:1px solid var(--border)">
+          <div style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">PDF</div>
+          <button class="btn btn-primary btn-sm" onclick="exportPdfTable()" style="width:100%;justify-content:center;display:flex;gap:6px">⬇ Télécharger le PDF</button>
+        </div>
+        <!-- Email -->
+        <div style="padding:14px 16px;flex:1">
+          <div style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Courriel Outlook</div>
+          <div style="font-size:12px;color:var(--text-2);margin-bottom:8px" id="fin-email-to"></div>
+          <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;font-size:11px;font-family:var(--mono);line-height:1.7;white-space:pre-wrap;max-height:240px;overflow-y:auto;margin-bottom:10px" id="fin-email-body"></div>
+          <button class="btn btn-green btn-sm" onclick="sendOutlook()" style="width:100%;justify-content:center;display:flex;gap:6px">✉ Ouvrir dans Outlook ↗</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -462,6 +530,9 @@ create table if not exists assignments (
   unique(week_key, shift_id, role)
 );
 
+-- Migration : ajouter la colonne note si elle n'existe pas
+alter table assignments add column if not exists note text;
+
 -- Activer la sécurité par ligne (RLS) avec accès public en lecture/écriture
 -- (pour usage interne sans authentification)
 alter table people enable row level security;
@@ -471,6 +542,14 @@ alter table assignments enable row level security;
 create policy "public_all" on people for all using (true) with check (true);
 create policy "public_all" on availabilities for all using (true) with check (true);
 create policy "public_all" on assignments for all using (true) with check (true);
+
+-- Table pour marquer les semaines confirmées
+create table if not exists confirmed_weeks (
+  week_key   text primary key,
+  confirmed_at timestamptz default now(),
+  confirmed_by text default 'organisatrice'
+);
+create policy "public_all" on confirmed_weeks for all using (true) with check (true);
 `.trim();
 
 function getSavedConfig() {
@@ -561,10 +640,26 @@ const GSH=11,GEH=22,TOTAL_SLOTS=(GEH-GSH)*2;
 /* ══════════════════════════════════════════════
    STATE (in-memory, synced from Supabase)
 ══════════════════════════════════════════════ */
-let bMon=getMonday(new Date()),oMon=getMonday(new Date());
+let oMon=getMonday(new Date());
+
+// Semaine bénévole : si on est lun-mer → semaine prochaine (prochain jeudi)
+// Si on est jeu-dim → semaine courante
+function getSmartBMon(){
+  const now=new Date();
+  const dow=now.getDay(); // 0=dim,1=lun,...,6=sam
+  // Jours de café : jeu(4), ven(5), sam(6), dim(0)
+  // Si on est après dim (0) et avant jeu (1,2,3) → semaine prochaine
+  const isBeforeCafe=[1,2,3].includes(dow);
+  const mon=getMonday(now);
+  return isBeforeCafe?addWeeks(mon,1):mon;
+}
+let bMon=getSmartBMon();
+let confirmedWeeks=new Set(); // semaines confirmées par l'organisatrice
+let closedDays={}; // {wk: Set<dayId>} jours fermés (météo etc.)
 let bSel={},avail={},assigns={},vcols={};
 let curDay='vendredi';
 let draggingVol=null;
+let draggingFromRole=null; // {shiftId, role, name} quand on drag depuis un bloc assigné
 let tpCtx=null,pmCtx=null;
 let directory=[],nextId=1;
 let emailList=[],emailIdx=0;
@@ -676,6 +771,32 @@ async function saveAvail(wk, name, slots, quota) {
 }
 
 /* ══════════════════════════════════════════════
+   SUPABASE — CONFIRMED WEEKS
+══════════════════════════════════════════════ */
+async function loadConfirmedWeeks() {
+  if (!sb) return;
+  const { data, error } = await sb.from('confirmed_weeks').select('week_key');
+  if (error) { console.error('loadConfirmedWeeks:', error); return; }
+  confirmedWeeks = new Set((data||[]).map(r => r.week_key));
+}
+
+async function markWeekConfirmed(wk) {
+  if (!sb) return;
+  const { error } = await sb.from('confirmed_weeks').upsert(
+    {week_key: wk, confirmed_at: new Date().toISOString()},
+    {onConflict:'week_key'}
+  );
+  if (error) console.error('markWeekConfirmed:', error);
+  else confirmedWeeks.add(wk);
+}
+
+async function unconfirmWeek(wk) {
+  if (!sb) return;
+  await sb.from('confirmed_weeks').delete().eq('week_key', wk);
+  confirmedWeeks.delete(wk);
+}
+
+/* ══════════════════════════════════════════════
    SUPABASE — ASSIGNMENTS
 ══════════════════════════════════════════════ */
 async function loadAssignments(wk) {
@@ -690,11 +811,12 @@ async function loadAssignments(wk) {
       if (r.start_mins != null && r.end_mins != null) {
         assigns[wk][k+'__t'] = {s: r.start_mins, e: r.end_mins};
       }
+      if (r.note) assigns[wk][k+'__n'] = r.note;
     }
   });
 }
 
-async function saveAssignment(wk, shiftId, role, name, startMins, endMins) {
+async function saveAssignment(wk, shiftId, role, name, startMins, endMins, note=null) {
   if (!sb) return;
   setSyncBadge('o-sync-badge','saving','Enregistrement…');
   const row = {
@@ -704,6 +826,7 @@ async function saveAssignment(wk, shiftId, role, name, startMins, endMins) {
     person_name: name,
     start_mins: startMins ?? null,
     end_mins: endMins ?? null,
+    note: note ?? null,
     updated_at: new Date().toISOString()
   };
   const { error } = await sb.from('assignments').upsert(row, {onConflict:'week_key,shift_id,role'});
@@ -719,7 +842,7 @@ async function saveAssignment(wk, shiftId, role, name, startMins, endMins) {
 async function deleteAssignment(wk, shiftId, role) {
   if (!sb) return;
   await sb.from('assignments')
-    .update({person_name: null, start_mins: null, end_mins: null, updated_at: new Date().toISOString()})
+    .update({person_name: null, start_mins: null, end_mins: null, note: null, updated_at: new Date().toISOString()})
     .eq('week_key', wk).eq('shift_id', shiftId).eq('role', role);
 }
 
@@ -752,9 +875,11 @@ function subscribeRealtime(wk) {
         if (r.person_name) {
           assigns[wk][k] = r.person_name;
           if (r.start_mins != null) assigns[wk][k+'__t'] = {s: r.start_mins, e: r.end_mins};
+          if (r.note) assigns[wk][k+'__n'] = r.note; else delete assigns[wk][k+'__n'];
         } else {
           delete assigns[wk][k];
           delete assigns[wk][k+'__t'];
+          delete assigns[wk][k+'__n'];
         }
         renderHoraire();
       }
@@ -769,6 +894,7 @@ async function bootOrgData() {
   if (!sb) return;
   const wk = wkey(oMon);
   await loadPeople();
+  await loadConfirmedWeeks();
   await loadAvail(wk);
   await loadAssignments(wk);
   subscribeRealtime(wk);
@@ -777,7 +903,7 @@ async function bootOrgData() {
 
 async function bootVolData(wk) {
   if (!sb) return;
-  await loadAvail(wk);
+  await Promise.all([loadAvail(wk), loadConfirmedWeeks()]);
 }
 
 /* ══════════════════════════════════════════════
@@ -910,7 +1036,12 @@ function onVolEmailChange(){
 /* ══════════════════════════════════════════════
    BÉNÉVOLE — calendrier de disponibilités
 ══════════════════════════════════════════════ */
-function bShift(d){bMon=addWeeks(bMon,d);renderB()}
+async function bShift(d){
+  bMon=addWeeks(bMon,d);
+  const wk=wkey(bMon);
+  await bootVolData(wk);
+  renderB();
+}
 
 function buildTimeSelect(day,type,savedVal,minMins=null){
   const sel=document.createElement('select');
@@ -928,10 +1059,36 @@ function buildTimeSelect(day,type,savedVal,minMins=null){
   return sel;
 }
 
+function isWeekReadOnly(wk){
+  // Lecture seule si semaine passée OU horaire confirmé
+  const mon=new Date(wk+'T00:00:00');
+  const now=new Date();now.setHours(0,0,0,0);
+  const weekEnd=new Date(mon);weekEnd.setDate(mon.getDate()+6);
+  return weekEnd<now||confirmedWeeks.has(wk);
+}
+
 function renderB(){
   const wk=wkey(bMon);
   if(!bSel[wk])bSel[wk]={};
   document.getElementById('b-wlabel').textContent=wlabel(bMon);
+  const readOnly=isWeekReadOnly(wk);
+  const confirmed=confirmedWeeks.has(wk);
+  // Banner read-only
+  const banner=document.getElementById('b-readonly-banner');
+  const submitBtn=document.querySelector('#pane-benevole .btn-primary');
+  const clearBtn=document.getElementById('b-clear-btn');
+  if(readOnly){
+    banner.style.display='block';
+    document.getElementById('b-readonly-title').textContent=confirmed?'📋 Horaire confirmé':'📅 Semaine passée';
+    document.getElementById('b-readonly-msg').textContent=confirmed
+      ?'L\'organisatrice a finalisé l\'horaire. Vos disponibilités sont en lecture seule.'
+      :'Cette semaine est passée. Vos disponibilités soumises sont affichées en lecture seule.';
+    if(submitBtn)submitBtn.style.display='none';
+    if(clearBtn)clearBtn.style.display='none';
+  } else {
+    banner.style.display='none';
+    if(submitBtn)submitBtn.style.display='';
+  }
   const wrap=document.getElementById('b-days-wrap');wrap.innerHTML='';
   DAYS.forEach(day=>{
     const dayData=bSel[wk][day.id]||null;
@@ -958,6 +1115,10 @@ function renderB(){
       const newToSel=buildTimeSelect(day,'to',ct<=cf?cf+30:ct,cf);
       toField.replaceChild(newToSel,toSel);toSel=newToSel;
       toSel.addEventListener('change',saveDay);saveDay();
+    }
+    if(readOnly){
+      chk.disabled=true;fromSel.disabled=true;toSel.disabled=true;
+      card.classList.add('readonly');
     }
     chk.addEventListener('change',()=>{
       const on=chk.checked;card.classList.toggle('active',on);body.style.display=on?'grid':'none';
@@ -1015,15 +1176,36 @@ function renderO(){
   document.getElementById('o-wlabel').textContent=wlabel(oMon);
   const nbVols=Object.keys(wkData).filter(n=>!isEmp(n)).length;
   document.getElementById('o-stat').textContent=nbVols+' bénévole(s) ont répondu';
+  // Badge confirmation
+  const isConfirmed=confirmedWeeks.has(wk);
+  const badge=document.getElementById('confirm-badge');
+  if(badge){badge.style.display=isConfirmed?'inline-flex':'none';}
   buildDayTabs();renderHoraire();
 }
 
 function buildDayTabs(){
+  const wk=wkey(oMon);
+  if(!closedDays[wk])closedDays[wk]=new Set();
   const el=document.getElementById('o-daytabs');el.innerHTML='';
   DAYS.forEach(day=>{
-    const btn=document.createElement('button');btn.className='day-tab'+(day.id===curDay?' active':'');
-    btn.textContent=day.label;btn.onclick=()=>{curDay=day.id;buildDayTabs();renderHoraire();};
-    el.appendChild(btn);
+    const isClosed=closedDays[wk].has(day.id);
+    const wrap=document.createElement('div');wrap.style.cssText='display:inline-flex;align-items:center;gap:0';
+    const btn=document.createElement('button');
+    btn.className='day-tab'+(day.id===curDay?' active':'')+(isClosed?' day-tab-closed':'');
+    btn.innerHTML=(isClosed?'☔ ':'')+day.label;
+    btn.onclick=()=>{curDay=day.id;buildDayTabs();renderHoraire();};
+    const closeBtn=document.createElement('button');
+    closeBtn.title=isClosed?'Rouvrir ce jour':'Marquer comme fermé (météo)';
+    closeBtn.style.cssText=`padding:3px 6px;border:1px solid var(--border);border-left:none;border-radius:0 var(--radius-sm) var(--radius-sm) 0;font-size:11px;cursor:pointer;background:${isClosed?'#FEF2F2':'var(--surface)'};color:${isClosed?'#DC2626':'var(--text-3)'};line-height:1;transition:background .12s`;
+    closeBtn.textContent=isClosed?'×':'☔';
+    closeBtn.onclick=(e)=>{
+      e.stopPropagation();
+      if(isClosed)closedDays[wk].delete(day.id);
+      else closedDays[wk].add(day.id);
+      buildDayTabs();renderHoraire();
+    };
+    wrap.appendChild(btn);wrap.appendChild(closeBtn);
+    el.appendChild(wrap);
   });
 }
 
@@ -1047,6 +1229,12 @@ function volCoversShift(wk,name,shift){
 /* ── assign helpers ── */
 function getAssign(wk,sid,role){return((assigns[wk]||{})[akey(sid,role)])||null}
 function getAssignTimes(wk,sid,role){return((assigns[wk]||{})[akey(sid,role)+'__t'])||null}
+function getAssignNote(wk,sid,role){return((assigns[wk]||{})[akey(sid,role)+'__n'])||''}
+function setAssignNote(wk,sid,role,note){
+  if(!assigns[wk])assigns[wk]={};
+  if(note)assigns[wk][akey(sid,role)+'__n']=note;
+  else delete assigns[wk][akey(sid,role)+'__n'];
+}
 
 function setAssign(wk,sid,role,name){
   if(!assigns[wk])assigns[wk]={};
@@ -1060,10 +1248,19 @@ function setAssignTimes(wk,sid,role,s,e){
 
 function highlightDZs(wk,shifts){
   shifts.forEach(sh=>{
-    const alreadyOnShift=!isEmp(draggingVol)&&volAssignedToShift(wk,draggingVol,sh);
+    // Si on drag depuis un bloc assigné, on ignore le "déjà assigné au shift"
+    // pour permettre de déposer sur un autre rôle du même shift
+    const fromRole=draggingFromRole;
+    const alreadyOnShift=!isEmp(draggingVol)&&volAssignedToShift(wk,draggingVol,sh)
+      &&!(fromRole&&fromRole.shiftId===sh.id);
     [...sh.roles,...(sh.optional||[])].forEach(role=>{
       const dz=document.getElementById('dz-'+sh.id+'-'+role.replace(/[^a-z0-9]/gi,'_'));
-      if(!dz||dz.classList.contains('filled'))return;
+      if(!dz)return;
+      // La source elle-même n'est pas une cible valide
+      if(fromRole&&fromRole.shiftId===sh.id&&fromRole.role===role){
+        dz.classList.remove('dv','di','dok');return;
+      }
+      if(dz.classList.contains('filled'))return;
       const v=volCoversShift(wk,draggingVol,sh)&&!alreadyOnShift;
       dz.classList.toggle('dv',v);dz.classList.toggle('di',!v);
     });
@@ -1089,9 +1286,12 @@ function renderHoraire(){
   const dynCOL=Math.floor(availW/numSlots);
   const TW=dynCOL*numSlots;
   function toPx(h){return Math.round((h-dSH)*2*dynCOL);}
+  const wk_check=wkey(oMon);
+  if(!closedDays[wk_check])closedDays[wk_check]=new Set();
+  const isClosed=closedDays[wk_check].has(curDay);
   const past=isPastDay();
   const autoBtn=document.getElementById('auto-btn');
-  if(autoBtn){autoBtn.disabled=past;autoBtn.style.opacity=past?'0.4':'1';}
+  if(autoBtn){autoBtn.disabled=past||isClosed;autoBtn.style.opacity=(past||isClosed)?'0.4':'1';}
   const grid=document.getElementById('h-grid');grid.innerHTML='';
 
   const hRow=document.createElement('div');hRow.className='h-head-row';
@@ -1153,8 +1353,9 @@ function renderHoraire(){
         const inner=document.createElement('div');inner.className='avail-chip-inner';
         if(emp){const b=document.createElement('span');b.className='emp-badge';b.style.color=col.fg;b.textContent='EMP';inner.appendChild(b);}
         const nm=document.createElement('span');nm.className='chip-name';nm.style.color=col.fg;nm.textContent=assigned;inner.appendChild(nm);
-        if(!emp){
-          const ct2=getAssignTimes(wk,shift.id,role);const rng2=volDayRange(wk,assigned);
+        {
+          const ct2=getAssignTimes(wk,shift.id,role);
+          const rng2=emp?null:volDayRange(wk,assigned);
           const sm=ct2?ct2.s:(rng2?Math.max(rng2.startMins,shift.fromH*60):shift.fromH*60);
           const em2=ct2?ct2.e:(rng2?Math.min(rng2.endMins,shift.toH*60):shift.toH*60);
           const tm=document.createElement('span');tm.className='chip-time';tm.style.color=col.fg;tm.textContent=mStr(sm)+'–'+mStr(em2);inner.appendChild(tm);
@@ -1165,8 +1366,41 @@ function renderHoraire(){
           deleteAssignment(wk,shift.id,role);renderHoraire();
         });
         else x.style.display='none';
-        inner.appendChild(x);chip.appendChild(inner);
-        if(!emp&&!past)chip.addEventListener('click',ev=>{if(ev.target===x)return;openTP(ev,assigned,shift.id,role,shift,wk);});
+        // Note icon
+        const noteVal=getAssignNote(wk,shift.id,role);
+        const noteBtn=document.createElement('span');
+        noteBtn.className='chip-note-btn';noteBtn.style.color=col.fg;
+        noteBtn.title=noteVal?'Modifier la note':'Ajouter une note';
+        noteBtn.textContent=noteVal?'✎':'＋';
+        noteBtn.style.cssText=`cursor:pointer;font-size:12px;opacity:${noteVal?'.7':'.3'};flex-shrink:0;padding:0 2px;transition:opacity .1s;margin-left:1px`;
+        if(!past)noteBtn.addEventListener('mouseenter',()=>noteBtn.style.opacity='1');
+        if(!past)noteBtn.addEventListener('mouseleave',()=>noteBtn.style.opacity=noteVal?'.7':'.3');
+        if(!past)noteBtn.addEventListener('click',ev=>{ev.stopPropagation();openNotePop(ev,assigned,shift.id,role,shift,wk);});
+        inner.appendChild(x);inner.appendChild(noteBtn);chip.appendChild(inner);
+        // Note display below chip
+        if(noteVal){
+          const noteLine=document.createElement('div');noteLine.className='chip-note-line';
+          noteLine.style.cssText=`position:absolute;left:${cL}px;top:calc(100% + 2px);font-size:10px;font-style:italic;color:${col.fg};opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:${cW}px;pointer-events:none;font-family:var(--mono)`;
+          noteLine.textContent='↳ '+noteVal;dz.appendChild(noteLine);
+        }
+        if(!past)chip.addEventListener('click',ev=>{if(ev.target===x||ev.target===noteBtn)return;openTP(ev,assigned,shift.id,role,shift,wk);});
+        // Drag from chip to unassign (drop on vol panel)
+        if(!past){
+          chip.draggable=true;
+          chip.addEventListener('dragstart',ev=>{
+            ev.stopPropagation();
+            draggingVol=assigned;
+            draggingFromRole={shiftId:shift.id,role,name:assigned};
+            ev.dataTransfer.setData('text/plain',assigned);
+            ev.dataTransfer.effectAllowed='move';
+            setTimeout(()=>chip.style.opacity='.35',0);
+            highlightDZs(wk,shifts);
+          });
+          chip.addEventListener('dragend',()=>{
+            chip.style.opacity='';
+            draggingVol=null;draggingFromRole=null;clearDZHighlights();
+          });
+        }
         dz.appendChild(chip);
         if(!past){
           dz.addEventListener('dragover',e=>{
@@ -1205,6 +1439,17 @@ function renderHoraire(){
   const pct=totalReq?Math.round(totalFilled/totalReq*100):0;
   document.getElementById('prog-fill').style.width=pct+'%';
   document.getElementById('prog-lbl').textContent=`${totalFilled} / ${totalReq} rôles requis assignés (${pct}%)`;
+  // Closed day overlay
+  if(isClosed){
+    const overlay=document.createElement('div');
+    overlay.style.cssText='position:absolute;inset:0;background:rgba(255,255,255,.75);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;border-radius:var(--radius);z-index:10;pointer-events:none';
+    overlay.innerHTML='<div style="font-size:32px">☔</div><div style="font-size:15px;font-weight:600;color:var(--text-2)">Journée fermée</div><div style="font-size:12px;color:var(--text-3)">Modifiez le statut dans les onglets ci-dessus</div>';
+    const scrollDiv=document.querySelector('.h-scroll');
+    if(scrollDiv){scrollDiv.style.position='relative';scrollDiv.appendChild(overlay);}
+  } else {
+    const scrollDiv=document.querySelector('.h-scroll');
+    if(scrollDiv)scrollDiv.style.position='relative';
+  }
   buildCards(wk,shifts);
 }
 
@@ -1238,16 +1483,63 @@ function overlapMins(wk,name,shift){
   if(e<=s)return null;return{s,e};
 }
 
+function volWeekShiftCount(wk, name) {
+  // Nombre de shifts distincts assignés cette semaine (toutes journées)
+  const seen = new Set();
+  DAYS.forEach(day => {
+    (SHIFTS[day.id]||[]).forEach(sh => {
+      const allR = [...sh.roles,...(sh.optional||[])];
+      if (allR.some(r => getAssign(wk,sh.id,r) === name)) seen.add(sh.id);
+    });
+  });
+  return seen.size;
+}
+
 function buildCards(wk,shifts){
   const wkData=avail[wk]||{};
-  const vp=document.getElementById('vol-cards'),ep=document.getElementById('emp-cards');
-  vp.innerHTML='';ep.innerHTML='';
+  // Panneau bénévoles = zone de drop pour désassigner
+  const vp=document.getElementById('vol-cards');
+  vp.addEventListener('dragover',e=>{
+    if(draggingFromRole){e.preventDefault();e.dataTransfer.dropEffect='move';vp.style.outline='2px dashed var(--accent)';}
+  },{capture:false});
+  vp.addEventListener('dragleave',()=>{vp.style.outline='';});
+  vp.addEventListener('drop',e=>{
+    vp.style.outline='';
+    if(!draggingFromRole)return;
+    e.preventDefault();
+    const {shiftId,role,name}=draggingFromRole;
+    setAssign(wk,shiftId,role,null);
+    deleteAssignment(wk,shiftId,role);
+    draggingFromRole=null;draggingVol=null;
+    renderHoraire();
+  });
+  vp.innerHTML='';
+  const ep=document.getElementById('emp-cards');
+  ep.addEventListener('dragover',e=>{
+    if(draggingFromRole&&isEmp(draggingFromRole.name)){e.preventDefault();e.dataTransfer.dropEffect='move';ep.style.outline='2px dashed var(--amber)';}
+  });
+  ep.addEventListener('dragleave',()=>{ep.style.outline='';});
+  ep.addEventListener('drop',e=>{
+    ep.style.outline='';
+    if(!draggingFromRole||!isEmp(draggingFromRole.name))return;
+    e.preventDefault();
+    const {shiftId,role}=draggingFromRole;
+    setAssign(wk,shiftId,role,null);
+    deleteAssignment(wk,shiftId,role);
+    draggingFromRole=null;draggingVol=null;
+    renderHoraire();
+  });
+  ep.innerHTML='';
   function makeCard(name,col,emp){
     const remaining=emp?null:volRemainingMins(wk,name);
     if(!emp&&remaining===0)return null;
-    const card=document.createElement('div');card.className='vol-card'+(emp?' emp-card':'');
+    const quota=emp?null:volQuota(wk,name);
+    const usedShifts=emp?0:volWeekShiftCount(wk,name);
+    const quotaFull=!emp&&quota!==99&&usedShifts>=quota;
+    const card=document.createElement('div');card.className='vol-card'+(emp?' emp-card':'')+(quotaFull?' quota-full':'');
     const isPast_=isPastDay();card.draggable=!isPast_;if(isPast_)card.style.cursor='default';
-    card.style.background=col.bg;card.style.borderColor=col.fg+(emp?'':'60');
+    const borderCol=quotaFull?'#EF4444':(col.fg+(emp?'':'60'));
+    card.style.background=col.bg;card.style.borderColor=borderCol;
     const nm=document.createElement('div');nm.className='vc-name';nm.style.color=col.fg;
     if(emp){nm.innerHTML=`<span class="emp-badge" style="color:${col.fg};margin-right:5px">EMP</span>${name}`;}
     else nm.textContent=name;card.appendChild(nm);
@@ -1273,11 +1565,27 @@ function buildCards(wk,shifts){
       }
     }
     if(t.textContent)card.appendChild(t);
+    // Quota dots (bénévoles seulement)
+    if(!emp){
+      const qw=document.createElement('div');qw.className='vc-quota';qw.style.color=col.fg;
+      if(quota===99){
+        const inf=document.createElement('span');inf.className='vc-inf';inf.textContent='∞';inf.title='Peu importe le nombre de shifts';
+        qw.appendChild(inf);
+      } else if(quota>0){
+        for(let i=0;i<quota;i++){
+          const dot=document.createElement('span');
+          dot.className='vc-dot '+(i<usedShifts?'filled':'empty');
+          dot.style.color=quotaFull?'#EF4444':col.fg;
+          qw.appendChild(dot);
+        }
+      }
+      if(qw.children.length)card.appendChild(qw);
+    }
     card.addEventListener('dragstart',e=>{
       draggingVol=name;e.dataTransfer.setData('text/plain',name);e.dataTransfer.effectAllowed='move';
       setTimeout(()=>{card.classList.add('dragging');highlightDZs(wk,shifts);},0);
     });
-    card.addEventListener('dragend',()=>{card.classList.remove('dragging');draggingVol=null;clearDZHighlights();});
+    card.addEventListener('dragend',()=>{card.classList.remove('dragging');draggingVol=null;draggingFromRole=null;clearDZHighlights();document.getElementById('vol-cards').style.outline='';document.getElementById('emp-cards').style.outline='';});
     return card;
   }
   const vols=Object.keys(wkData).filter(n=>!isEmp(n)&&Object.keys(wkData[n].slots||{}).some(k=>k.startsWith(curDay+'_')));
@@ -1314,10 +1622,11 @@ function doAssign(wk,shift,role,name){
 ══════════════════════════════════════════════ */
 function openTP(e,name,sid,role,shift,wk){
   tpCtx={name,sid,role,shift,wk};
-  document.getElementById('tp-name').textContent=name;
+  const emp=isEmp(name);
+  document.getElementById('tp-name').textContent=name+(emp?' (employé)':'');
   document.getElementById('tp-role').textContent=role+' · '+shift.label;
   const ct=getAssignTimes(wk,sid,role);
-  const rng=volDayRange(wk,name);
+  const rng=emp?null:volDayRange(wk,name);
   const day=DAYS.find(d=>d.id===curDay);
   const startVal=ct?ct.s:(rng?Math.max(rng.startMins,shift.fromH*60):shift.fromH*60);
   const endVal=ct?ct.e:(rng?Math.min(rng.endMins,shift.toH*60):shift.toH*60);
@@ -1442,14 +1751,17 @@ async function savePerson(){
 /* ══════════════════════════════════════════════
    GMAIL NOTIFICATION
 ══════════════════════════════════════════════ */
-function openNotify(){
-  const wk=wkey(oMon);
+/* ══════════════════════════════════════════════
+   FINALISER MODAL
+══════════════════════════════════════════════ */
+function buildScheduleSummary(wk){
+  // Returns {byPerson, lines} for email body and preview
   const byPerson={};
   const savedDay=curDay;
   DAYS.forEach(day=>{
+    if((closedDays[wk]||new Set()).has(day.id))return;
     curDay=day.id;
-    const shifts=SHIFTS[day.id]||[];
-    shifts.forEach(shift=>{
+    (SHIFTS[day.id]||[]).forEach(shift=>{
       [...shift.roles,...(shift.optional||[])].forEach(role=>{
         const name=getAssign(wk,shift.id,role);if(!name)return;
         if(!byPerson[name])byPerson[name]=[];
@@ -1457,38 +1769,112 @@ function openNotify(){
         const rng=isEmp(name)?null:volDayRange(wk,name);
         const sm=ct?ct.s:(rng?Math.max(rng.startMins,shift.fromH*60):shift.fromH*60);
         const em=ct?ct.e:(rng?Math.min(rng.endMins,shift.toH*60):shift.toH*60);
-        byPerson[name].push({day:day.label,role,sm,em});
+        const note=getAssignNote(wk,shift.id,role);
+        byPerson[name].push({day:day.label,role:roleLabel(role),sm,em,note});
       });
     });
   });
   curDay=savedDay;
-  const names=Object.keys(byPerson);
-  if(!names.length){alert('Aucun bénévole assigné cette semaine.');return}
-  emailList=names.map(name=>{
-    const p=getPerson(name);
-    const lines=byPerson[name].map(a=>`  • ${a.day} — ${a.role}  (${mStr(a.sm)} – ${mStr(a.em)})`).join('\n');
-    return{name,email:p?p.email:'',subject:`Votre horaire — ${wlabel(oMon)}`,
-      body:`Bonjour ${name.split(' ')[0]},\n\nVoici votre horaire pour la semaine du ${wlabel(oMon)} :\n\n${lines}\n\nMerci pour votre implication au café !\nBonne semaine,\nL'équipe organisatrice`};
+  return byPerson;
+}
+
+function openFinaliser(){
+  const wk=wkey(oMon);
+  document.getElementById('fin-week-lbl').textContent='— '+wlabel(oMon);
+  // Confirm toggle
+  const isConfirmed=confirmedWeeks.has(wk);
+  const chk=document.getElementById('fin-confirm-chk');
+  chk.checked=isConfirmed;
+  document.getElementById('fin-confirm-lbl').textContent=isConfirmed?'Horaire officiel ✓':'Marquer comme officiel';
+  // PDF preview
+  renderFinPreview(wk);
+  // Email
+  renderFinEmail(wk);
+  document.getElementById('finaliser-overlay').classList.add('open');
+}
+function closeFinaliser(){document.getElementById('finaliser-overlay').classList.remove('open');}
+
+function renderFinPreview(wk){
+  const el=document.getElementById('fin-preview');el.innerHTML='';
+  const wkClosed=closedDays[wk]||new Set();
+  DAYS.forEach(day=>{
+    const dayDiv=document.createElement('div');dayDiv.style.marginBottom='14px';
+    const title=document.createElement('div');
+    title.style.cssText='font-weight:700;font-size:13px;color:var(--accent);margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--border)';
+    if(wkClosed.has(day.id)){
+      title.textContent='☔ '+day.label+' — FERMÉ';title.style.color='#DC2626';
+      dayDiv.appendChild(title);el.appendChild(dayDiv);return;
+    }
+    title.textContent=day.label+' '+fmt(dayDate(oMon,day.dow));
+    dayDiv.appendChild(title);
+    const savedDay=curDay;curDay=day.id;
+    (SHIFTS[day.id]||[]).forEach(shift=>{
+      const shiftLbl=document.createElement('div');
+      shiftLbl.style.cssText='font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin:6px 0 3px';
+      shiftLbl.textContent=shift.label+' — '+mStr(shift.fromH*60)+' – '+mStr(shift.toH*60);
+      dayDiv.appendChild(shiftLbl);
+      [...shift.roles,...(shift.optional||[])].forEach(role=>{
+        const name=getAssign(wk,shift.id,role);
+        const note=name?getAssignNote(wk,shift.id,role):'';
+        const r=document.createElement('div');r.style.cssText='display:flex;gap:6px;padding:2px 0;font-size:11px';
+        const rLabel=document.createElement('span');rLabel.style.cssText='color:var(--text-3);min-width:130px;flex-shrink:0';rLabel.textContent=roleLabel(role);
+        const rName=document.createElement('span');rName.style.color=name?(isEmp(name)?'#9A3412':'var(--text)'):'var(--text-3)';
+        rName.textContent=name||'—';
+        r.appendChild(rLabel);r.appendChild(rName);
+        if(note){const rNote=document.createElement('span');rNote.style.cssText='color:var(--text-3);font-style:italic';rNote.textContent='↳ '+note;r.appendChild(rNote);}
+        dayDiv.appendChild(r);
+      });
+    });
+    curDay=savedDay;
+    el.appendChild(dayDiv);
   });
-  emailIdx=0;
-  document.getElementById('notify-week').textContent=wlabel(oMon);
-  document.getElementById('notify-sub').textContent=`${names.length} personne(s) assignée(s) cette semaine`;
-  renderEmailPreview();document.getElementById('notify-overlay').classList.add('open');
 }
-function renderEmailPreview(){
-  const e=emailList[emailIdx];
-  document.getElementById('email-idx').textContent=`${emailIdx+1} / ${emailList.length}  —  ${e.name}`;
-  document.getElementById('email-preview').textContent=`À : ${e.email}\nObjet : ${e.subject}\n\n${e.body}`;
+
+function renderFinEmail(wk){
+  const byPerson=buildScheduleSummary(wk);
+  const names=Object.keys(byPerson);
+  const allEmails=[...new Set(names.map(n=>{const p=getPerson(n);return p&&p.email?p.email:null;}).filter(Boolean))];
+  document.getElementById('fin-email-to').textContent=allEmails.length
+    ?`BCC : ${allEmails.join(', ')}`
+    :'Aucun courriel enregistré dans le répertoire';
+  if(!names.length){document.getElementById('fin-email-body').textContent='Aucun bénévole assigné.';return;}
+  // Build collective body
+  let body=`Bonjour à tous,
+
+Voici l'horaire de la semaine du ${wlabel(oMon)} :
+`;
+  // Closed days
+  const wkClosed=closedDays[wk]||new Set();
+  DAYS.forEach(day=>{if(wkClosed.has(day.id))body+=`\n  ☔ ${day.label} — Fermé\n`;});
+  body+='\n';
+  names.forEach(name=>{
+    const lines=byPerson[name].map(a=>`    • ${a.day} — ${a.role}  (${mStr(a.sm)} – ${mStr(a.em)})${a.note?' — '+a.note:''}`).join('\n');
+    body+=`${name} :\n${lines}\n\n`;
+  });
+  body+=`Merci pour votre implication !
+Bonne semaine,
+L'équipe organisatrice`;
+  document.getElementById('fin-email-body').textContent=body;
 }
-function prevEmail(){if(emailIdx>0){emailIdx--;renderEmailPreview();}}
-function nextEmail(){if(emailIdx<emailList.length-1){emailIdx++;renderEmailPreview();}}
-function closeNotify(){document.getElementById('notify-overlay').classList.remove('open');}
-function sendCurrent(){
-  const e=emailList[emailIdx];
-  const url=`https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(e.email)}&su=${encodeURIComponent(e.subject)}&body=${encodeURIComponent(e.body)}`;
-  window.open(url,'_blank');
-  if(emailIdx<emailList.length-1){emailIdx++;renderEmailPreview();}
-  else alert('Tous les courriels ont été ouverts dans Gmail.');
+
+async function toggleConfirm(){
+  const wk=wkey(oMon);
+  const chk=document.getElementById('fin-confirm-chk');
+  if(chk.checked){await markWeekConfirmed(wk);}
+  else{await unconfirmWeek(wk);}
+  document.getElementById('fin-confirm-lbl').textContent=chk.checked?'Horaire officiel ✓':'Marquer comme officiel';
+  renderO();
+}
+
+function sendOutlook(){
+  const wk=wkey(oMon);
+  const byPerson=buildScheduleSummary(wk);
+  const names=Object.keys(byPerson);
+  const allEmails=[...new Set(names.map(n=>{const p=getPerson(n);return p&&p.email?p.email:null;}).filter(Boolean))];
+  const subject=encodeURIComponent(`Horaire bénévoles — ${wlabel(oMon)}`);
+  const body=encodeURIComponent(document.getElementById('fin-email-body').textContent);
+  const bcc=encodeURIComponent(allEmails.join(';'));
+  window.open(`mailto:?bcc=${bcc}&subject=${subject}&body=${body}`,'_blank');
 }
 
 /* ══════════════════════════════════════════════
@@ -1542,11 +1928,16 @@ function volQuotaReached(wk, name, tempShiftCounts) {
 
 async function openAutoAssign(){
   if(isPastDay()){alert('Journée passée — impossible de modifier l\'horaire.');return;}
-  const wk=wkey(oMon);const dayId=curDay;const wkData=avail[wk]||{};
+  const wk=wkey(oMon);const dayId=curDay;
+
+  // Recharger les assignations fraîches depuis Supabase pour que le compte
+  // hebdomadaire soit toujours exact
+  if(sb) await loadAssignments(wk);
+
+  const wkData=avail[wk]||{};
   const shifts=SHIFTS[dayId]||[];
 
-  // tempShiftCounts : nombre de shifts assignés cette semaine (toutes journées),
-  // initialisé avec les assignations existantes
+  // tempShiftCounts : nombre de shifts distincts assignés cette semaine (toutes journées)
   const tempShiftCounts = {};
   DAYS.forEach(day => {
     (SHIFTS[day.id]||[]).forEach(sh => {
@@ -1554,7 +1945,6 @@ async function openAutoAssign(){
       allR.forEach(role => {
         const ex = getAssign(wk,sh.id,role);
         if (ex && !isEmp(ex)) {
-          // Compte chaque shift une seule fois par bénévole
           const key = ex + '|' + sh.id;
           if (!tempShiftCounts['__seen_' + key]) {
             tempShiftCounts['__seen_' + key] = true;
@@ -1667,14 +2057,18 @@ async function openAutoAssign(){
     });
   });
 
-  // Trier : requis avant optionnel, puis par nombre de candidats disponibles (moins = d'abord)
+  // Trier : requis avant optionnel, puis par nombre de candidats ELIGIBLES
+  // (quota non atteint + disponible) croissant.
+  // Corrige le bug Bea/Papa : Barista n'a qu'1 candidate eligible (Bea),
+  // donc il est traite avant Caissier qui en a 2.
   rolesQueue.sort((a, b) => {
     if (a.isOpt !== b.isOpt) return a.isOpt ? 1 : -1;
-    const getCands = item => availVols.filter(name =>
+    const getEligible = item => availVols.filter(name =>
       !alreadyInShiftToday(name, item.shift.id) &&
-      volCoversShiftFor(wk, name, item.shift, dayId)
+      volCoversShiftFor(wk, name, item.shift, dayId) &&
+      !volQuotaReached(wk, name, tempShiftCounts)
     ).length;
-    return getCands(a) - getCands(b);
+    return getEligible(a) - getEligible(b);
   });
 
   const toSave = [];
@@ -1719,6 +2113,190 @@ async function openAutoAssign(){
   for(const a of toSave){await saveAssignment(a.wk,a.shiftId,a.role,a.name,a.s,a.e);}
   renderHoraire();
 }
+
+/* ══════════════════════════════════════════════
+   EXPORT PDF — TABLEAU SIMPLE
+══════════════════════════════════════════════ */
+// openPdfModal replaced by openFinaliser
+
+function exportPdfTable(){
+  const wk = wkey(oMon);
+  const wkClosed = closedDays[wk] || new Set();
+  const markConfirmed = confirmedWeeks.has(wk);
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
+  const pageW = 215.9, pageH = 279.4;
+  const margin = 14;
+  const col1 = 52, col2 = 90;
+  let y = margin;
+  const C = { accent:'#C2410C', text:'#1C1917', text2:'#57534E', text3:'#A8A29E',
+               bg:'#F7F5F2', surface:'#FFFFFF', border:'#E2DDD8',
+               green:'#16A34A', greenLight:'#F0FDF4', headerBg:'#FFF7ED' };
+  function hexToRgb(hex){ const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return[r,g,b]; }
+  function setFill(hex){ doc.setFillColor(...hexToRgb(hex)); }
+  function setDraw(hex){ doc.setDrawColor(...hexToRgb(hex)); }
+  function setTextColor(hex){ doc.setTextColor(...hexToRgb(hex)); }
+  // En-tête
+  setFill(C.accent); doc.rect(0,0,pageW,10,'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(11);
+  setTextColor('#FFFFFF');
+  doc.text('Café • Horaire des bénévoles'+(markConfirmed?' — OFFICIEL':''), margin, 7);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9);
+  doc.text(wlabel(oMon), pageW - margin, 7, {align:'right'});
+  y = 18;
+  const usedDays = DAYS; // tous les jours, fermés marqués différemment
+  usedDays.forEach((day, di) => {
+    const shifts = SHIFTS[day.id] || [];
+    const rows = [];
+    shifts.forEach(shift => {
+      const allRoles = [...shift.roles, ...(shift.optional||[])];
+      allRoles.forEach(role => {
+        const isOpt = (shift.optional||[]).includes(role);
+        const name = getAssign(wk, shift.id, role);
+        const ct = name ? getAssignTimes(wk, shift.id, role) : null;
+        const rng = (name && !isEmp(name)) ? (() => {
+          const savedDay = curDay; curDay = day.id;
+          const r = volDayRange(wk, name); curDay = savedDay; return r;
+        })() : null;
+        let timeStr = '';
+        if(name){
+          if(isEmp(name)){ timeStr = mStr(shift.fromH*60)+' – '+mStr(shift.toH*60); }
+          else if(ct){ timeStr = mStr(ct.s)+' – '+mStr(ct.e); }
+          else if(rng){ timeStr = mStr(Math.max(rng.startMins,shift.fromH*60))+' – '+mStr(Math.min(rng.endMins,shift.toH*60)); }
+        }
+        const noteVal = name ? getAssignNote(wk, shift.id, role) : '';
+        rows.push({shift, role, name:name||'', timeStr, isOpt, note:noteVal});
+      });
+    });
+    const rowH = 7, headerH = 8, shiftH = 6;
+    const estimatedH = headerH + rows.length * rowH + shifts.length * shiftH + 4;
+    if(y + estimatedH > pageH - margin && di > 0){ doc.addPage(); y = margin; }
+    const isClosed = wkClosed.has(day.id);
+    setFill(isClosed ? '#FEF2F2' : C.headerBg); setDraw(isClosed ? '#FECACA' : C.border);
+    doc.roundedRect(margin, y, pageW - margin*2, 8, 1.5, 1.5, 'FD');
+    doc.setFont('helvetica','bold'); doc.setFontSize(10);
+    setTextColor(isClosed ? '#DC2626' : C.accent);
+    doc.text((isClosed ? '☔ ' : '') + day.label.toUpperCase() + (isClosed ? ' — FERMÉ' : ''), margin+3, y+5.5);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8);
+    setTextColor(C.text3);
+    doc.text(fmt(dayDate(oMon, day.dow)), pageW - margin - 3, y+5.5, {align:'right'});
+    y += 11;
+    if(isClosed){ y += 4; return; } // pas de tableau pour les jours fermés
+    setFill(C.bg); setDraw(C.border);
+    doc.rect(margin, y, pageW-margin*2, 5.5, 'FD');
+    doc.setFont('helvetica','bold'); doc.setFontSize(7.5);
+    setTextColor(C.text3);
+    doc.text('RÔLE', margin+3, y+3.8);
+    doc.text('BÉNÉVOLE / EMPLOYÉ', margin+col1+3, y+3.8);
+    doc.text('HEURES', margin+col1+col2+3, y+3.8);
+    y += 5.5;
+    let lastShiftId = null;
+    rows.forEach((row, ri) => {
+      if(row.shift.id !== lastShiftId){
+        lastShiftId = row.shift.id;
+        if(ri > 0) y += 1.5;
+        setFill('#F0F0EE'); setDraw(C.border);
+        doc.rect(margin, y, pageW-margin*2, 5, 'FD');
+        doc.setFont('helvetica','bold'); doc.setFontSize(7);
+        setTextColor(C.text2);
+        doc.text(row.shift.label.toUpperCase()+' — '+mStr(row.shift.fromH*60)+' – '+mStr(row.shift.toH*60), margin+3, y+3.4);
+        y += 5;
+      }
+      if(y + rowH > pageH - margin){ doc.addPage(); y = margin; }
+      if(ri % 2 === 0){ setFill('#FAFAF9'); } else { setFill(C.surface); }
+      setDraw(C.border);
+      doc.rect(margin, y, pageW-margin*2, rowH, 'FD');
+      doc.setFont('helvetica', row.isOpt ? 'italic' : 'normal');
+      doc.setFontSize(8);
+      setTextColor(row.isOpt ? C.text3 : C.text2);
+      doc.text((row.isOpt ? '★ ' : '') + roleLabel(row.role), margin+3, y+4.8);
+      if(row.name){
+        const emp = isEmp(row.name);
+        setTextColor(emp ? '#9A3412' : C.text);
+        doc.setFont('helvetica', emp ? 'bold' : 'normal');
+        doc.setFontSize(8.5);
+        doc.text(emp ? '▪ '+row.name : row.name, margin+col1+3, y+4.8);
+        doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
+        setTextColor(C.text3);
+        doc.text(row.timeStr, margin+col1+col2+3, y+4.8);
+        // Note
+        if(row.note){
+          if(y + rowH + 5 > pageH - margin){ doc.addPage(); y = margin; }
+          y += rowH;
+          doc.setFont('helvetica','italic'); doc.setFontSize(7);
+          setTextColor(C.text3);
+          const noteText = '  ↳ '+row.note;
+          const splitNote = doc.splitTextToSize(noteText, pageW - margin*2 - col1 - 6);
+          doc.text(splitNote, margin+col1+3, y+3.5);
+          y += splitNote.length * 4;
+        } else { y += rowH; }
+      } else {
+        doc.setFont('helvetica','italic'); doc.setFontSize(8);
+        setTextColor(C.text3);
+        doc.text('— non assigné', margin+col1+3, y+4.8);
+        y += rowH;
+      }
+    });
+    y += 10;
+  });
+  const totalPages = doc.getNumberOfPages();
+  for(let p = 1; p <= totalPages; p++){
+    doc.setPage(p);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7);
+    setTextColor(C.text3);
+    doc.text('Café • Généré le '+new Date().toLocaleDateString('fr-CA'), margin, pageH-6);
+    doc.text(`Page ${p} / ${totalPages}`, pageW-margin, pageH-6, {align:'right'});
+  }
+  const filename = 'horaire-cafe-'+wkey(oMon)+'.pdf';
+  doc.save(filename);
+  closePdfModal();
+}
+
+/* ══════════════════════════════════════════════
+   CONFIRMER L'HORAIRE
+══════════════════════════════════════════════ */
+// confirmSchedule replaced by toggleConfirm inside openFinaliser
+
+/* ══════════════════════════════════════════════
+   NOTE POPOVER
+══════════════════════════════════════════════ */
+let noteCtx=null;
+
+function openNotePop(e,name,sid,role,shift,wk){
+  noteCtx={name,sid,role,shift,wk};
+  document.getElementById('np-name').textContent=name;
+  document.getElementById('np-role').textContent=role+' · '+shift.label;
+  const existing=getAssignNote(wk,sid,role);
+  document.getElementById('np-text').value=existing;
+  document.getElementById('np-clear').style.display=existing?'block':'none';
+  const pop=document.getElementById('note-pop');pop.classList.add('open');
+  const popW=268,popH=200;
+  let left=e.clientX+10,top=e.clientY-10;
+  if(left+popW>window.innerWidth-8)left=e.clientX-popW-10;
+  if(top+popH>window.innerHeight-8)top=window.innerHeight-popH-8;
+  pop.style.left=Math.max(8,left)+'px';pop.style.top=Math.max(8,top)+'px';
+  setTimeout(()=>document.getElementById('np-text').focus(),50);
+}
+function closeNotePop(){document.getElementById('note-pop').classList.remove('open');noteCtx=null;}
+function saveNote(){
+  if(!noteCtx)return;
+  const note=document.getElementById('np-text').value.trim();
+  const {wk,sid,role,name}=noteCtx;
+  setAssignNote(wk,sid,role,note||null);
+  // Save to Supabase — re-upsert the whole assignment row with updated note
+  const ct=getAssignTimes(wk,sid,role);
+  saveAssignment(wk,sid,role,name,ct?ct.s:null,ct?ct.e:null,note||null);
+  closeNotePop();renderHoraire();
+}
+function clearNote(){
+  if(!noteCtx)return;
+  document.getElementById('np-text').value='';
+  saveNote();
+}
+document.addEventListener('click',e=>{
+  const np=document.getElementById('note-pop');
+  if(np.classList.contains('open')&&!np.contains(e.target))closeNotePop();
+},true);
 
 /* ══════════════════════════════════════════════
    INIT
