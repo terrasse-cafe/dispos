@@ -5,9 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Café — Planification bénévoles</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
 :root{
@@ -318,8 +315,6 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <span class="pill" id="o-stat">—</span>
       <button class="btn btn-sm" id="auto-btn" onclick="openAutoAssign()" style="display:flex;align-items:center;gap:5px">⚡ Assignation auto</button>
       <button class="btn btn-green btn-sm" onclick="openNotify()">✉ Notifier les bénévoles</button>
-      <button class="btn btn-sm" onclick="openPdfModal()" style="display:flex;align-items:center;gap:5px">⬇ Exporter PDF</button>
-      <button class="btn btn-sm" onclick="openPdfModal()" style="display:flex;align-items:center;gap:5px">⬇ Exporter PDF</button>
       <span id="o-sync-badge" class="sync-badge offline" style="display:none"></span>
     </div>
     <div class="day-tabs" id="o-daytabs"></div>
@@ -399,21 +394,6 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <button class="btn btn-danger btn-sm" id="pm-delete" onclick="deletePersonFromModal()" style="margin-right:auto;display:none">Supprimer</button>
       <button class="btn btn-sm" onclick="closePersonModal()">Annuler</button>
       <button class="btn btn-primary btn-sm" onclick="savePerson()">Enregistrer</button>
-    </div>
-  </div>
-</div>
-
-<!-- PDF MODAL -->
-<div class="overlay" id="pdf-overlay" onclick="if(event.target===this)closePdfModal()">
-  <div class="modal-box">
-    <div class="modal-title">Exporter l'horaire en PDF</div>
-    <div style="margin-bottom:1rem">
-      <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Jours à inclure</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap" id="pdf-day-checks"></div>
-    </div>
-    <div class="modal-btns">
-      <button class="btn btn-sm" onclick="closePdfModal()">Annuler</button>
-      <button class="btn btn-primary btn-sm" onclick="exportPdfTable()">⬇ Télécharger PDF</button>
     </div>
   </div>
 </div>
@@ -662,21 +642,28 @@ async function loadAvail(wk) {
   if (!avail[wk]) avail[wk] = {};
   data.forEach(r => {
     try {
-      avail[wk][r.person_name] = { slots: JSON.parse(r.slots_json) };
+      const parsed = JSON.parse(r.slots_json);
+      // Support ancien format (objet plat de slots) et nouveau format {slots, quota}
+      if (parsed && typeof parsed === 'object' && ('slots' in parsed || 'quota' in parsed)) {
+        avail[wk][r.person_name] = parsed;
+      } else {
+        avail[wk][r.person_name] = { slots: parsed };
+      }
     } catch(e) {}
   });
 }
 
-async function saveAvail(wk, name, slots) {
+async function saveAvail(wk, name, slots, quota) {
   if (!sb) {
-    // Mode hors-ligne : déjà en mémoire, on affiche juste un avertissement
     setSyncBadge('b-sync-badge','offline','Hors-ligne — non sauvegardé');
     setTimeout(()=>setSyncBadge('b-sync-badge','offline',''),3000);
     return;
   }
   setSyncBadge('b-sync-badge','saving','Enregistrement…');
+  const payload = { slots };
+  if (quota !== undefined) payload.quota = quota;
   const { error } = await sb.from('availabilities').upsert(
-    {week_key: wk, person_name: name, slots_json: JSON.stringify(slots), updated_at: new Date().toISOString()},
+    {week_key: wk, person_name: name, slots_json: JSON.stringify(payload), updated_at: new Date().toISOString()},
     {onConflict:'week_key,person_name'}
   );
   if (error) {
@@ -749,7 +736,10 @@ function subscribeRealtime(wk) {
         const r = payload.new;
         if (!r || !r.person_name) return;
         if (!avail[wk]) avail[wk] = {};
-        try { avail[wk][r.person_name] = {slots: JSON.parse(r.slots_json)}; } catch(e) {}
+        try {
+          const parsed = JSON.parse(r.slots_json);
+          avail[wk][r.person_name] = (parsed && ('slots' in parsed || 'quota' in parsed)) ? parsed : {slots: parsed};
+        } catch(e) {}
         renderO();
       }
     )
@@ -879,7 +869,8 @@ async function onVolSelect(){
   await bootVolData(wk);
   // Pré-remplir bSel si des dispos existent déjà
   if(avail[wk]&&avail[wk][name]){
-    const slots=avail[wk][name].slots||{};
+    const entry=avail[wk][name];
+    const slots=entry.slots||{};
     if(!bSel[wk])bSel[wk]={};
     DAYS.forEach(day=>{
       const daySlots=Object.keys(slots).filter(k=>k.startsWith(day.id+'_')).map(k=>parseInt(k.split('_')[1]));
@@ -888,7 +879,12 @@ async function onVolSelect(){
         bSel[wk][day.id]={from:Math.min(...mins),to:Math.max(...mins)+30};
       }
     });
-    if(Object.keys(bSel[wk]).length&&bShiftsDesired===0){bShiftsDesired=1;}
+    // Restaurer le quota si présent
+    if(entry.quota!==undefined&&bShiftMemory[name]===undefined){
+      bShiftsDesired=entry.quota;
+    } else if(bShiftMemory[name]===undefined&&Object.keys(bSel[wk]).length){
+      bShiftsDesired=1;
+    }
   }
 
   buildShiftChips();
@@ -993,8 +989,9 @@ async function submitAvail(){
     const{from,to}=sel[day.id];
     for(let m=from;m<to;m+=30){const s=Math.round((m-GSH*60)/30);slots[skey(day.id,s)]=true;}
   });
-  avail[wk][name]={slots};
-  await saveAvail(wk,name,slots);
+  const quota=bShiftsDesired; // 0=aucun, 1, 2, 3, 99=peu importe
+  avail[wk][name]={slots,quota};
+  await saveAvail(wk,name,slots,quota);
   const t=document.getElementById('b-toast');t.style.display='block';
   setTimeout(()=>t.style.display='none',3000);
 }
@@ -1518,222 +1515,214 @@ function volCoversShiftFor(wk,name,shift,dayId){
   return r&&r.startMins<shift.toH*60&&r.endMins>shift.fromH*60;
 }
 
+/* ── Helpers quota ── */
+function volQuota(wk, name) {
+  // 99 = peu importe (traité comme Infinity), 0 = aucun
+  const entry = (avail[wk]||{})[name];
+  if (!entry) return 99;
+  return entry.quota !== undefined ? entry.quota : 99;
+}
+function volShiftsAssignedThisWeek(wk, name) {
+  // Compte le nombre de shifts distincts où le bénévole est assigné cette semaine
+  const shiftIds = new Set();
+  DAYS.forEach(day => {
+    (SHIFTS[day.id]||[]).forEach(sh => {
+      const allR = [...sh.roles,...(sh.optional||[])];
+      if (allR.some(r => getAssign(wk,sh.id,r) === name)) shiftIds.add(sh.id);
+    });
+  });
+  return shiftIds.size;
+}
+function volQuotaReached(wk, name, tempShiftCounts) {
+  const q = volQuota(wk, name);
+  if (q === 99) return false; // peu importe
+  const already = (tempShiftCounts[name] || 0);
+  return already >= q;
+}
+
 async function openAutoAssign(){
   if(isPastDay()){alert('Journée passée — impossible de modifier l\'horaire.');return;}
   const wk=wkey(oMon);const dayId=curDay;const wkData=avail[wk]||{};
-  const tempAssigned={};
-  function alreadyInShift(name,dayId,shiftId){return(tempAssigned[name+'|'+dayId]||[]).includes(shiftId);}
-  function markAssigned(name,dayId,shiftId){if(!tempAssigned[name+'|'+dayId])tempAssigned[name+'|'+dayId]=[];tempAssigned[name+'|'+dayId].push(shiftId);}
-  function scoreVol(name,role,shift,dayId){
-    const p=getPerson(name);if(!p)return 0;
-    const prioIdx=p.roles.indexOf(role);
-    let score=0;
-    if(prioIdx===0)score+=30;else if(prioIdx===1)score+=20;else if(prioIdx===2)score+=10;else score+=2;
-    const ov=overlapFor(wk,name,shift,dayId);if(ov)score+=Math.round((ov.e-ov.s)/30);
-    return score;
-  }
   const shifts=SHIFTS[dayId]||[];
-  shifts.forEach(sh=>{[...sh.roles,...(sh.optional||[])].forEach(role=>{const existing=getAssign(wk,sh.id,role);if(existing)markAssigned(existing,dayId,sh.id);});});
-  const availVols=Object.keys(wkData).filter(name=>!isEmp(name)&&Object.keys(wkData[name].slots||{}).some(k=>k.startsWith(dayId+'_')));
-  const toSave=[];
-  shifts.forEach(shift=>{
-    [...shift.roles,...(shift.optional||[])].forEach(role=>{
-      if(getAssign(wk,shift.id,role))return;
-      const candidates=availVols
-        .filter(name=>!alreadyInShift(name,dayId,shift.id)&&volCoversShiftFor(wk,name,shift,dayId))
-        .map(name=>({name,score:scoreVol(name,role,shift,dayId)}))
-        .sort((a,b)=>b.score-a.score);
-      if(!candidates.length)return;
-      const best=candidates[0];
-      const ov=overlapFor(wk,best.name,shift,dayId);if(!ov)return;
-      setAssign(wk,shift.id,role,best.name);setAssignTimes(wk,shift.id,role,ov.s,ov.e);
-      markAssigned(best.name,dayId,shift.id);
-      toSave.push({wk,shiftId:shift.id,role,name:best.name,s:ov.s,e:ov.e});
+
+  // tempShiftCounts : nombre de shifts assignés cette semaine (toutes journées),
+  // initialisé avec les assignations existantes
+  const tempShiftCounts = {};
+  DAYS.forEach(day => {
+    (SHIFTS[day.id]||[]).forEach(sh => {
+      const allR = [...sh.roles,...(sh.optional||[])];
+      allR.forEach(role => {
+        const ex = getAssign(wk,sh.id,role);
+        if (ex && !isEmp(ex)) {
+          // Compte chaque shift une seule fois par bénévole
+          const key = ex + '|' + sh.id;
+          if (!tempShiftCounts['__seen_' + key]) {
+            tempShiftCounts['__seen_' + key] = true;
+            tempShiftCounts[ex] = (tempShiftCounts[ex]||0) + 1;
+          }
+        }
+      });
     });
   });
-  // Sauvegarder toutes les nouvelles assignations
+
+  // tempAssigned : shifts du jour où le bénévole est déjà placé
+  const tempDayShifts = {}; // name -> Set of shiftId pour la journée courante
+  shifts.forEach(sh => {
+    [...sh.roles,...(sh.optional||[])].forEach(role => {
+      const ex = getAssign(wk,sh.id,role);
+      if (ex) {
+        if (!tempDayShifts[ex]) tempDayShifts[ex] = new Set();
+        tempDayShifts[ex].add(sh.id);
+      }
+    });
+  });
+
+  function alreadyInShiftToday(name, shiftId) {
+    return !!(tempDayShifts[name]&&tempDayShifts[name].has(shiftId));
+  }
+  function markAssignedToday(name, shiftId) {
+    if (!tempDayShifts[name]) tempDayShifts[name] = new Set();
+    tempDayShifts[name].add(shiftId);
+    // Incrémenter le compte hebdomadaire seulement si ce shift n'était pas déjà compté
+    const key = name + '|' + shiftId;
+    if (!tempShiftCounts['__seen_' + key]) {
+      tempShiftCounts['__seen_' + key] = true;
+      tempShiftCounts[name] = (tempShiftCounts[name]||0) + 1;
+    }
+  }
+
+  // Bénévoles disponibles ce jour
+  const availVols = Object.keys(wkData).filter(name =>
+    !isEmp(name) &&
+    Object.keys((wkData[name].slots)||{}).some(k => k.startsWith(dayId+'_'))
+  );
+
+  // Score de correspondance rôle — SANS tenir compte du fit horaire ici
+  function roleScore(name, role) {
+    const p = getPerson(name); if (!p) return 0;
+    // Chercher le rôle dans les préférences (correspondance exacte ou par label)
+    const roleL = roleToLabel(role);
+    const idx = p.roles.findIndex(r => r === role || roleToLabel(r) === roleL);
+    if (idx === 0) return 30;
+    if (idx === 1) return 20;
+    if (idx === 2) return 10;
+    return 2; // pas de préférence explicite
+  }
+
+  // Nombre de rôles définis (versatilité)
+  function versatility(name) {
+    const p = getPerson(name); if (!p) return 0;
+    return p.roles.filter(Boolean).length;
+  }
+
+  // Fit horaire : minutes de recouvrement avec le shift
+  function fitMins(name, shift) {
+    const ov = overlapFor(wk, name, shift, dayId);
+    return ov ? (ov.e - ov.s) : 0;
+  }
+
+  // Comparateur principal entre deux candidats pour un rôle donné
+  // Retourne >0 si a est meilleur que b
+  function compareCandidates(a, b, role, shift, respectQuota) {
+    const aAtQuota = volQuotaReached(wk, a, tempShiftCounts);
+    const bAtQuota = volQuotaReached(wk, b, tempShiftCounts);
+
+    if (respectQuota) {
+      // Priorité 1 : quota non atteint > quota atteint
+      if (!aAtQuota && bAtQuota) return 1;
+      if (aAtQuota && !bAtQuota) return -1;
+    }
+
+    // Priorité 2 : score de correspondance au rôle
+    const aRS = roleScore(a, role);
+    const bRS = roleScore(b, role);
+    if (aRS !== bRS) return aRS - bRS;
+
+    // Tie-breaker 2a : à score égal, le moins versatile gagne
+    // (moins de rôles définis = plus spécialisé = on le place là où il est à l'aise)
+    const aV = versatility(a);
+    const bV = versatility(b);
+    if (aV !== bV) return bV - aV; // moins versatile = valeur plus haute = gagne
+
+    // Priorité 3 : meilleur fit horaire
+    return fitMins(a, shift) - fitMins(b, shift);
+  }
+
+  function bestCandidate(candidates, role, shift, respectQuota) {
+    if (!candidates.length) return null;
+    return candidates.reduce((best, cur) =>
+      compareCandidates(cur, best, role, shift, respectQuota) > 0 ? cur : best
+    );
+  }
+
+  // Collecter les rôles à remplir (requis d'abord, optionnels ensuite)
+  // Trier par nombre de candidats disponibles croissant (les plus difficiles en premier)
+  const rolesQueue = [];
+  shifts.forEach(shift => {
+    const requiredRoles = shift.roles.filter(role => !getAssign(wk, shift.id, role));
+    const optionalRoles = (shift.optional||[]).filter(role => !getAssign(wk, shift.id, role));
+    [...requiredRoles, ...optionalRoles].forEach(role => {
+      const isOpt = (shift.optional||[]).includes(role);
+      rolesQueue.push({shift, role, isOpt});
+    });
+  });
+
+  // Trier : requis avant optionnel, puis par nombre de candidats disponibles (moins = d'abord)
+  rolesQueue.sort((a, b) => {
+    if (a.isOpt !== b.isOpt) return a.isOpt ? 1 : -1;
+    const getCands = item => availVols.filter(name =>
+      !alreadyInShiftToday(name, item.shift.id) &&
+      volCoversShiftFor(wk, name, item.shift, dayId)
+    ).length;
+    return getCands(a) - getCands(b);
+  });
+
+  const toSave = [];
+
+  // Passe 1 : assigner en respectant le quota
+  rolesQueue.forEach(({shift, role}) => {
+    if (getAssign(wk, shift.id, role)) return; // déjà assigné entre-temps
+    const candidates = availVols.filter(name =>
+      !alreadyInShiftToday(name, shift.id) &&
+      volCoversShiftFor(wk, name, shift, dayId) &&
+      !volQuotaReached(wk, name, tempShiftCounts) // quota respecté
+    );
+    const best = bestCandidate(candidates, role, shift, true);
+    if (!best) return; // laissé pour la passe 2 ou à l'organisatrice
+    const ov = overlapFor(wk, best, shift, dayId); if (!ov) return;
+    setAssign(wk, shift.id, role, best);
+    setAssignTimes(wk, shift.id, role, ov.s, ov.e);
+    markAssignedToday(best, shift.id);
+    toSave.push({wk, shiftId:shift.id, role, name:best, s:ov.s, e:ov.e});
+  });
+
+  // Passe 2 : rôles requis encore vides — dernier recours uniquement avec les
+  // bénévoles "peu importe" (quota=99). On ne force jamais quelqu'un au-delà
+  // de son quota exprimé. Si aucun candidat → laisser vide pour l'organisatrice.
+  rolesQueue.forEach(({shift, role, isOpt}) => {
+    if (isOpt) return; // on ne force jamais les optionnels
+    if (getAssign(wk, shift.id, role)) return;
+    const candidates = availVols.filter(name =>
+      !alreadyInShiftToday(name, shift.id) &&
+      volCoversShiftFor(wk, name, shift, dayId) &&
+      volQuota(wk, name) === 99 // seulement ceux qui ont dit "peu importe"
+    );
+    const best = bestCandidate(candidates, role, shift, false);
+    if (!best) return; // laisser vide → l'organisatrice décide
+    const ov = overlapFor(wk, best, shift, dayId); if (!ov) return;
+    setAssign(wk, shift.id, role, best);
+    setAssignTimes(wk, shift.id, role, ov.s, ov.e);
+    markAssignedToday(best, shift.id);
+    toSave.push({wk, shiftId:shift.id, role, name:best, s:ov.s, e:ov.e});
+  });
+
   for(const a of toSave){await saveAssignment(a.wk,a.shiftId,a.role,a.name,a.s,a.e);}
   renderHoraire();
 }
 
 /* ══════════════════════════════════════════════
-   EXPORT PDF — TABLEAU SIMPLE
+   INIT
 ══════════════════════════════════════════════ */
-function openPdfModal(){
-  // Cocher tous les jours par défaut
-  const wrap = document.getElementById('pdf-day-checks');
-  wrap.innerHTML = '';
-  DAYS.forEach(day => {
-    const lbl = document.createElement('label');
-    lbl.style.cssText = 'display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border:1px solid var(--border);border-radius:20px;cursor:pointer;font-size:13px;background:var(--surface)';
-    const chk = document.createElement('input');
-    chk.type = 'checkbox'; chk.value = day.id; chk.checked = true;
-    chk.style.accentColor = 'var(--accent)';
-    lbl.appendChild(chk);
-    lbl.appendChild(document.createTextNode(day.label));
-    wrap.appendChild(lbl);
-  });
-  document.getElementById('pdf-overlay').classList.add('open');
-}
-function closePdfModal(){ document.getElementById('pdf-overlay').classList.remove('open'); }
-
-function exportPdfTable(){
-  const wk = wkey(oMon);
-  // Jours cochés
-  const selectedDays = [...document.querySelectorAll('#pdf-day-checks input:checked')].map(c => c.value);
-  if(!selectedDays.length){ alert('Sélectionnez au moins un jour.'); return; }
-
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
-  const pageW = 215.9, pageH = 279.4;
-  const margin = 14;
-  const col1 = 52, col2 = 90; // largeurs colonnes
-  let y = margin;
-
-  // Couleurs
-  const C = { accent:'#C2410C', text:'#1C1917', text2:'#57534E', text3:'#A8A29E',
-               bg:'#F7F5F2', surface:'#FFFFFF', border:'#E2DDD8',
-               green:'#16A34A', greenLight:'#F0FDF4', headerBg:'#FFF7ED' };
-
-  function hexToRgb(hex){ const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return[r,g,b]; }
-  function setFill(hex){ doc.setFillColor(...hexToRgb(hex)); }
-  function setDraw(hex){ doc.setDrawColor(...hexToRgb(hex)); }
-  function setTextColor(hex){ doc.setTextColor(...hexToRgb(hex)); }
-
-  // ── En-tête du document ──
-  setFill(C.accent); doc.rect(0,0,pageW,10,'F');
-  doc.setFont('helvetica','bold'); doc.setFontSize(11);
-  setTextColor('#FFFFFF');
-  doc.text('Café • Horaire des bénévoles', margin, 7);
-  doc.setFont('helvetica','normal'); doc.setFontSize(9);
-  doc.text(wlabel(oMon), pageW - margin, 7, {align:'right'});
-  y = 18;
-
-  const usedDays = DAYS.filter(d => selectedDays.includes(d.id));
-
-  usedDays.forEach((day, di) => {
-    const shifts = SHIFTS[day.id] || [];
-
-    // Collecter les lignes de ce jour
-    const rows = []; // {shift, role, name, time, isOpt}
-    shifts.forEach(shift => {
-      const allRoles = [...shift.roles, ...(shift.optional||[])];
-      allRoles.forEach(role => {
-        const isOpt = (shift.optional||[]).includes(role);
-        const name = getAssign(wk, shift.id, role);
-        const ct = name ? getAssignTimes(wk, shift.id, role) : null;
-        const rng = (name && !isEmp(name)) ? (() => {
-          const savedDay = curDay; curDay = day.id;
-          const r = volDayRange(wk, name); curDay = savedDay; return r;
-        })() : null;
-        let timeStr = '';
-        if(name){
-          if(isEmp(name)){ timeStr = mStr(shift.fromH*60)+' – '+mStr(shift.toH*60); }
-          else if(ct){ timeStr = mStr(ct.s)+' – '+mStr(ct.e); }
-          else if(rng){ timeStr = mStr(Math.max(rng.startMins,shift.fromH*60))+' – '+mStr(Math.min(rng.endMins,shift.toH*60)); }
-        }
-        rows.push({shift, role, name:name||'', timeStr, isOpt});
-      });
-    });
-
-    // Estimer hauteur nécessaire (en-tête jour + lignes)
-    const rowH = 7, headerH = 8, shiftH = 6;
-    const estimatedH = headerH + rows.length * rowH + shifts.length * shiftH + 4;
-    if(y + estimatedH > pageH - margin && di > 0){
-      doc.addPage(); y = margin;
-    }
-
-    // ── En-tête du jour ──
-    setFill(C.headerBg); setDraw(C.border);
-    doc.roundedRect(margin, y, pageW - margin*2, 8, 1.5, 1.5, 'FD');
-    doc.setFont('helvetica','bold'); doc.setFontSize(10);
-    setTextColor(C.accent);
-    doc.text(day.label.toUpperCase(), margin+3, y+5.5);
-    doc.setFont('helvetica','normal'); doc.setFontSize(8);
-    setTextColor(C.text3);
-    const dayDateStr = fmt(dayDate(oMon, day.dow));
-    doc.text(dayDateStr, pageW - margin - 3, y+5.5, {align:'right'});
-    y += 11;
-
-    // ── En-tête colonnes ──
-    setFill(C.bg); setDraw(C.border);
-    doc.rect(margin, y, pageW-margin*2, 5.5, 'FD');
-    doc.setFont('helvetica','bold'); doc.setFontSize(7.5);
-    setTextColor(C.text3);
-    doc.text('RÔLE', margin+3, y+3.8);
-    doc.text('BÉNÉVOLE / EMPLOYÉ', margin+col1+3, y+3.8);
-    doc.text('HEURES', margin+col1+col2+3, y+3.8);
-    y += 5.5;
-
-    // ── Lignes par shift ──
-    let lastShiftId = null;
-    rows.forEach((row, ri) => {
-      // Séparateur de shift
-      if(row.shift.id !== lastShiftId){
-        lastShiftId = row.shift.id;
-        if(ri > 0) y += 1.5;
-        setFill('#F0F0EE'); setDraw(C.border);
-        doc.rect(margin, y, pageW-margin*2, 5, 'FD');
-        doc.setFont('helvetica','bold'); doc.setFontSize(7);
-        setTextColor(C.text2);
-        doc.text(row.shift.label.toUpperCase()+' — '+mStr(row.shift.fromH*60)+' – '+mStr(row.shift.toH*60), margin+3, y+3.4);
-        y += 5;
-      }
-
-      // Vérifier si on dépasse la page
-      if(y + rowH > pageH - margin){ doc.addPage(); y = margin; }
-
-      // Fond alterné
-      if(ri % 2 === 0){ setFill('#FAFAF9'); } else { setFill(C.surface); }
-      setDraw(C.border);
-      doc.rect(margin, y, pageW-margin*2, rowH, 'FD');
-
-      // Rôle
-      doc.setFont('helvetica', row.isOpt ? 'italic' : 'normal');
-      doc.setFontSize(8);
-      setTextColor(row.isOpt ? C.text3 : C.text2);
-      doc.text((row.isOpt ? '★ ' : '') + roleLabel(row.role), margin+3, y+4.8);
-
-      // Nom
-      if(row.name){
-        const emp = isEmp(row.name);
-        setTextColor(emp ? '#9A3412' : C.text);
-        doc.setFont('helvetica', emp ? 'bold' : 'normal');
-        doc.setFontSize(8.5);
-        const displayName = emp ? '▪ '+row.name : row.name;
-        doc.text(displayName, margin+col1+3, y+4.8);
-        // Heures
-        doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
-        setTextColor(C.text3);
-        doc.text(row.timeStr, margin+col1+col2+3, y+4.8);
-      } else {
-        doc.setFont('helvetica','italic'); doc.setFontSize(8);
-        setTextColor(C.text3);
-        doc.text('— non assigné', margin+col1+3, y+4.8);
-      }
-
-      y += rowH;
-    });
-
-    y += 10; // espace entre les jours
-  });
-
-  // ── Pied de page sur chaque page ──
-  const totalPages = doc.getNumberOfPages();
-  for(let p = 1; p <= totalPages; p++){
-    doc.setPage(p);
-    doc.setFont('helvetica','normal'); doc.setFontSize(7);
-    setTextColor(C.text3);
-    doc.text('Café • Généré le '+new Date().toLocaleDateString('fr-CA'), margin, pageH-6);
-    doc.text(`Page ${p} / ${totalPages}`, pageW-margin, pageH-6, {align:'right'});
-  }
-
-  const filename = 'horaire-cafe-'+wkey(oMon)+'.pdf';
-  doc.save(filename);
-  closePdfModal();
-}
-
-
 (async function init(){
   // Tenter de charger la config Supabase sauvegardée
   const cfg=getSavedConfig();
