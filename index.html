@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Café — Planification bénévoles</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
 :root{
@@ -315,6 +318,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <span class="pill" id="o-stat">—</span>
       <button class="btn btn-sm" id="auto-btn" onclick="openAutoAssign()" style="display:flex;align-items:center;gap:5px">⚡ Assignation auto</button>
       <button class="btn btn-green btn-sm" onclick="openNotify()">✉ Notifier les bénévoles</button>
+      <button class="btn btn-sm" onclick="openPdfModal()" style="display:flex;align-items:center;gap:5px">⬇ Exporter PDF</button>
+      <button class="btn btn-sm" onclick="openPdfModal()" style="display:flex;align-items:center;gap:5px">⬇ Exporter PDF</button>
       <span id="o-sync-badge" class="sync-badge offline" style="display:none"></span>
     </div>
     <div class="day-tabs" id="o-daytabs"></div>
@@ -394,6 +399,21 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <button class="btn btn-danger btn-sm" id="pm-delete" onclick="deletePersonFromModal()" style="margin-right:auto;display:none">Supprimer</button>
       <button class="btn btn-sm" onclick="closePersonModal()">Annuler</button>
       <button class="btn btn-primary btn-sm" onclick="savePerson()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- PDF MODAL -->
+<div class="overlay" id="pdf-overlay" onclick="if(event.target===this)closePdfModal()">
+  <div class="modal-box">
+    <div class="modal-title">Exporter l'horaire en PDF</div>
+    <div style="margin-bottom:1rem">
+      <div style="font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Jours à inclure</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap" id="pdf-day-checks"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-sm" onclick="closePdfModal()">Annuler</button>
+      <button class="btn btn-primary btn-sm" onclick="exportPdfTable()">⬇ Télécharger PDF</button>
     </div>
   </div>
 </div>
@@ -1537,8 +1557,183 @@ async function openAutoAssign(){
 }
 
 /* ══════════════════════════════════════════════
-   INIT
+   EXPORT PDF — TABLEAU SIMPLE
 ══════════════════════════════════════════════ */
+function openPdfModal(){
+  // Cocher tous les jours par défaut
+  const wrap = document.getElementById('pdf-day-checks');
+  wrap.innerHTML = '';
+  DAYS.forEach(day => {
+    const lbl = document.createElement('label');
+    lbl.style.cssText = 'display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border:1px solid var(--border);border-radius:20px;cursor:pointer;font-size:13px;background:var(--surface)';
+    const chk = document.createElement('input');
+    chk.type = 'checkbox'; chk.value = day.id; chk.checked = true;
+    chk.style.accentColor = 'var(--accent)';
+    lbl.appendChild(chk);
+    lbl.appendChild(document.createTextNode(day.label));
+    wrap.appendChild(lbl);
+  });
+  document.getElementById('pdf-overlay').classList.add('open');
+}
+function closePdfModal(){ document.getElementById('pdf-overlay').classList.remove('open'); }
+
+function exportPdfTable(){
+  const wk = wkey(oMon);
+  // Jours cochés
+  const selectedDays = [...document.querySelectorAll('#pdf-day-checks input:checked')].map(c => c.value);
+  if(!selectedDays.length){ alert('Sélectionnez au moins un jour.'); return; }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
+  const pageW = 215.9, pageH = 279.4;
+  const margin = 14;
+  const col1 = 52, col2 = 90; // largeurs colonnes
+  let y = margin;
+
+  // Couleurs
+  const C = { accent:'#C2410C', text:'#1C1917', text2:'#57534E', text3:'#A8A29E',
+               bg:'#F7F5F2', surface:'#FFFFFF', border:'#E2DDD8',
+               green:'#16A34A', greenLight:'#F0FDF4', headerBg:'#FFF7ED' };
+
+  function hexToRgb(hex){ const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return[r,g,b]; }
+  function setFill(hex){ doc.setFillColor(...hexToRgb(hex)); }
+  function setDraw(hex){ doc.setDrawColor(...hexToRgb(hex)); }
+  function setTextColor(hex){ doc.setTextColor(...hexToRgb(hex)); }
+
+  // ── En-tête du document ──
+  setFill(C.accent); doc.rect(0,0,pageW,10,'F');
+  doc.setFont('helvetica','bold'); doc.setFontSize(11);
+  setTextColor('#FFFFFF');
+  doc.text('Café • Horaire des bénévoles', margin, 7);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9);
+  doc.text(wlabel(oMon), pageW - margin, 7, {align:'right'});
+  y = 18;
+
+  const usedDays = DAYS.filter(d => selectedDays.includes(d.id));
+
+  usedDays.forEach((day, di) => {
+    const shifts = SHIFTS[day.id] || [];
+
+    // Collecter les lignes de ce jour
+    const rows = []; // {shift, role, name, time, isOpt}
+    shifts.forEach(shift => {
+      const allRoles = [...shift.roles, ...(shift.optional||[])];
+      allRoles.forEach(role => {
+        const isOpt = (shift.optional||[]).includes(role);
+        const name = getAssign(wk, shift.id, role);
+        const ct = name ? getAssignTimes(wk, shift.id, role) : null;
+        const rng = (name && !isEmp(name)) ? (() => {
+          const savedDay = curDay; curDay = day.id;
+          const r = volDayRange(wk, name); curDay = savedDay; return r;
+        })() : null;
+        let timeStr = '';
+        if(name){
+          if(isEmp(name)){ timeStr = mStr(shift.fromH*60)+' – '+mStr(shift.toH*60); }
+          else if(ct){ timeStr = mStr(ct.s)+' – '+mStr(ct.e); }
+          else if(rng){ timeStr = mStr(Math.max(rng.startMins,shift.fromH*60))+' – '+mStr(Math.min(rng.endMins,shift.toH*60)); }
+        }
+        rows.push({shift, role, name:name||'', timeStr, isOpt});
+      });
+    });
+
+    // Estimer hauteur nécessaire (en-tête jour + lignes)
+    const rowH = 7, headerH = 8, shiftH = 6;
+    const estimatedH = headerH + rows.length * rowH + shifts.length * shiftH + 4;
+    if(y + estimatedH > pageH - margin && di > 0){
+      doc.addPage(); y = margin;
+    }
+
+    // ── En-tête du jour ──
+    setFill(C.headerBg); setDraw(C.border);
+    doc.roundedRect(margin, y, pageW - margin*2, 8, 1.5, 1.5, 'FD');
+    doc.setFont('helvetica','bold'); doc.setFontSize(10);
+    setTextColor(C.accent);
+    doc.text(day.label.toUpperCase(), margin+3, y+5.5);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8);
+    setTextColor(C.text3);
+    const dayDateStr = fmt(dayDate(oMon, day.dow));
+    doc.text(dayDateStr, pageW - margin - 3, y+5.5, {align:'right'});
+    y += 11;
+
+    // ── En-tête colonnes ──
+    setFill(C.bg); setDraw(C.border);
+    doc.rect(margin, y, pageW-margin*2, 5.5, 'FD');
+    doc.setFont('helvetica','bold'); doc.setFontSize(7.5);
+    setTextColor(C.text3);
+    doc.text('RÔLE', margin+3, y+3.8);
+    doc.text('BÉNÉVOLE / EMPLOYÉ', margin+col1+3, y+3.8);
+    doc.text('HEURES', margin+col1+col2+3, y+3.8);
+    y += 5.5;
+
+    // ── Lignes par shift ──
+    let lastShiftId = null;
+    rows.forEach((row, ri) => {
+      // Séparateur de shift
+      if(row.shift.id !== lastShiftId){
+        lastShiftId = row.shift.id;
+        if(ri > 0) y += 1.5;
+        setFill('#F0F0EE'); setDraw(C.border);
+        doc.rect(margin, y, pageW-margin*2, 5, 'FD');
+        doc.setFont('helvetica','bold'); doc.setFontSize(7);
+        setTextColor(C.text2);
+        doc.text(row.shift.label.toUpperCase()+' — '+mStr(row.shift.fromH*60)+' – '+mStr(row.shift.toH*60), margin+3, y+3.4);
+        y += 5;
+      }
+
+      // Vérifier si on dépasse la page
+      if(y + rowH > pageH - margin){ doc.addPage(); y = margin; }
+
+      // Fond alterné
+      if(ri % 2 === 0){ setFill('#FAFAF9'); } else { setFill(C.surface); }
+      setDraw(C.border);
+      doc.rect(margin, y, pageW-margin*2, rowH, 'FD');
+
+      // Rôle
+      doc.setFont('helvetica', row.isOpt ? 'italic' : 'normal');
+      doc.setFontSize(8);
+      setTextColor(row.isOpt ? C.text3 : C.text2);
+      doc.text((row.isOpt ? '★ ' : '') + roleLabel(row.role), margin+3, y+4.8);
+
+      // Nom
+      if(row.name){
+        const emp = isEmp(row.name);
+        setTextColor(emp ? '#9A3412' : C.text);
+        doc.setFont('helvetica', emp ? 'bold' : 'normal');
+        doc.setFontSize(8.5);
+        const displayName = emp ? '▪ '+row.name : row.name;
+        doc.text(displayName, margin+col1+3, y+4.8);
+        // Heures
+        doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
+        setTextColor(C.text3);
+        doc.text(row.timeStr, margin+col1+col2+3, y+4.8);
+      } else {
+        doc.setFont('helvetica','italic'); doc.setFontSize(8);
+        setTextColor(C.text3);
+        doc.text('— non assigné', margin+col1+3, y+4.8);
+      }
+
+      y += rowH;
+    });
+
+    y += 10; // espace entre les jours
+  });
+
+  // ── Pied de page sur chaque page ──
+  const totalPages = doc.getNumberOfPages();
+  for(let p = 1; p <= totalPages; p++){
+    doc.setPage(p);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7);
+    setTextColor(C.text3);
+    doc.text('Café • Généré le '+new Date().toLocaleDateString('fr-CA'), margin, pageH-6);
+    doc.text(`Page ${p} / ${totalPages}`, pageW-margin, pageH-6, {align:'right'});
+  }
+
+  const filename = 'horaire-cafe-'+wkey(oMon)+'.pdf';
+  doc.save(filename);
+  closePdfModal();
+}
+
+
 (async function init(){
   // Tenter de charger la config Supabase sauvegardée
   const cfg=getSavedConfig();
