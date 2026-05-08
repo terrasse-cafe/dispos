@@ -21,7 +21,7 @@
   --radius:8px;--radius-sm:5px;
   --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.05);
   --shadow-md:0 4px 16px rgba(0,0,0,.12);
-  --role-col:165px;--font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+  --role-col:130px;--font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:var(--bg);font-family:var(--font);color:var(--text);font-size:14px}
@@ -35,7 +35,7 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 .conn-dot{width:7px;height:7px;border-radius:50%;background:var(--border);display:inline-block;margin-left:auto;flex-shrink:0;transition:background .3s}
 .conn-dot.ok{background:var(--green)}
 .conn-dot.err{background:#EF4444}
-main{flex:1;padding:1rem 1.25rem;max-width:1400px;width:100%;margin:0 auto}
+main{flex:1;padding:1rem 2rem;max-width:1400px;width:100%;margin:0 auto}
 .pane{display:none}.pane.visible{display:block}
 
 /* ── SETUP BANNER ── */
@@ -68,14 +68,14 @@ main{flex:1;padding:1rem 1.25rem;max-width:1400px;width:100%;margin:0 auto}
 .b-shift-chip{height:32px;padding:0 18px;border-radius:999px;border:1.5px solid var(--border);background:var(--surface);font-size:13px;font-weight:500;cursor:pointer;color:var(--text-2);display:inline-flex;align-items:center;transition:all .12s;font-family:var(--font);box-shadow:none}
 .b-shift-chip.active{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
 .day-tabs{display:flex;gap:8px;margin-bottom:.75rem;flex-wrap:wrap}
-.day-tab{height:32px;padding:0 18px;border-radius:6px;border:1.5px solid var(--border);background:var(--surface);font-size:13px;font-weight:500;cursor:pointer;color:var(--text-2);transition:all .15s;box-shadow:none;display:inline-flex;align-items:center}
+.day-tab{height:32px;padding:0 18px;border-radius:999px;border:1.5px solid var(--border);background:var(--surface);font-size:13px;font-weight:500;cursor:pointer;color:var(--text-2);transition:all .15s;box-shadow:none;display:inline-flex;align-items:center}
 .day-tab:hover{background:var(--bg);border-color:#C8C4BF}
 .day-tab.active{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
 .day-tab-closed{color:#DC2626;border-color:#FECACA;background:#FEF2F2}
 .day-tab-closed.active{background:#DC2626;border-color:#DC2626;color:#fff}
-/* open/closed toggle */
+/* open/closed toggle — pill container, flat inner borders */
 .day-status-bar{display:flex;align-items:center;gap:10px;margin-bottom:1.25rem}
-.status-toggle{display:inline-flex;border-radius:6px;border:1.5px solid var(--border);overflow:hidden;background:var(--surface);box-shadow:none}
+.status-toggle{display:inline-flex;border-radius:999px;border:1.5px solid var(--border);overflow:hidden;background:var(--surface);box-shadow:none}
 .status-btn{height:32px;padding:0 20px;font-size:13px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--text-2);transition:background .15s,color .15s;font-family:var(--font);display:flex;align-items:center;gap:6px;white-space:nowrap;border-radius:0}
 .status-btn:first-child{border-right:1.5px solid var(--border)}
 .status-btn.active-open{background:var(--accent);color:var(--accent-text)}
@@ -123,7 +123,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .toast{margin-top:12px;padding:9px 14px;border-radius:var(--radius-sm);background:var(--green-light);border:1px solid #86EFAC;color:var(--green);font-size:13px;display:none}
 
 /* ── HORAIRE ── */
-.h-layout{display:grid;grid-template-columns:1fr 240px;gap:14px;align-items:start}
+.h-layout{display:grid;grid-template-columns:1fr 200px;gap:12px;align-items:start}
 .h-scroll{overflow-x:auto}
 .h-grid{display:inline-block;min-width:100%;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow)}
 .h-head-row{display:flex;border-bottom:1px solid var(--border)}
@@ -1340,7 +1340,7 @@ function renderHoraire(){
   const hScroll=document.querySelector('.h-scroll');
   const roleColW=parseInt(getComputedStyle(document.documentElement).getPropertyValue('--role-col')||'165');
   const scrollW=hScroll?hScroll.clientWidth:800;
-  const availW=Math.max(scrollW-roleColW,numSlots*28);
+  const availW=Math.max(scrollW-roleColW,numSlots*22);
   const dynCOL=Math.floor(availW/numSlots);
   const TW=dynCOL*numSlots;
   function toPx(h){return Math.round((h-dSH)*2*dynCOL);}
