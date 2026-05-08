@@ -1968,7 +1968,9 @@ async function openAutoAssign(){
   // Les préférences stockées sont des noms propres (ex: 'Pizzaiolo')
   // Les slots peuvent avoir un suffixe # (ex: 'Pizzaiolo#2') — on compare par display label
   function prefScore(name,role){
-    const p=getPerson(name);if(!p||!p.roles)return 0;
+    const p=getPerson(name);
+    console.log('[prefScore] name=',name,'person=',p,'role=',role);
+    if(!p||!p.roles)return 0;
     const displayRole=roleDisplayLabel(role);
     // Correspondance exacte par label d'affichage
     const idx=p.roles.findIndex(r=>r&&(r===role||r===displayRole||roleDisplayLabel(r)===displayRole));
