@@ -1000,11 +1000,25 @@ async function onVolSelect(){
   // Charger les dispos existantes pour cette semaine
   const wk=wkey(bMon);
   await bootVolData(wk);
-  // Pré-remplir bSel si des dispos existent déjà
+  restoreWeekState(name, wk);
+  buildShiftChips();
+  const showWeek=bShiftsDesired!==0;
+  document.getElementById('b-week-section').style.display=showWeek?'block':'none';
+  if(showWeek)renderB();
+}
+
+// Restaure bSel et bShiftsDesired pour une semaine donnée.
+// Si la semaine a des données → affiche-les.
+// Si la semaine est vierge → hérite du quota de la semaine la plus récente connue, jours vides.
+function restoreWeekState(name, wk) {
+  if(!bSel[wk])bSel[wk]={};
+
   if(avail[wk]&&avail[wk][name]){
+    // ── Semaine avec données existantes ──
     const entry=avail[wk][name];
     const slots=entry.slots||{};
-    if(!bSel[wk])bSel[wk]={};
+    // Reconstruire bSel depuis les slots
+    bSel[wk]={};
     DAYS.forEach(day=>{
       const daySlots=Object.keys(slots).filter(k=>k.startsWith(day.id+'_')).map(k=>parseInt(k.split('_')[1]));
       if(daySlots.length){
@@ -1012,18 +1026,36 @@ async function onVolSelect(){
         bSel[wk][day.id]={from:Math.min(...mins),to:Math.max(...mins)+30};
       }
     });
-    // Restaurer le quota si présent
-    if(entry.quota!==undefined&&bShiftMemory[name]===undefined){
+    // Quota depuis l'entrée
+    if(entry.quota!==undefined){
       bShiftsDesired=entry.quota;
-    } else if(bShiftMemory[name]===undefined&&Object.keys(bSel[wk]).length){
+    } else if(Object.keys(bSel[wk]).length){
       bShiftsDesired=1;
     }
+  } else {
+    // ── Nouvelle semaine vierge → hériter du quota de la semaine la plus récente ──
+    bSel[wk]={};
+    const inherited=findLastQuota(name, wk);
+    bShiftsDesired=inherited!==null?inherited:0;
   }
+}
 
-  buildShiftChips();
-  const showWeek=bShiftsDesired!==0;
-  document.getElementById('b-week-section').style.display=showWeek?'block':'none';
-  if(showWeek)renderB();
+// Cherche le quota le plus récent soumis par ce bénévole (toutes semaines antérieures)
+function findLastQuota(name, currentWk) {
+  const wkData=avail[name]||{};
+  // Parcourir avail global pour trouver les entrées de ce bénévole
+  let bestWk=null, bestQuota=null;
+  Object.keys(avail).forEach(wk=>{
+    if(wk>=currentWk)return; // seulement les semaines passées
+    if(avail[wk]&&avail[wk][name]!==undefined){
+      if(bestWk===null||wk>bestWk){
+        bestWk=wk;
+        const q=avail[wk][name].quota;
+        bestQuota=q!==undefined?q:null;
+      }
+    }
+  });
+  return bestQuota;
 }
 
 function resetVolSelect(){
@@ -1063,8 +1095,17 @@ async function onVolEmailBlur(){
 async function bShift(d){
   bMon=addWeeks(bMon,d);
   const wk=wkey(bMon);
+  const name=document.getElementById('vol-select').value;
   await bootVolData(wk);
-  renderB();
+  if(name){
+    restoreWeekState(name, wk);
+    buildShiftChips();
+    const showWeek=bShiftsDesired!==0;
+    document.getElementById('b-week-section').style.display=showWeek?'block':'none';
+    if(showWeek)renderB();
+  } else {
+    renderB();
+  }
 }
 
 function buildTimeSelect(day,type,savedVal,minMins=null){
