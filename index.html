@@ -1637,7 +1637,7 @@ function renderDir(){
       <td><strong>${p.name}</strong></td>
       <td><a href="mailto:${p.email}" style="color:var(--accent);font-size:12px">${p.email||'—'}</a></td>
       <td><span class="type-badge ${p.type}">${p.type==='vol'?'Bénévole':'Employé'}</span></td>
-      <td><div class="role-tags">${p.roles.filter(Boolean).map(r=>`<span class="role-tag">${r}</span>`).join('')||'<span style="color:var(--text-3);font-size:12px">—</span>'}</div></td>
+      <td><div class="role-tags">${p.roles.filter(Boolean).map(r=>`<span class="role-tag">${roleLabel(r)}</span>`).join('')||'<span style="color:var(--text-3);font-size:12px">—</span>'}</div></td>
       <td style="white-space:nowrap;text-align:right">
         <button class="btn btn-sm btn-icon" title="Modifier" onclick="openPersonModal(${p.id})">✏</button>
       </td>`;
@@ -1648,18 +1648,19 @@ function renderDir(){
 
 function fillRoleSelects(vals){
   const ids=['pm-r1','pm-r2','pm-r3'];
-  const valLabels=vals?vals.map(v=>v?roleToLabel(v):''):['','',''];
   ids.forEach((id,i)=>{
     const sel=document.getElementById(id);
-    const myLabel=valLabels[i];
-    const otherLabels=ids.filter((_,j)=>j!==i).map((_,k)=>valLabels[[0,1,2].filter(x=>x!==i)[k]]).filter(Boolean);
+    const myVal=vals?vals[i]||'':'';
+    const otherVals=ids.filter((_,j)=>j!==i).map((_,k)=>vals?vals[[0,1,2].filter(x=>x!==i)[k]]||'':'').filter(Boolean);
     while(sel.options.length>1)sel.remove(1);
-    DISPLAY_ROLES.forEach(label=>{
-      const o=document.createElement('option');o.value=labelToRole(label);o.textContent=label;
-      if(otherLabels.includes(label)){o.disabled=true;o.style.color='#A8A29E';}
+    ALL_ROLES.forEach(role=>{
+      const o=document.createElement('option');
+      o.value=role;
+      o.textContent=role; // afficher le nom complet avec numéro si applicable
+      if(otherVals.includes(role)){o.disabled=true;o.style.color='#A8A29E';}
       sel.appendChild(o);
     });
-    sel.value=vals?vals[i]:'';
+    sel.value=myVal;
   });
 }
 function initRoleSelectListeners(){
@@ -1938,11 +1939,15 @@ async function openAutoAssign(){
     return(ov.e-ov.s)/shiftDur;
   }
 
-  // ── Règle 3 : score de préférence de rôle (par label pour gérer les doublons) ──
+  // ── Règle 3 : score de préférence de rôle ──
+  // Correspondance exacte prioritaire, puis par label (pour gérer Pizzaiolo (1)/(2))
   function prefScore(name,role){
     const p=getPerson(name);if(!p||!p.roles)return 0;
-    const label=roleToLabel(role);
-    const idx=p.roles.findIndex(r=>r&&(r===role||roleToLabel(r)===label));
+    const roleLabel_=roleToLabel(role);
+    // 1. Chercher une correspondance exacte d'abord
+    let idx=p.roles.findIndex(r=>r===role);
+    // 2. Si pas de correspondance exacte, chercher par label
+    if(idx===-1) idx=p.roles.findIndex(r=>r&&roleToLabel(r)===roleLabel_);
     if(idx===0)return 3;
     if(idx===1)return 2;
     if(idx===2)return 1;
