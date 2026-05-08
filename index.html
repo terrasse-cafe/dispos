@@ -917,7 +917,16 @@ function switchMain(id,btn){
       document.getElementById('setup-banner').style.display='block';
       document.getElementById('setup-sql').textContent=SETUP_SQL;
     }
-    renderO();
+    // Charger les données org si pas encore chargées
+    if(sb&&!switchMain._orgLoaded){
+      switchMain._orgLoaded=true;
+      const wk=wkey(oMon);
+      Promise.all([loadAvail(wk),loadAssignments(wk)]).then(()=>{
+        subscribeRealtime(wk);renderO();
+      });
+    } else {
+      renderO();
+    }
   }
 }
 function switchOrg(id,btn){
@@ -2178,11 +2187,17 @@ function exportPdfTable(){
    INIT
 ══════════════════════════════════════════════ */
 (async function init(){
-  // Tenter de charger la config Supabase sauvegardée
   const cfg=getSavedConfig();
   if(cfg.url&&cfg.key){
     if(initSupabase(cfg.url,cfg.key)){
-      await bootOrgData();
+      // Charger le répertoire pour tous (bénévoles et organisatrice)
+      await loadPeople();
+      if(orgUnlocked){
+        const wk=wkey(oMon);
+        await loadAvail(wk);
+        await loadAssignments(wk);
+        subscribeRealtime(wk);
+      }
     }
   } else {
     setConnDot('');
@@ -2202,6 +2217,7 @@ function exportPdfTable(){
     const orgTab=document.getElementById('tab-org');
     if(orgTab)orgTab.style.display='';
     const orgBtn=document.querySelector('.main-tab:last-child');
+    switchMain._orgLoaded=true; // déjà chargé dans init
     switchMain('organisatrice',orgBtn);
     if(!sb){
       document.getElementById('setup-banner').style.display='block';
