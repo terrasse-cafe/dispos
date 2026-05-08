@@ -1346,7 +1346,9 @@ function renderHoraire(){
 
       const assigned=getAssign(wk,shift.id,role);
       const noteVal=getAssignNote(wk,shift.id,role);
-      if(assigned&&noteVal)row.classList.add('has-note');
+      const rowH=assigned&&noteVal?62:40;
+      row.style.minHeight=rowH+'px';
+      tl.style.height=rowH+'px';
       if(assigned){
         if(!isOpt)totalFilled++;
         const emp=isEmp(assigned);
@@ -1364,6 +1366,11 @@ function renderHoraire(){
         const cL=toPx(aSH)-spx,cW=toPx(aEH)-toPx(aSH);
         const chip=document.createElement('div');chip.className='avail-chip';
         chip.style.left=cL+'px';chip.style.width=cW+'px';
+        // When note: chip fills the row height via top/bottom, and shows note inside
+        if(noteVal){
+          chip.style.top='3px';chip.style.bottom='3px';
+          chip.style.paddingTop='4px';chip.style.paddingBottom='4px';
+        }
         chip.style.background=col.bg;chip.style.border=`${emp?'2.5px':'1.5px'} solid ${col.fg}${emp?'':'80'}`;
         const inner=document.createElement('div');inner.className='avail-chip-inner';
         if(emp){const b=document.createElement('span');b.className='emp-badge';b.style.color=col.fg;b.textContent='EMP';inner.appendChild(b);}
@@ -1387,7 +1394,7 @@ function renderHoraire(){
         // Note on second line inside the chip
         if(noteVal){
           const noteLine=document.createElement('div');
-          noteLine.style.cssText=`font-size:10px;font-style:italic;color:${col.fg};opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--mono);line-height:1.3;padding-bottom:1px`;
+          noteLine.style.cssText=`font-size:10px;font-style:italic;color:${col.fg};opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--mono);line-height:1.4;margin-top:2px`;
           noteLine.textContent=noteVal;chip.appendChild(noteLine);
         }
         if(!past)chip.addEventListener('click',ev=>{if(ev.target===x)return;openTP(ev,assigned,shift.id,role,shift,wk);});
