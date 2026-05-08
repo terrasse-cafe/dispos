@@ -452,7 +452,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
           <div style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em">Courriel</div>
           <div style="font-size:12px;color:var(--text-2)" id="fin-email-to"></div>
           <textarea id="fin-email-body" rows="10" style="flex:1;width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:11px;font-family:var(--mono);line-height:1.7;resize:vertical;outline:none;background:var(--bg);color:var(--text);transition:border-color .15s" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"></textarea>
-          <button class="btn btn-green btn-sm" onclick="sendOutlook()" style="width:100%;justify-content:center;display:flex;gap:6px">✉ Préparer l'envoi du courriel</button>
+          <button class="btn btn-green btn-sm" onclick="sendOutlook()" style="width:100%;justify-content:center;display:flex;gap:6px">✉ Télécharger le PDF et ouvrir Gmail</button>
+          <div style="font-size:10px;color:var(--text-3);text-align:center;margin-top:6px">Le PDF sera téléchargé — glissez-le dans Gmail pour l'attacher.</div>
         </div>
       </div>
     </div>
@@ -1849,15 +1850,17 @@ L'équipe organisatrice`;
 }
 
 function sendOutlook(){
+  // 1. Télécharger le PDF automatiquement
+  exportPdfTable();
+  // 2. Ouvrir Gmail avec sujet et corps pré-remplis
   const wk=wkey(oMon);
   const byPerson=buildScheduleSummary(wk);
   const names=Object.keys(byPerson);
   const allEmails=[...new Set(names.map(n=>{const p=getPerson(n);return p&&p.email?p.email:null;}).filter(Boolean))];
   const subject=encodeURIComponent(`Horaire bénévoles — ${wlabel(oMon)}`);
   const body=encodeURIComponent(document.getElementById('fin-email-body').value);
-  // Ouvrir Gmail avec sujet et corps pré-remplis (bcc non supporté par Gmail via URL)
   const gmailUrl=`https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}&bcc=${encodeURIComponent(allEmails.join(','))}`;
-  window.open(gmailUrl,'_blank');
+  setTimeout(()=>window.open(gmailUrl,'_blank'),500);
 }
 
 /* ══════════════════════════════════════════════
