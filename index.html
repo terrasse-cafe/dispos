@@ -66,14 +66,14 @@ main{flex:1;padding:1rem 1.25rem;max-width:1400px;width:100%;margin:0 auto}
 .wlabel{font-size:13px;color:var(--text-2);min-width:210px;text-align:center;font-weight:500}
 .pill{font-size:12px;padding:3px 10px;border:1px solid var(--border);border-radius:20px;color:var(--text-2);background:var(--surface)}
 .day-tabs{display:flex;gap:8px;margin-bottom:.75rem;flex-wrap:wrap}
-.day-tab{padding:8px 20px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);font-size:14px;font-weight:500;cursor:pointer;color:var(--text-2);transition:all .15s;box-shadow:var(--shadow)}
+.day-tab{padding:8px 20px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);font-size:14px;font-weight:500;cursor:pointer;color:var(--text-2);transition:all .15s;box-shadow:none}
 .day-tab:hover{background:var(--bg);border-color:#C8C4BF}
-.day-tab.active{background:var(--accent);color:var(--accent-text);border-color:var(--accent);box-shadow:0 2px 8px rgba(166,197,189,.4)}
+.day-tab.active{background:var(--accent);color:var(--accent-text);border-color:var(--accent);box-shadow:none}
 .day-tab-closed{color:#DC2626;border-color:#FECACA;background:#FEF2F2}
 .day-tab-closed.active{background:#DC2626;border-color:#DC2626;color:#fff}
 /* open/closed toggle */
 .day-status-bar{display:flex;align-items:center;gap:10px;margin-bottom:1.25rem}
-.status-toggle{display:inline-flex;border-radius:12px;border:1.5px solid var(--border);overflow:hidden;background:var(--surface);box-shadow:var(--shadow)}
+.status-toggle{display:inline-flex;border-radius:12px;border:1.5px solid var(--border);overflow:hidden;background:var(--surface);box-shadow:none}
 .status-btn{padding:9px 22px;font-size:14px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--text-2);transition:background .15s,color .15s;font-family:var(--font);display:flex;align-items:center;gap:7px;white-space:nowrap}
 .status-btn:first-child{border-right:1.5px solid var(--border)}
 .status-btn.active-open{background:var(--accent);color:var(--accent-text)}
@@ -87,14 +87,15 @@ main{flex:1;padding:1rem 1.25rem;max-width:1400px;width:100%;margin:0 auto}
 input[type=text],input[type=email],select{padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;background:var(--surface);color:var(--text);outline:none;transition:border-color .15s}
 input[type=text]:focus,input[type=email]:focus,select:focus{border-color:var(--accent-dark)}
 select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%2357534E' d='M5 6L0 0h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
-.btn{padding:7px 18px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;background:var(--surface);color:var(--text);transition:background .12s;line-height:1}
+.btn{height:32px;padding:0 16px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;background:var(--surface);color:var(--text);transition:background .12s,color .12s;line-height:1;display:inline-flex;align-items:center;justify-content:center;gap:5px;box-shadow:none;white-space:nowrap}
 .btn:hover{background:var(--bg)}
 .btn-primary{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}.btn-primary:hover{background:var(--accent-dark);color:#fff}
+.btn-secondary{background:var(--brand-secondary);color:#fff;border-color:var(--brand-secondary)}.btn-secondary:hover{background:#E89A3C;border-color:#E89A3C}
 .btn-green{background:var(--green);color:#fff;border-color:var(--green)}.btn-green:hover{background:#15803d}
 .btn-blue{background:var(--blue);color:#fff;border-color:var(--blue)}.btn-blue:hover{background:#1e40af}
-.btn-danger{color:#DC2626;border-color:#FECACA}.btn-danger:hover{background:#FEF2F2}
-.btn-sm{padding:5px 12px;font-size:12px}
-.btn-icon{width:28px;height:28px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:13px}
+.btn-danger{color:#DC2626;border-color:#FECACA;background:transparent}.btn-danger:hover{background:#FEF2F2}
+.btn-sm{height:28px;padding:0 12px;font-size:12px}
+.btn-icon{width:28px;height:28px;padding:0;font-size:13px}
 
 /* ── BÉNÉVOLE CARDS ── */
 .b-days-wrap{display:flex;flex-direction:column;gap:10px;max-width:680px}
@@ -282,7 +283,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         </div>
       </div>
       <div class="b-actions">
-        <button class="btn btn-primary" onclick="submitAvail()">Envoyer mes disponibilités</button>
+        <button class="btn btn-secondary" onclick="submitAvail()">Envoyer mes disponibilités</button>
         <button class="btn btn-sm" id="b-clear-btn" onclick="clearBSel()" style="display:none">Effacer tout</button>
         <span id="b-sync-badge" class="sync-badge offline" style="display:none"></span>
       </div>
@@ -335,7 +336,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       </div>
       <span class="pill" id="o-stat">—</span>
       <button class="btn btn-sm" id="auto-btn" onclick="openAutoAssign()" style="display:flex;align-items:center;gap:5px">⚡ Assignation auto</button>
-      <button class="btn btn-sm" id="finaliser-btn" onclick="openFinaliser()" style="display:flex;align-items:center;gap:5px;background:var(--blue);color:#fff;border-color:var(--blue)">✓ Finaliser l'horaire</button>
+      <button class="btn btn-sm btn-secondary" id="finaliser-btn" onclick="openFinaliser()" style="display:flex;align-items:center;gap:5px">✓ Finaliser l'horaire</button>
       <span id="o-sync-badge" class="sync-badge offline" style="display:none"></span>
     </div>
     <div class="day-tabs" id="o-daytabs"></div>
