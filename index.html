@@ -1993,6 +1993,10 @@ async function openAutoAssign(){
     return coverRatio(a,sh)-coverRatio(b,sh);
   }
 
+  console.log('[Auto] dayId=', dayId, 'wk=', wk);
+  console.log('[Auto] availVols=', availVols);
+  console.log('[Auto] rolesQueue=', rolesQueue.map(r=>r.role));
+
   const toSave=[];
 
   const sorted=[...rolesQueue].sort((a,b)=>a.isOpt===b.isOpt?0:a.isOpt?1:-1);
@@ -2001,24 +2005,28 @@ async function openAutoAssign(){
     if(getAssign(wk,sh.id,role))return;
 
     const candidates=availVols.filter(n=>
-      // Ne pas assigner le même bénévole deux fois au même shift
       !alreadyToday(n,sh.id)&&
       volCoversShiftFor(wk,n,sh,dayId)&&
       !quotaReached(n)
     );
+    console.log('[Auto] role=', role, '| candidates=', candidates, '| alreadyToday check:', availVols.map(n=>n+':'+alreadyToday(n,sh.id)));
     if(!candidates.length)return;
 
     const best=candidates.reduce((b,c)=>compare(c,b,role,sh)>0?c:b);
+    const ps=prefScore(best,role);
+    console.log('[Auto] best=', best, '| prefScore=', ps);
 
-    // Règle 5 : n'assigner automatiquement que si préférence explicite
-    if(prefScore(best,role)===0)return;
+    if(ps===0){console.log('[Auto] skipped - no pref');return;}
 
-    const ov=overlapFor(wk,best,sh,dayId);if(!ov)return;
+    const ov=overlapFor(wk,best,sh,dayId);
+    console.log('[Auto] overlap=', ov);
+    if(!ov)return;
     setAssign(wk,sh.id,role,best);
     setAssignTimes(wk,sh.id,role,ov.s,ov.e);
     setAssignNote(wk,sh.id,role,null);
     markAssigned(best,sh.id);
     toSave.push({wk,shiftId:sh.id,role,name:best,s:ov.s,e:ov.e});
+    console.log('[Auto] ✓ assigned', best, '->', role);
   });
 
   for(const a of toSave)await saveAssignment(a.wk,a.shiftId,a.role,a.name,a.s,a.e);
