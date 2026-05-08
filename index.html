@@ -436,10 +436,10 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 <!-- FINALISER MODAL -->
 <div class="overlay" id="finaliser-overlay" onclick="if(event.target===this)closeFinaliser()">
   <div class="modal-box" style="width:900px;max-width:97vw;padding:0;overflow:hidden;display:flex;flex-direction:column;max-height:92vh">
-    <div style="padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0">
+    <div style="padding:1rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0">
       <div class="modal-title" style="margin:0">Finaliser l'horaire</div>
       <span id="fin-week-lbl" style="font-size:13px;color:var(--text-2)"></span>
-      <button class="btn btn-sm" onclick="closeFinaliser()" style="margin-left:auto">✕ Fermer</button>
+      <button class="btn btn-icon" onclick="closeFinaliser()" style="margin-left:auto;font-size:16px;color:var(--text-3)">✕</button>
     </div>
     <div style="display:grid;grid-template-columns:1fr 340px;flex:1;min-height:0;overflow:hidden">
       <!-- LEFT: PDF preview -->
@@ -449,32 +449,27 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       </div>
       <!-- RIGHT: Actions -->
       <div style="display:flex;flex-direction:column;overflow-y:auto">
-        <!-- Confirm toggle -->
-        <div style="padding:14px 16px;border-bottom:1px solid var(--border)">
-          <div style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Statut</div>
-          <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
-            <div class="b-toggle" style="flex-shrink:0">
-              <input type="checkbox" id="fin-confirm-chk" onchange="toggleConfirm()">
-              <span class="b-toggle-track"></span>
-              <span class="b-toggle-thumb"></span>
-            </div>
-            <div>
-              <div style="font-size:13px;font-weight:500" id="fin-confirm-lbl">Marquer comme officiel</div>
-              <div style="font-size:11px;color:var(--text-3);margin-top:2px">Les bénévoles voient leurs dispos en lecture seule</div>
-            </div>
-          </label>
-        </div>
         <!-- PDF download -->
         <div style="padding:14px 16px;border-bottom:1px solid var(--border)">
           <div style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">PDF</div>
           <button class="btn btn-primary btn-sm" onclick="exportPdfTable()" style="width:100%;justify-content:center;display:flex;gap:6px">⬇ Télécharger le PDF</button>
         </div>
         <!-- Email -->
-        <div style="padding:14px 16px;flex:1">
-          <div style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Courriel Outlook</div>
-          <div style="font-size:12px;color:var(--text-2);margin-bottom:8px" id="fin-email-to"></div>
-          <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;font-size:11px;font-family:var(--mono);line-height:1.7;white-space:pre-wrap;max-height:240px;overflow-y:auto;margin-bottom:10px" id="fin-email-body"></div>
+        <div style="padding:14px 16px;flex:1;display:flex;flex-direction:column;gap:10px">
+          <div style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em">Courriel</div>
+          <div style="font-size:12px;color:var(--text-2)" id="fin-email-to"></div>
+          <textarea id="fin-email-body" rows="10" style="flex:1;width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:11px;font-family:var(--mono);line-height:1.7;resize:vertical;outline:none;background:var(--bg);color:var(--text);transition:border-color .15s" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"></textarea>
           <button class="btn btn-green btn-sm" onclick="sendOutlook()" style="width:100%;justify-content:center;display:flex;gap:6px">✉ Ouvrir dans Outlook ↗</button>
+        </div>
+        <!-- Confirm — discret en bas -->
+        <div style="padding:12px 16px;border-top:1px solid var(--border);background:var(--bg)">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="fin-confirm-chk" onchange="toggleConfirm()" style="width:14px;height:14px;accent-color:var(--green);cursor:pointer">
+            <div>
+              <span style="font-size:12px;font-weight:500;color:var(--text-2)" id="fin-confirm-lbl">Marquer comme officiel</span>
+              <span style="font-size:11px;color:var(--text-3);margin-left:6px">— bloque les modifications des bénévoles</span>
+            </div>
+          </label>
         </div>
       </div>
     </div>
@@ -1862,24 +1857,21 @@ function renderFinEmail(wk){
   document.getElementById('fin-email-to').textContent=allEmails.length
     ?`BCC : ${allEmails.join(', ')}`
     :'Aucun courriel enregistré dans le répertoire';
-  if(!names.length){document.getElementById('fin-email-body').textContent='Aucun bénévole assigné.';return;}
-  // Build collective body
+  // Message générique — l'horaire est en pièce jointe PDF
+  const wkClosed=closedDays[wk]||new Set();
+  const closedList=DAYS.filter(d=>wkClosed.has(d.id)).map(d=>d.label);
   let body=`Bonjour à tous,
 
-Voici l'horaire de la semaine du ${wlabel(oMon)} :
-`;
-  // Closed days
-  const wkClosed=closedDays[wk]||new Set();
-  DAYS.forEach(day=>{if(wkClosed.has(day.id))body+=`\n  ☔ ${day.label} — Fermé\n`;});
-  body+='\n';
-  names.forEach(name=>{
-    const lines=byPerson[name].map(a=>`    • ${a.day} — ${a.role}  (${mStr(a.sm)} – ${mStr(a.em)})${a.note?' — '+a.note:''}`).join('\n');
-    body+=`${name} :\n${lines}\n\n`;
-  });
-  body+=`Merci pour votre implication !
+Vous trouverez en pièce jointe l'horaire des bénévoles pour la semaine du ${wlabel(oMon)}.`;
+  if(closedList.length){
+    body+=`\n\nNote : le café sera fermé le${closedList.length>1?'s':''} ${closedList.join(' et ')}.`;
+  }
+  body+=`
+
+Merci pour votre implication !
 Bonne semaine,
 L'équipe organisatrice`;
-  document.getElementById('fin-email-body').textContent=body;
+  document.getElementById('fin-email-body').value=body;
 }
 
 async function toggleConfirm(){
@@ -1897,7 +1889,7 @@ function sendOutlook(){
   const names=Object.keys(byPerson);
   const allEmails=[...new Set(names.map(n=>{const p=getPerson(n);return p&&p.email?p.email:null;}).filter(Boolean))];
   const subject=encodeURIComponent(`Horaire bénévoles — ${wlabel(oMon)}`);
-  const body=encodeURIComponent(document.getElementById('fin-email-body').textContent);
+  const body=encodeURIComponent(document.getElementById('fin-email-body').value);
   const bcc=encodeURIComponent(allEmails.join(';'));
   window.open(`mailto:?bcc=${bcc}&subject=${subject}&body=${body}`,'_blank');
 }
