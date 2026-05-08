@@ -1873,188 +1873,133 @@ function volQuotaReached(wk, name, tempShiftCounts) {
 async function openAutoAssign(){
   if(isPastDay()){alert('Journée passée — impossible de modifier l\'horaire.');return;}
   const wk=wkey(oMon);const dayId=curDay;
-
-  // Recharger les assignations fraîches depuis Supabase pour que le compte
-  // hebdomadaire soit toujours exact
   if(sb) await loadAssignments(wk);
 
   const wkData=avail[wk]||{};
   const shifts=SHIFTS[dayId]||[];
 
-  // tempShiftCounts : nombre de shifts distincts assignés cette semaine (toutes journées)
-  const tempShiftCounts = {};
-  DAYS.forEach(day => {
-    (SHIFTS[day.id]||[]).forEach(sh => {
-      const allR = [...sh.roles,...(sh.optional||[])];
-      allR.forEach(role => {
-        const ex = getAssign(wk,sh.id,role);
-        if (ex && !isEmp(ex)) {
-          const key = ex + '|' + sh.id;
-          if (!tempShiftCounts['__seen_' + key]) {
-            tempShiftCounts['__seen_' + key] = true;
-            tempShiftCounts[ex] = (tempShiftCounts[ex]||0) + 1;
-          }
+  // ── Comptage shifts déjà assignés cette semaine (toutes journées) ──
+  const weekShiftCounts={};
+  const weekShiftSeen=new Set();
+  DAYS.forEach(day=>{
+    (SHIFTS[day.id]||[]).forEach(sh=>{
+      [...sh.roles,...(sh.optional||[])].forEach(role=>{
+        const ex=getAssign(wk,sh.id,role);
+        if(ex&&!isEmp(ex)){
+          const key=ex+'|'+sh.id;
+          if(!weekShiftSeen.has(key)){weekShiftSeen.add(key);weekShiftCounts[ex]=(weekShiftCounts[ex]||0)+1;}
         }
       });
     });
   });
 
-  // tempAssigned : shifts du jour où le bénévole est déjà placé
-  const tempDayShifts = {}; // name -> Set of shiftId pour la journée courante
-  shifts.forEach(sh => {
-    [...sh.roles,...(sh.optional||[])].forEach(role => {
-      const ex = getAssign(wk,sh.id,role);
-      if (ex) {
-        if (!tempDayShifts[ex]) tempDayShifts[ex] = new Set();
-        tempDayShifts[ex].add(sh.id);
-      }
+  // Shifts du jour déjà assignés
+  const dayShifts={}; // name -> Set<shiftId>
+  shifts.forEach(sh=>{
+    [...sh.roles,...(sh.optional||[])].forEach(role=>{
+      const ex=getAssign(wk,sh.id,role);
+      if(ex){if(!dayShifts[ex])dayShifts[ex]=new Set();dayShifts[ex].add(sh.id);}
     });
   });
 
-  function alreadyInShiftToday(name, shiftId) {
-    return !!(tempDayShifts[name]&&tempDayShifts[name].has(shiftId));
+  function quotaReached(name){
+    const q=volQuota(wk,name);
+    return q!==99&&(weekShiftCounts[name]||0)>=q;
   }
-  function markAssignedToday(name, shiftId) {
-    if (!tempDayShifts[name]) tempDayShifts[name] = new Set();
-    tempDayShifts[name].add(shiftId);
-    // Incrémenter le compte hebdomadaire seulement si ce shift n'était pas déjà compté
-    const key = name + '|' + shiftId;
-    if (!tempShiftCounts['__seen_' + key]) {
-      tempShiftCounts['__seen_' + key] = true;
-      tempShiftCounts[name] = (tempShiftCounts[name]||0) + 1;
-    }
+  function alreadyToday(name,shiftId){return !!(dayShifts[name]&&dayShifts[name].has(shiftId));}
+  function markAssigned(name,shiftId){
+    if(!dayShifts[name])dayShifts[name]=new Set();
+    dayShifts[name].add(shiftId);
+    const key=name+'|'+shiftId;
+    if(!weekShiftSeen.has(key)){weekShiftSeen.add(key);weekShiftCounts[name]=(weekShiftCounts[name]||0)+1;}
   }
 
-  // Bénévoles disponibles ce jour
-  const availVols = Object.keys(wkData).filter(name =>
-    !isEmp(name) &&
-    Object.keys((wkData[name].slots)||{}).some(k => k.startsWith(dayId+'_'))
+  // Bénévoles disponibles aujourd'hui, quota non atteint
+  const availVols=Object.keys(wkData).filter(n=>
+    !isEmp(n)&&
+    !quotaReached(n)&&
+    Object.keys((wkData[n].slots)||{}).some(k=>k.startsWith(dayId+'_'))
   );
 
-  // Score de correspondance rôle — SANS tenir compte du fit horaire ici
-  function roleScore(name, role) {
-    const p = getPerson(name); if (!p) return 0;
-    // Chercher le rôle dans les préférences (correspondance exacte ou par label)
-    const roleL = roleToLabel(role);
-    const idx = p.roles.findIndex(r => r === role || roleToLabel(r) === roleL);
-    if (idx === 0) return 30;
-    if (idx === 1) return 20;
-    if (idx === 2) return 10;
-    return 2; // pas de préférence explicite
-  }
-
-  // Nombre de rôles définis (versatilité)
-  function versatility(name) {
-    const p = getPerson(name); if (!p) return 0;
-    return p.roles.filter(Boolean).length;
-  }
-
-  // Fit horaire : minutes de recouvrement avec le shift
-  function fitMins(name, shift) {
-    const ov = overlapFor(wk, name, shift, dayId);
-    return ov ? (ov.e - ov.s) : 0;
-  }
-
-  // Comparateur principal entre deux candidats pour un rôle donné
-  // Retourne >0 si a est meilleur que b
-  function compareCandidates(a, b, role, shift, respectQuota) {
-    const aAtQuota = volQuotaReached(wk, a, tempShiftCounts);
-    const bAtQuota = volQuotaReached(wk, b, tempShiftCounts);
-
-    if (respectQuota) {
-      // Priorité 1 : quota non atteint > quota atteint
-      if (!aAtQuota && bAtQuota) return 1;
-      if (aAtQuota && !bAtQuota) return -1;
-    }
-
-    // Priorité 2 : score de correspondance au rôle
-    const aRS = roleScore(a, role);
-    const bRS = roleScore(b, role);
-    if (aRS !== bRS) return aRS - bRS;
-
-    // Tie-breaker 2a : à score égal, le moins versatile gagne
-    // (moins de rôles définis = plus spécialisé = on le place là où il est à l'aise)
-    const aV = versatility(a);
-    const bV = versatility(b);
-    if (aV !== bV) return bV - aV; // moins versatile = valeur plus haute = gagne
-
-    // Priorité 3 : meilleur fit horaire
-    return fitMins(a, shift) - fitMins(b, shift);
-  }
-
-  function bestCandidate(candidates, role, shift, respectQuota) {
-    if (!candidates.length) return null;
-    return candidates.reduce((best, cur) =>
-      compareCandidates(cur, best, role, shift, respectQuota) > 0 ? cur : best
-    );
-  }
-
-  // Collecter les rôles à remplir (requis d'abord, optionnels ensuite)
-  // Trier par nombre de candidats disponibles croissant (les plus difficiles en premier)
-  const rolesQueue = [];
-  shifts.forEach(shift => {
-    const requiredRoles = shift.roles.filter(role => !getAssign(wk, shift.id, role));
-    const optionalRoles = (shift.optional||[]).filter(role => !getAssign(wk, shift.id, role));
-    [...requiredRoles, ...optionalRoles].forEach(role => {
-      const isOpt = (shift.optional||[]).includes(role);
-      rolesQueue.push({shift, role, isOpt});
+  // Rôles vides à remplir
+  const rolesQueue=[];
+  shifts.forEach(sh=>{
+    [...sh.roles,...(sh.optional||[])].forEach(role=>{
+      if(!getAssign(wk,sh.id,role))
+        rolesQueue.push({sh,role,isOpt:(sh.optional||[]).includes(role)});
     });
   });
 
-  // Trier : requis avant optionnel, puis par nombre de candidats ELIGIBLES
-  // (quota non atteint + disponible) croissant.
-  // Corrige le bug Bea/Papa : Barista n'a qu'1 candidate eligible (Bea),
-  // donc il est traite avant Caissier qui en a 2.
-  rolesQueue.sort((a, b) => {
-    if (a.isOpt !== b.isOpt) return a.isOpt ? 1 : -1;
-    const getEligible = item => availVols.filter(name =>
-      !alreadyInShiftToday(name, item.shift.id) &&
-      volCoversShiftFor(wk, name, item.shift, dayId) &&
-      !volQuotaReached(wk, name, tempShiftCounts)
-    ).length;
-    return getEligible(a) - getEligible(b);
-  });
+  // ── Règle 2 : couverture horaire complète du shift ──
+  // coverRatio = minutes de chevauchement / durée du shift (1.0 = couverture complète)
+  function coverRatio(name,sh){
+    const ov=overlapFor(wk,name,sh,dayId);if(!ov)return 0;
+    const shiftDur=sh.toH*60-sh.fromH*60;
+    return(ov.e-ov.s)/shiftDur;
+  }
 
-  const toSave = [];
+  // ── Règle 3 : score de préférence de rôle (par label pour gérer les doublons) ──
+  function prefScore(name,role){
+    const p=getPerson(name);if(!p||!p.roles)return 0;
+    const label=roleToLabel(role);
+    const idx=p.roles.findIndex(r=>r&&(r===role||roleToLabel(r)===label));
+    if(idx===0)return 3;
+    if(idx===1)return 2;
+    if(idx===2)return 1;
+    return 0;
+  }
 
-  // Passe 1 : assigner en respectant le quota
-  rolesQueue.forEach(({shift, role}) => {
-    if (getAssign(wk, shift.id, role)) return; // déjà assigné entre-temps
-    const candidates = availVols.filter(name =>
-      !alreadyInShiftToday(name, shift.id) &&
-      volCoversShiftFor(wk, name, shift, dayId) &&
-      !volQuotaReached(wk, name, tempShiftCounts) // quota respecté
+  // ── Règle 4 : versatilité (moins = plus spécialisé = priorité si égalité) ──
+  function versatility(name){const p=getPerson(name);return p?p.roles.filter(Boolean).length:0;}
+
+  // ── Comparateur : retourne >0 si a est meilleur candidat que b pour ce rôle ──
+  function compare(a,b,role,sh){
+    // R3 : préférence de rôle
+    const pa=prefScore(a,role),pb=prefScore(b,role);
+    if(pa!==pb)return pa-pb;
+    // R4 : moins versatile gagne (à préférence égale)
+    const va=versatility(a),vb=versatility(b);
+    if(va!==vb)return vb-va;
+    // R2 : meilleure couverture horaire
+    return coverRatio(a,sh)-coverRatio(b,sh);
+  }
+
+  const toSave=[];
+
+  // ── PASSE UNIQUE : on itère jusqu'à stabilité ──
+  // Pour chaque rôle vide (requis d'abord), on cherche le meilleur candidat
+  // SEULEMENT s'il a une préférence explicite pour ce rôle (règle 5 : sinon on ne force pas)
+  // Requis avant optionnels
+  const sorted=[...rolesQueue].sort((a,b)=>a.isOpt===b.isOpt?0:a.isOpt?1:-1);
+
+  sorted.forEach(({sh,role,isOpt})=>{
+    if(getAssign(wk,sh.id,role))return;
+    const candidates=availVols.filter(n=>
+      !alreadyToday(n,sh.id)&&
+      volCoversShiftFor(wk,n,sh,dayId)&&
+      !quotaReached(n)
     );
-    const best = bestCandidate(candidates, role, shift, true);
-    if (!best) return; // laissé pour la passe 2 ou à l'organisatrice
-    const ov = overlapFor(wk, best, shift, dayId); if (!ov) return;
-    setAssign(wk, shift.id, role, best);
-    setAssignTimes(wk, shift.id, role, ov.s, ov.e);
-    markAssignedToday(best, shift.id);
-    toSave.push({wk, shiftId:shift.id, role, name:best, s:ov.s, e:ov.e});
+    if(!candidates.length)return;
+
+    // Trouver le meilleur selon le comparateur
+    const best=candidates.reduce((b,c)=>compare(c,b,role,sh)>0?c:b);
+
+    // Règle 5 : n'assigner que si le meilleur a une préférence explicite
+    // OU si c'est un rôle requis et qu'il est le seul candidat possible
+    const hasPref=prefScore(best,role)>0;
+    const isSoleCandidate=candidates.length===1;
+
+    if(!hasPref&&!isSoleCandidate)return; // laisser l'organisatrice décider
+
+    const ov=overlapFor(wk,best,sh,dayId);if(!ov)return;
+    setAssign(wk,sh.id,role,best);
+    setAssignTimes(wk,sh.id,role,ov.s,ov.e);
+    setAssignNote(wk,sh.id,role,null);
+    markAssigned(best,sh.id);
+    toSave.push({wk,shiftId:sh.id,role,name:best,s:ov.s,e:ov.e});
   });
 
-  // Passe 2 : rôles requis encore vides — dernier recours uniquement avec les
-  // bénévoles "peu importe" (quota=99). On ne force jamais quelqu'un au-delà
-  // de son quota exprimé. Si aucun candidat → laisser vide pour l'organisatrice.
-  rolesQueue.forEach(({shift, role, isOpt}) => {
-    if (isOpt) return; // on ne force jamais les optionnels
-    if (getAssign(wk, shift.id, role)) return;
-    const candidates = availVols.filter(name =>
-      !alreadyInShiftToday(name, shift.id) &&
-      volCoversShiftFor(wk, name, shift, dayId) &&
-      volQuota(wk, name) === 99 // seulement ceux qui ont dit "peu importe"
-    );
-    const best = bestCandidate(candidates, role, shift, false);
-    if (!best) return; // laisser vide → l'organisatrice décide
-    const ov = overlapFor(wk, best, shift, dayId); if (!ov) return;
-    setAssign(wk, shift.id, role, best);
-    setAssignTimes(wk, shift.id, role, ov.s, ov.e);
-    markAssignedToday(best, shift.id);
-    toSave.push({wk, shiftId:shift.id, role, name:best, s:ov.s, e:ov.e});
-  });
-
-  for(const a of toSave){await saveAssignment(a.wk,a.shiftId,a.role,a.name,a.s,a.e);}
+  for(const a of toSave)await saveAssignment(a.wk,a.shiftId,a.role,a.name,a.s,a.e);
   renderHoraire();
 }
 
