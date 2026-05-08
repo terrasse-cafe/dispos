@@ -683,7 +683,15 @@ function akey(sid,role){return sid+'||'+role}
 function getPerson(name){
   if(!name)return null;
   const n=name.trim().toLowerCase();
-  return directory.find(p=>p.name&&p.name.trim().toLowerCase()===n)||null;
+  // 1. Correspondance exacte
+  let p=directory.find(p=>p.name&&p.name.trim().toLowerCase()===n);
+  if(p)return p;
+  // 2. Le nom dans avail commence par le nom du répertoire (ex: "Béatrice" starts with "Bé")
+  p=directory.find(p=>p.name&&n.startsWith(p.name.trim().toLowerCase()));
+  if(p)return p;
+  // 3. Le nom du répertoire commence par le nom dans avail (ex: "Béatrice" in dir, "Béa" in avail)
+  p=directory.find(p=>p.name&&p.name.trim().toLowerCase().startsWith(n));
+  return p||null;
 }
 function isEmp(name){const p=getPerson(name);return!!(p&&p.type==='emp')}
 function curDayDate(){const day=DAYS.find(d=>d.id===curDay);return dayDate(oMon,day.dow)}
@@ -1904,7 +1912,6 @@ async function openAutoAssign(){
   if(isPastDay()){alert('Journée passée — impossible de modifier l\'horaire.');return;}
   const wk=wkey(oMon);const dayId=curDay;
   if(sb){await loadPeople();await loadAssignments(wk);}
-  console.log('[Auto] directory=', directory.map(p=>p.name+'→'+p.roles.filter(Boolean).join(',')));
 
   const wkData=avail[wk]||{};
   const shifts=SHIFTS[dayId]||[];
@@ -1974,7 +1981,6 @@ async function openAutoAssign(){
   // Les slots peuvent avoir un suffixe # (ex: 'Pizzaiolo#2') — on compare par display label
   function prefScore(name,role){
     const p=getPerson(name);
-    console.log('[prefScore] name=',name,'person=',p,'role=',role);
     if(!p||!p.roles)return 0;
     const displayRole=roleDisplayLabel(role);
     // Correspondance exacte par label d'affichage
@@ -2000,9 +2006,6 @@ async function openAutoAssign(){
     return coverRatio(a,sh)-coverRatio(b,sh);
   }
 
-  console.log('[Auto] dayId=', dayId, 'wk=', wk);
-  console.log('[Auto] availVols=', availVols);
-  console.log('[Auto] rolesQueue=', rolesQueue.map(r=>r.role));
 
   const toSave=[];
 
@@ -2016,24 +2019,18 @@ async function openAutoAssign(){
       volCoversShiftFor(wk,n,sh,dayId)&&
       !quotaReached(n)
     );
-    console.log('[Auto] role=', role, '| candidates=', candidates, '| alreadyToday check:', availVols.map(n=>n+':'+alreadyToday(n,sh.id)));
     if(!candidates.length)return;
 
     const best=candidates.reduce((b,c)=>compare(c,b,role,sh)>0?c:b);
-    const ps=prefScore(best,role);
-    console.log('[Auto] best=', best, '| prefScore=', ps);
-
-    if(ps===0){console.log('[Auto] skipped - no pref');return;}
+    if(prefScore(best,role)===0)return;
 
     const ov=overlapFor(wk,best,sh,dayId);
-    console.log('[Auto] overlap=', ov);
     if(!ov)return;
     setAssign(wk,sh.id,role,best);
     setAssignTimes(wk,sh.id,role,ov.s,ov.e);
     setAssignNote(wk,sh.id,role,null);
     markAssigned(best,sh.id);
     toSave.push({wk,shiftId:sh.id,role,name:best,s:ov.s,e:ov.e});
-    console.log('[Auto] ✓ assigned', best, '->', role);
   });
 
   for(const a of toSave)await saveAssignment(a.wk,a.shiftId,a.role,a.name,a.s,a.e);
