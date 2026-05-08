@@ -714,7 +714,6 @@ async function loadPeople() {
   nextId = Math.max(0, ...directory.map(p=>p.id)) + 1;
   rebuildVcols();
   populateVolSelect();
-  fillRoleSelects();
   renderDir();
 }
 
@@ -1759,16 +1758,19 @@ async function savePerson(){
   const type=document.getElementById('pm-type').value;
   const roles=[document.getElementById('pm-r1').value,document.getElementById('pm-r2').value,document.getElementById('pm-r3').value];
   if(pmCtx){
+    // Modification — mettre à jour localement immédiatement
     const p=directory.find(x=>x.id===pmCtx);
-    if(p){p.name=name;p.email=email;p.type=type;p.roles=roles;await upsertPerson(p);}
+    if(p){p.name=name;p.email=email;p.type=type;p.roles=roles;}
   } else {
-    const newP={id:null,name,email,type,roles};
-    directory.push(newP);
-    await upsertPerson(newP);
+    // Création — ajouter localement avec id temporaire
+    directory.push({id:null,name,email,type,roles});
   }
-  // Toujours recharger depuis Supabase pour avoir les ids corrects
-  await loadPeople();
+  rebuildVcols();populateVolSelect();renderDir();
   closePersonModal();
+  // Persister en arrière-plan puis recharger pour avoir les vrais ids
+  const p=directory.find(x=>x.name===name);
+  await upsertPerson(p||{name,email,type,roles});
+  await loadPeople();
 }
 
 /* ══════════════════════════════════════════════
