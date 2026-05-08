@@ -1874,9 +1874,6 @@ L'équipe organisatrice`;
 }
 
 function sendOutlook(){
-  // 1. Télécharger le PDF automatiquement
-  exportPdfTable();
-  // 2. Ouvrir Gmail avec sujet et corps pré-remplis
   const wk=wkey(oMon);
   const byPerson=buildScheduleSummary(wk);
   const names=Object.keys(byPerson);
@@ -1884,7 +1881,10 @@ function sendOutlook(){
   const subject=encodeURIComponent(`Horaire bénévoles — ${wlabel(oMon)}`);
   const body=encodeURIComponent(document.getElementById('fin-email-body').value);
   const gmailUrl=`https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}&bcc=${encodeURIComponent(allEmails.join(','))}`;
-  setTimeout(()=>window.open(gmailUrl,'_blank'),500);
+  // Ouvrir Gmail en premier (dans le gestionnaire de clic direct) pour éviter le bloqueur Safari
+  window.open(gmailUrl,'_blank');
+  // Puis télécharger le PDF
+  exportPdfTable();
 }
 
 /* ══════════════════════════════════════════════
