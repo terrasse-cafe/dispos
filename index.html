@@ -63,10 +63,19 @@ main{flex:1;padding:1rem 1.25rem;max-width:1400px;width:100%;margin:0 auto}
 .wbtn:hover{background:var(--bg)}
 .wlabel{font-size:13px;color:var(--text-2);min-width:210px;text-align:center;font-weight:500}
 .pill{font-size:12px;padding:3px 10px;border:1px solid var(--border);border-radius:20px;color:var(--text-2);background:var(--surface)}
-.day-tabs{display:flex;gap:4px;margin-bottom:1.25rem}
-.day-tab{padding:5px 16px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);font-size:13px;cursor:pointer;color:var(--text-2);transition:all .12s}
-.day-tab:hover{background:var(--bg)}.day-tab.active{background:var(--text);color:#fff;border-color:var(--text)}
-.day-tab-closed{color:#DC2626;border-color:#FECACA;background:#FEF2F2}.day-tab-closed.active{background:#DC2626;border-color:#DC2626;color:#fff}
+.day-tabs{display:flex;gap:8px;margin-bottom:.75rem;flex-wrap:wrap}
+.day-tab{padding:8px 20px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);font-size:14px;font-weight:500;cursor:pointer;color:var(--text-2);transition:all .15s;box-shadow:var(--shadow)}
+.day-tab:hover{background:var(--bg);border-color:#C8C4BF}
+.day-tab.active{background:var(--text);color:#fff;border-color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.day-tab-closed{color:#DC2626;border-color:#FECACA;background:#FEF2F2}
+.day-tab-closed.active{background:#DC2626;border-color:#DC2626;color:#fff}
+/* open/closed toggle */
+.day-status-bar{display:flex;align-items:center;gap:10px;margin-bottom:1.25rem}
+.status-toggle{display:inline-flex;border-radius:12px;border:1.5px solid var(--border);overflow:hidden;background:var(--surface);box-shadow:var(--shadow)}
+.status-btn{padding:9px 22px;font-size:14px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--text-2);transition:background .15s,color .15s;font-family:var(--font);display:flex;align-items:center;gap:7px;white-space:nowrap}
+.status-btn:first-child{border-right:1.5px solid var(--border)}
+.status-btn.active-open{background:var(--text);color:#fff}
+.status-btn.active-closed{background:#DC2626;color:#fff}
 .org-tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:1.25rem}
 .org-tab{padding:7px 18px;border-radius:var(--radius-sm) var(--radius-sm) 0 0;border:1px solid transparent;border-bottom:none;background:transparent;font-size:13px;cursor:pointer;color:var(--text-2);transition:all .12s;margin-bottom:-1px}
 .org-tab.active{background:var(--surface);border-color:var(--border);border-bottom-color:var(--surface);color:var(--text);font-weight:500}
@@ -212,9 +221,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .tp-btn.p{background:var(--text);color:#fff;border-color:var(--text)}.tp-btn.p:hover{background:#292524}
 .tp-remove{width:100%;margin-top:6px;padding:4px;border:none;background:none;font-size:11px;color:#DC2626;cursor:pointer}
 .tp-remove:hover{text-decoration:underline}
-#np-text:focus{border-color:var(--accent)}
-.chip-note-btn{display:inline-flex;align-items:center;justify-content:center}
-.tp-remove:hover{text-decoration:underline}
+#tp-note:focus{border-color:var(--accent);outline:none}
 </style>
 </head>
 <body>
@@ -341,6 +348,12 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <span id="o-sync-badge" class="sync-badge offline" style="display:none"></span>
     </div>
     <div class="day-tabs" id="o-daytabs"></div>
+    <div class="day-status-bar" id="day-status-bar">
+      <div class="status-toggle">
+        <button class="status-btn" id="status-btn-open" onclick="setDayOpen(true)">⛅ Ouvert</button>
+        <button class="status-btn" id="status-btn-closed" onclick="setDayOpen(false)">☔ Fermé</button>
+      </div>
+    </div>
     <div class="h-layout">
       <div>
         <div class="h-scroll"><div class="h-grid" id="h-grid"></div></div>
@@ -382,12 +395,16 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 </div>
 
 <!-- TIME POPOVER -->
-<div class="time-pop" id="time-pop">
+<div class="time-pop" id="time-pop" style="width:260px">
   <div class="tp-name" id="tp-name">—</div>
   <div class="tp-role" id="tp-role">—</div>
   <div class="tp-fields">
     <div><label>Début</label></div>
     <div><label>Fin</label></div>
+  </div>
+  <div style="margin:10px 0 8px">
+    <label style="font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px">Note / renfort</label>
+    <textarea id="tp-note" rows="2" placeholder="ex: + Marie 17h-19h en renfort" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;resize:vertical;outline:none;line-height:1.5;transition:border-color .15s"></textarea>
   </div>
   <div class="tp-btns">
     <button class="tp-btn p" onclick="saveTP()">Confirmer</button>
@@ -396,20 +413,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   <button class="tp-remove" onclick="removeAssignTP()">Retirer ce bénévole</button>
 </div>
 
-<!-- NOTE POPOVER -->
-<div class="time-pop" id="note-pop" style="width:260px">
-  <div class="tp-name" id="np-name">—</div>
-  <div class="tp-role" id="np-role">—</div>
-  <div style="margin:10px 0 8px">
-    <label style="font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px">Note / renfort</label>
-    <textarea id="np-text" rows="3" placeholder="ex: + Marie 17h-19h en renfort" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;resize:vertical;outline:none;line-height:1.5"></textarea>
-  </div>
-  <div class="tp-btns">
-    <button class="tp-btn p" onclick="saveNote()">Confirmer</button>
-    <button class="tp-btn" onclick="closeNotePop()">Annuler</button>
-  </div>
-  <button class="tp-remove" id="np-clear" onclick="clearNote()" style="display:none">Supprimer la note</button>
-</div>
+
 
 <!-- PERSON MODAL -->
 <div class="overlay" id="person-overlay" onclick="if(event.target===this)closePersonModal()">
@@ -1189,24 +1193,32 @@ function buildDayTabs(){
   const el=document.getElementById('o-daytabs');el.innerHTML='';
   DAYS.forEach(day=>{
     const isClosed=closedDays[wk].has(day.id);
-    const wrap=document.createElement('div');wrap.style.cssText='display:inline-flex;align-items:center;gap:0';
     const btn=document.createElement('button');
     btn.className='day-tab'+(day.id===curDay?' active':'')+(isClosed?' day-tab-closed':'');
-    btn.innerHTML=(isClosed?'☔ ':'')+day.label;
-    btn.onclick=()=>{curDay=day.id;buildDayTabs();renderHoraire();};
-    const closeBtn=document.createElement('button');
-    closeBtn.title=isClosed?'Rouvrir ce jour':'Marquer comme fermé (météo)';
-    closeBtn.style.cssText=`padding:3px 6px;border:1px solid var(--border);border-left:none;border-radius:0 var(--radius-sm) var(--radius-sm) 0;font-size:11px;cursor:pointer;background:${isClosed?'#FEF2F2':'var(--surface)'};color:${isClosed?'#DC2626':'var(--text-3)'};line-height:1;transition:background .12s`;
-    closeBtn.textContent=isClosed?'×':'☔';
-    closeBtn.onclick=(e)=>{
-      e.stopPropagation();
-      if(isClosed)closedDays[wk].delete(day.id);
-      else closedDays[wk].add(day.id);
-      buildDayTabs();renderHoraire();
-    };
-    wrap.appendChild(btn);wrap.appendChild(closeBtn);
-    el.appendChild(wrap);
+    btn.textContent=(isClosed?'☔ ':'')+day.label;
+    btn.onclick=()=>{curDay=day.id;buildDayTabs();renderStatusToggle();renderHoraire();};
+    el.appendChild(btn);
   });
+  renderStatusToggle();
+}
+
+function renderStatusToggle(){
+  const wk=wkey(oMon);
+  if(!closedDays[wk])closedDays[wk]=new Set();
+  const isClosed=closedDays[wk].has(curDay);
+  const btnOpen=document.getElementById('status-btn-open');
+  const btnClosed=document.getElementById('status-btn-closed');
+  if(!btnOpen||!btnClosed)return;
+  btnOpen.className='status-btn'+(isClosed?'':' active-open');
+  btnClosed.className='status-btn'+(isClosed?' active-closed':'');
+}
+
+function setDayOpen(open){
+  const wk=wkey(oMon);
+  if(!closedDays[wk])closedDays[wk]=new Set();
+  if(open)closedDays[wk].delete(curDay);
+  else closedDays[wk].add(curDay);
+  buildDayTabs();renderHoraire();
 }
 
 /* ── avail helpers ── */
@@ -1362,28 +1374,21 @@ function renderHoraire(){
         }
         const x=document.createElement('span');x.className='chip-x';x.style.color=col.fg;x.textContent='×';
         if(!past)x.addEventListener('click',ev=>{
-          ev.stopPropagation();setAssign(wk,shift.id,role,null);
+          ev.stopPropagation();
+          setAssignNote(wk,shift.id,role,null);
+          setAssign(wk,shift.id,role,null);
           deleteAssignment(wk,shift.id,role);renderHoraire();
         });
         else x.style.display='none';
-        // Note icon
-        const noteVal=getAssignNote(wk,shift.id,role);
-        const noteBtn=document.createElement('span');
-        noteBtn.className='chip-note-btn';noteBtn.style.color=col.fg;
-        noteBtn.title=noteVal?'Modifier la note':'Ajouter une note';
-        noteBtn.textContent=noteVal?'✎':'＋';
-        noteBtn.style.cssText=`cursor:pointer;font-size:12px;opacity:${noteVal?'.7':'.3'};flex-shrink:0;padding:0 2px;transition:opacity .1s;margin-left:1px`;
-        if(!past)noteBtn.addEventListener('mouseenter',()=>noteBtn.style.opacity='1');
-        if(!past)noteBtn.addEventListener('mouseleave',()=>noteBtn.style.opacity=noteVal?'.7':'.3');
-        if(!past)noteBtn.addEventListener('click',ev=>{ev.stopPropagation();openNotePop(ev,assigned,shift.id,role,shift,wk);});
-        inner.appendChild(x);inner.appendChild(noteBtn);chip.appendChild(inner);
+        inner.appendChild(x);chip.appendChild(inner);
         // Note display below chip
+        const noteVal=getAssignNote(wk,shift.id,role);
         if(noteVal){
           const noteLine=document.createElement('div');noteLine.className='chip-note-line';
           noteLine.style.cssText=`position:absolute;left:${cL}px;top:calc(100% + 2px);font-size:10px;font-style:italic;color:${col.fg};opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:${cW}px;pointer-events:none;font-family:var(--mono)`;
           noteLine.textContent='↳ '+noteVal;dz.appendChild(noteLine);
         }
-        if(!past)chip.addEventListener('click',ev=>{if(ev.target===x||ev.target===noteBtn)return;openTP(ev,assigned,shift.id,role,shift,wk);});
+        if(!past)chip.addEventListener('click',ev=>{if(ev.target===x)return;openTP(ev,assigned,shift.id,role,shift,wk);});
         // Drag from chip to unassign (drop on vol panel)
         if(!past){
           chip.draggable=true;
@@ -1604,15 +1609,17 @@ function buildCards(wk,shifts){
 
 /* ── doAssign — avec persistance ── */
 function doAssign(wk,shift,role,name){
+  // Clear any existing note when reassigning
+  setAssignNote(wk,shift.id,role,null);
   if(isEmp(name)){
     setAssign(wk,shift.id,role,name);
-    saveAssignment(wk,shift.id,role,name,null,null);
+    saveAssignment(wk,shift.id,role,name,null,null,null);
   } else {
     if(volAssignedToShift(wk,name,shift)){alert(name+' est déjà assigné(e) à ce shift.');return false;}
     const ov=overlapMins(wk,name,shift);
     if(!ov){alert(name+' n\'est pas disponible sur ce shift.');return false;}
     setAssign(wk,shift.id,role,name);setAssignTimes(wk,shift.id,role,ov.s,ov.e);
-    saveAssignment(wk,shift.id,role,name,ov.s,ov.e);
+    saveAssignment(wk,shift.id,role,name,ov.s,ov.e,null);
   }
   return true;
 }
@@ -1641,8 +1648,10 @@ function openTP(e,name,sid,role,shift,wk){
   const sSel=buildTimeSelect(day,'from',startVal);sSel.id='tp-start';containers[0].appendChild(sSel);
   refreshEndSelect(startVal);
   sSel.addEventListener('change',ev=>refreshEndSelect(parseInt(ev.target.value)));
+  // Load existing note
+  document.getElementById('tp-note').value=getAssignNote(wk,sid,role)||'';
   const pop=document.getElementById('time-pop');pop.classList.add('open');
-  const popW=248,popH=210;
+  const popW=268,popH=280;
   let left=e.clientX+10,top=e.clientY-10;
   if(left+popW>window.innerWidth-8)left=e.clientX-popW-10;
   if(top+popH>window.innerHeight-8)top=window.innerHeight-popH-8;
@@ -1654,8 +1663,10 @@ function saveTP(){
   const s=parseInt(document.getElementById('tp-start').value);
   const e=parseInt(document.getElementById('tp-end').value);
   if(e<=s){alert("L'heure de fin doit être après le début.");return;}
+  const note=document.getElementById('tp-note').value.trim()||null;
   setAssignTimes(tpCtx.wk,tpCtx.sid,tpCtx.role,s,e);
-  saveAssignment(tpCtx.wk,tpCtx.sid,tpCtx.role,tpCtx.name,s,e);
+  setAssignNote(tpCtx.wk,tpCtx.sid,tpCtx.role,note);
+  saveAssignment(tpCtx.wk,tpCtx.sid,tpCtx.role,tpCtx.name,s,e,note);
   closeTP();renderHoraire();
 }
 function removeAssignTP(){
@@ -2256,47 +2267,6 @@ function exportPdfTable(){
    CONFIRMER L'HORAIRE
 ══════════════════════════════════════════════ */
 // confirmSchedule replaced by toggleConfirm inside openFinaliser
-
-/* ══════════════════════════════════════════════
-   NOTE POPOVER
-══════════════════════════════════════════════ */
-let noteCtx=null;
-
-function openNotePop(e,name,sid,role,shift,wk){
-  noteCtx={name,sid,role,shift,wk};
-  document.getElementById('np-name').textContent=name;
-  document.getElementById('np-role').textContent=role+' · '+shift.label;
-  const existing=getAssignNote(wk,sid,role);
-  document.getElementById('np-text').value=existing;
-  document.getElementById('np-clear').style.display=existing?'block':'none';
-  const pop=document.getElementById('note-pop');pop.classList.add('open');
-  const popW=268,popH=200;
-  let left=e.clientX+10,top=e.clientY-10;
-  if(left+popW>window.innerWidth-8)left=e.clientX-popW-10;
-  if(top+popH>window.innerHeight-8)top=window.innerHeight-popH-8;
-  pop.style.left=Math.max(8,left)+'px';pop.style.top=Math.max(8,top)+'px';
-  setTimeout(()=>document.getElementById('np-text').focus(),50);
-}
-function closeNotePop(){document.getElementById('note-pop').classList.remove('open');noteCtx=null;}
-function saveNote(){
-  if(!noteCtx)return;
-  const note=document.getElementById('np-text').value.trim();
-  const {wk,sid,role,name}=noteCtx;
-  setAssignNote(wk,sid,role,note||null);
-  // Save to Supabase — re-upsert the whole assignment row with updated note
-  const ct=getAssignTimes(wk,sid,role);
-  saveAssignment(wk,sid,role,name,ct?ct.s:null,ct?ct.e:null,note||null);
-  closeNotePop();renderHoraire();
-}
-function clearNote(){
-  if(!noteCtx)return;
-  document.getElementById('np-text').value='';
-  saveNote();
-}
-document.addEventListener('click',e=>{
-  const np=document.getElementById('note-pop');
-  if(np.classList.contains('open')&&!np.contains(e.target))closeNotePop();
-},true);
 
 /* ══════════════════════════════════════════════
    INIT
