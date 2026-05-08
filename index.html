@@ -137,14 +137,14 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .h-role-name.opt{color:var(--text-3);font-style:italic}
 .h-timeline{flex:1;position:relative;background:var(--bg);overflow:visible}
 .h-dz{position:absolute;top:5px;bottom:5px;border:2px dashed var(--border);border-radius:var(--radius-sm);display:flex;align-items:center;padding:0 10px;transition:border-color .1s,background .1s;cursor:default;overflow:visible}
-.h-dz.empty{background:var(--surface);overflow:hidden}.h-dz.filled{border-style:solid}
+.h-dz.empty{background:var(--surface);overflow:hidden}.h-dz.filled{border-style:solid;top:3px;bottom:3px}
 .dz-ph{font-size:11px;color:var(--text-3)}
 .h-dz.dv{border-color:var(--green);background:var(--green-light);border-style:solid;box-shadow:0 0 0 2px #86EFAC50}
 .h-dz.di{opacity:.38;cursor:not-allowed}
 .h-dz.dok{border-color:var(--green);background:#DCFCE7;border-style:solid}
-.avail-chip{position:absolute;top:-1px;bottom:-1px;border-radius:5px;display:flex;align-items:center;padding:0 7px;cursor:pointer;z-index:2;transition:filter .1s}
+.avail-chip{position:absolute;top:-1px;bottom:-1px;border-radius:5px;display:flex;flex-direction:column;justify-content:center;padding:0 7px;cursor:pointer;z-index:2;transition:filter .1s}
 .avail-chip:hover{filter:brightness(.9)}
-.avail-chip-inner{display:flex;align-items:center;gap:4px;width:100%;overflow:hidden}
+.avail-chip-inner{display:flex;align-items:center;gap:4px;width:100%;overflow:hidden;flex:0 0 auto}
 .chip-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
 .chip-time{font-size:10px;font-family:var(--mono);opacity:.55;white-space:nowrap;flex-shrink:0;margin-left:4px}
 .chip-x{cursor:pointer;font-size:18px;opacity:.35;line-height:1;flex-shrink:0;transition:opacity .1s;padding:0 2px;margin-left:2px}
@@ -1359,9 +1359,12 @@ function renderHoraire(){
         else if(rng){aSH=rng.startMins/60;aEH=rng.endMins/60;}
         else{aSH=shift.fromH;aEH=shift.toH;}
         const cL=toPx(aSH)-spx,cW=toPx(aEH)-toPx(aSH);
+        const noteVal=getAssignNote(wk,shift.id,role);
         const chip=document.createElement('div');chip.className='avail-chip';
         chip.style.left=cL+'px';chip.style.width=cW+'px';
         chip.style.background=col.bg;chip.style.border=`${emp?'2.5px':'1.5px'} solid ${col.fg}${emp?'':'80'}`;
+        // When note exists, chip grows vertically to show two lines
+        if(noteVal){chip.style.top='-1px';chip.style.bottom='-1px';chip.style.height='auto';chip.style.flexDirection='column';chip.style.alignItems='stretch';chip.style.padding='3px 7px';}
         const inner=document.createElement('div');inner.className='avail-chip-inner';
         if(emp){const b=document.createElement('span');b.className='emp-badge';b.style.color=col.fg;b.textContent='EMP';inner.appendChild(b);}
         const nm=document.createElement('span');nm.className='chip-name';nm.style.color=col.fg;nm.textContent=assigned;inner.appendChild(nm);
@@ -1381,12 +1384,11 @@ function renderHoraire(){
         });
         else x.style.display='none';
         inner.appendChild(x);chip.appendChild(inner);
-        // Note display below chip
-        const noteVal=getAssignNote(wk,shift.id,role);
+        // Note on second line inside the chip
         if(noteVal){
-          const noteLine=document.createElement('div');noteLine.className='chip-note-line';
-          noteLine.style.cssText=`position:absolute;left:${cL}px;top:calc(100% + 2px);font-size:10px;font-style:italic;color:${col.fg};opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:${cW}px;pointer-events:none;font-family:var(--mono)`;
-          noteLine.textContent='↳ '+noteVal;dz.appendChild(noteLine);
+          const noteLine=document.createElement('div');
+          noteLine.style.cssText=`font-size:10px;font-style:italic;color:${col.fg};opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--mono);line-height:1.3;padding-bottom:1px`;
+          noteLine.textContent=noteVal;chip.appendChild(noteLine);
         }
         if(!past)chip.addEventListener('click',ev=>{if(ev.target===x)return;openTP(ev,assigned,shift.id,role,shift,wk);});
         // Drag from chip to unassign (drop on vol panel)
