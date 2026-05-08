@@ -123,8 +123,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .toast{margin-top:12px;padding:9px 14px;border-radius:var(--radius-sm);background:var(--green-light);border:1px solid #86EFAC;color:var(--green);font-size:13px;display:none}
 
 /* ── HORAIRE ── */
-.h-layout{display:grid;grid-template-columns:1fr 170px;gap:10px;align-items:start}
-.h-scroll{overflow-x:auto}
+.h-layout{display:grid;grid-template-columns:1fr 185px;gap:10px;align-items:start}
+.h-scroll{overflow-x:hidden;min-width:0}
 .h-grid{display:inline-block;min-width:100%;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow)}
 .h-head-row{display:flex;border-bottom:1px solid var(--border)}
 .h-corner{width:var(--role-col);min-width:var(--role-col);flex-shrink:0;background:var(--bg);border-right:1px solid var(--border);padding:6px 8px;font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:flex-end}
@@ -1342,9 +1342,8 @@ function renderHoraire(){
   const hScroll=document.querySelector('.h-scroll');
   const roleColW=parseInt(getComputedStyle(document.documentElement).getPropertyValue('--role-col')||'130');
   const scrollW=hScroll?hScroll.clientWidth:800;
-  // dynCOL = pixels per 30-min slot; cap at 50px so grid never overflows on 13" laptop
-  const availW=Math.max(scrollW-roleColW, numHours*38);
-  const dynCOL=Math.min(50, Math.floor(availW/numSlots));
+  // Hard cap: 43px/slot max → worst case 21 slots × 43 = 903px, fits in grid column
+  const dynCOL=Math.min(43, Math.max(24, Math.floor((scrollW-roleColW)/numSlots)));
   const TW=dynCOL*numSlots;
   function toPx(h){return Math.round((h-dSH)*2*dynCOL);}
   const wk_check=wkey(oMon);
