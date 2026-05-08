@@ -1453,16 +1453,19 @@ function renderHoraire(){
   const pct=totalReq?Math.round(totalFilled/totalReq*100):0;
   document.getElementById('prog-fill').style.width=pct+'%';
   document.getElementById('prog-lbl').textContent=`${totalFilled} / ${totalReq} rôles requis assignés (${pct}%)`;
-  // Closed day overlay
-  if(isClosed){
-    const overlay=document.createElement('div');
-    overlay.style.cssText='position:absolute;inset:0;background:rgba(255,255,255,.75);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;border-radius:var(--radius);z-index:10;pointer-events:none';
-    overlay.innerHTML='<div style="font-size:32px">☔</div><div style="font-size:15px;font-weight:600;color:var(--text-2)">Journée fermée</div><div style="font-size:12px;color:var(--text-3)">Modifiez le statut dans les onglets ci-dessus</div>';
-    const scrollDiv=document.querySelector('.h-scroll');
-    if(scrollDiv){scrollDiv.style.position='relative';scrollDiv.appendChild(overlay);}
-  } else {
-    const scrollDiv=document.querySelector('.h-scroll');
-    if(scrollDiv)scrollDiv.style.position='relative';
+  // Closed day overlay — remove any previous before adding
+  const scrollDiv=document.querySelector('.h-scroll');
+  if(scrollDiv){
+    scrollDiv.style.position='relative';
+    const oldOverlay=scrollDiv.querySelector('.day-closed-overlay');
+    if(oldOverlay)oldOverlay.remove();
+    if(isClosed){
+      const overlay=document.createElement('div');
+      overlay.className='day-closed-overlay';
+      overlay.style.cssText='position:absolute;inset:0;background:rgba(255,255,255,.75);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;border-radius:var(--radius);z-index:10;pointer-events:none';
+      overlay.innerHTML='<div style="font-size:32px">☔</div><div style="font-size:15px;font-weight:600;color:var(--text-2)">Journée fermée</div><div style="font-size:12px;color:var(--text-3)">Utilisez le toggle Ouvert / Fermé ci-dessus</div>';
+      scrollDiv.appendChild(overlay);
+    }
   }
   buildCards(wk,shifts);
 }
@@ -1762,10 +1765,10 @@ async function savePerson(){
     const newP={id:null,name,email,type,roles};
     directory.push(newP);
     await upsertPerson(newP);
-    // Recharger pour avoir l'id correct depuis Supabase
-    await loadPeople();
   }
-  rebuildVcols();populateVolSelect();renderDir();closePersonModal();
+  // Toujours recharger depuis Supabase pour avoir les ids corrects
+  await loadPeople();
+  closePersonModal();
 }
 
 /* ══════════════════════════════════════════════
