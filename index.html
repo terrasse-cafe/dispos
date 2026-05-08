@@ -1737,8 +1737,10 @@ function initRoleSelectListeners(){
   const ids=['pm-r1','pm-r2','pm-r3'];
   ids.forEach(id=>{document.getElementById(id).addEventListener('change',()=>{const cur=ids.map(i=>document.getElementById(i).value);fillRoleSelects(cur);});});
 }
-function openPersonModal(id){
-  pmCtx=id;
+async function openPersonModal(id){
+  // Recharger depuis Supabase pour avoir les ids à jour
+  await loadPeople();
+  pmCtx=id||null;
   const p=id?directory.find(x=>x.id===id):null;
   document.getElementById('pm-title').textContent=p?'Modifier — '+p.name:'Ajouter une personne';
   document.getElementById('pm-name').value=p?p.name:'';
@@ -1763,19 +1765,19 @@ async function savePerson(){
   const email=document.getElementById('pm-email').value.trim();
   const type=document.getElementById('pm-type').value;
   const roles=[document.getElementById('pm-r1').value,document.getElementById('pm-r2').value,document.getElementById('pm-r3').value];
+  const personData={id:pmCtx||null,name,email,type,roles};
   if(pmCtx){
     // Modification — mettre à jour localement immédiatement
     const p=directory.find(x=>x.id===pmCtx);
     if(p){p.name=name;p.email=email;p.type=type;p.roles=roles;}
   } else {
-    // Création — ajouter localement avec id temporaire
-    directory.push({id:null,name,email,type,roles});
+    // Création — ajouter localement
+    directory.push(personData);
   }
   rebuildVcols();populateVolSelect();renderDir();
   closePersonModal();
-  // Persister en arrière-plan puis recharger pour avoir les vrais ids
-  const p=directory.find(x=>x.name===name);
-  await upsertPerson(p||{name,email,type,roles});
+  // Persister avec l'id correct, puis resync
+  await upsertPerson(personData);
   await loadPeople();
 }
 
