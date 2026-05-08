@@ -680,7 +680,11 @@ function skey(dayId,s){return dayId+'_'+s}
 function pad2(n){return String(n).padStart(2,'0')}
 function mStr(m){return Math.floor(m/60)+'h'+pad2(m%60)}
 function akey(sid,role){return sid+'||'+role}
-function getPerson(name){return directory.find(p=>p.name===name)}
+function getPerson(name){
+  if(!name)return null;
+  const n=name.trim().toLowerCase();
+  return directory.find(p=>p.name&&p.name.trim().toLowerCase()===n)||null;
+}
 function isEmp(name){const p=getPerson(name);return!!(p&&p.type==='emp')}
 function curDayDate(){const day=DAYS.find(d=>d.id===curDay);return dayDate(oMon,day.dow)}
 function isPastDay(){const d=curDayDate();const today=new Date();today.setHours(0,0,0,0);return d<today;}
@@ -1899,7 +1903,8 @@ function volQuotaReached(wk, name, tempShiftCounts) {
 async function openAutoAssign(){
   if(isPastDay()){alert('Journée passée — impossible de modifier l\'horaire.');return;}
   const wk=wkey(oMon);const dayId=curDay;
-  if(sb) await loadAssignments(wk);
+  if(sb){await loadPeople();await loadAssignments(wk);}
+  console.log('[Auto] directory=', directory.map(p=>p.name+'→'+p.roles.filter(Boolean).join(',')));
 
   const wkData=avail[wk]||{};
   const shifts=SHIFTS[dayId]||[];
