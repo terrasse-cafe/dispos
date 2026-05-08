@@ -1274,7 +1274,8 @@ function renderHoraire(){
   const isClosed=closedDays[wk_check].has(curDay);
   const past=isPastDay();
   const autoBtn=document.getElementById('auto-btn');
-  if(autoBtn){autoBtn.disabled=past||isClosed;autoBtn.style.opacity=(past||isClosed)?'0.4':'1';}
+  const wkPast=DAYS.every(d=>dayDate(oMon,d.dow)<new Date(new Date().setHours(0,0,0,0)));
+  if(autoBtn){autoBtn.disabled=wkPast||isClosed;autoBtn.style.opacity=(wkPast||isClosed)?'0.4':'1';}
   const grid=document.getElementById('h-grid');grid.innerHTML='';
 
   const hRow=document.createElement('div');hRow.className='h-head-row';
@@ -1909,34 +1910,29 @@ function volQuotaReached(wk, name, tempShiftCounts) {
 }
 
 async function openAutoAssign(){
-  if(isPastDay()){alert('Journée passée — impossible de modifier l\'horaire.');return;}
-  const wk=wkey(oMon);const dayId=curDay;
+  const wk=wkey(oMon);
   if(sb){await loadPeople();await loadAssignments(wk);}
 
   const wkData=avail[wk]||{};
-  const shifts=SHIFTS[dayId]||[];
+  const today=new Date();today.setHours(0,0,0,0);
 
-  // ── Comptage shifts déjà assignés cette semaine (toutes journées) ──
+  // ── Comptage shifts déjà assignés cette semaine ──
   const weekShiftCounts={};
   const weekShiftSeen=new Set();
+  // name -> Set<shiftId> par jour
+  const assignedShifts={}; // name+'|'+dayId -> Set<shiftId>
   DAYS.forEach(day=>{
     (SHIFTS[day.id]||[]).forEach(sh=>{
       [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(role=>{
         const ex=getAssign(wk,sh.id,role);
         if(ex&&!isEmp(ex)){
-          const key=ex+'|'+sh.id;
-          if(!weekShiftSeen.has(key)){weekShiftSeen.add(key);weekShiftCounts[ex]=(weekShiftCounts[ex]||0)+1;}
+          const wkey_=ex+'|'+sh.id;
+          if(!weekShiftSeen.has(wkey_)){weekShiftSeen.add(wkey_);weekShiftCounts[ex]=(weekShiftCounts[ex]||0)+1;}
+          const dk=ex+'|'+day.id;
+          if(!assignedShifts[dk])assignedShifts[dk]=new Set();
+          assignedShifts[dk].add(sh.id);
         }
       });
-    });
-  });
-
-  // Shifts du jour déjà assignés
-  const dayShifts={}; // name -> Set<shiftId>
-  shifts.forEach(sh=>{
-    [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(role=>{
-      const ex=getAssign(wk,sh.id,role);
-      if(ex){if(!dayShifts[ex])dayShifts[ex]=new Set();dayShifts[ex].add(sh.id);}
     });
   });
 
@@ -1944,92 +1940,76 @@ async function openAutoAssign(){
     const q=volQuota(wk,name);
     return q!==99&&(weekShiftCounts[name]||0)>=q;
   }
-  function alreadyToday(name,shiftId){return !!(dayShifts[name]&&dayShifts[name].has(shiftId));}
-  function markAssigned(name,shiftId){
-    if(!dayShifts[name])dayShifts[name]=new Set();
-    dayShifts[name].add(shiftId);
-    const key=name+'|'+shiftId;
-    if(!weekShiftSeen.has(key)){weekShiftSeen.add(key);weekShiftCounts[name]=(weekShiftCounts[name]||0)+1;}
+  function alreadyOnShift(name,dayId,shiftId){
+    const dk=name+'|'+dayId;
+    return !!(assignedShifts[dk]&&assignedShifts[dk].has(shiftId));
+  }
+  function markAssigned(name,dayId,shiftId){
+    const dk=name+'|'+dayId;
+    if(!assignedShifts[dk])assignedShifts[dk]=new Set();
+    assignedShifts[dk].add(shiftId);
+    const wk_=name+'|'+shiftId;
+    if(!weekShiftSeen.has(wk_)){weekShiftSeen.add(wk_);weekShiftCounts[name]=(weekShiftCounts[name]||0)+1;}
   }
 
-  // Bénévoles disponibles aujourd'hui, quota non atteint
-  const availVols=Object.keys(wkData).filter(n=>
-    !isEmp(n)&&
-    !quotaReached(n)&&
-    Object.keys((wkData[n].slots)||{}).some(k=>k.startsWith(dayId+'_'))
-  );
+  // ── Helpers de score ──
+  function prefScore(name,role){
+    const p=getPerson(name);if(!p||!p.roles)return 0;
+    const dr=roleDisplayLabel(role);
+    const idx=p.roles.findIndex(r=>r&&(r===role||r===dr||roleDisplayLabel(r)===dr));
+    if(idx===0)return 3;if(idx===1)return 2;if(idx===2)return 1;return 0;
+  }
+  function versatility(name){const p=getPerson(name);return p?p.roles.filter(Boolean).length:0;}
+  function coverRatio(name,sh,dayId){
+    const ov=overlapFor(wk,name,sh,dayId);if(!ov)return 0;
+    return(ov.e-ov.s)/((sh.toH-sh.fromH)*60);
+  }
+  function compare(a,b,role,sh,dayId){
+    const pa=prefScore(a,role),pb=prefScore(b,role);if(pa!==pb)return pa-pb;
+    const va=versatility(a),vb=versatility(b);if(va!==vb)return vb-va;
+    return coverRatio(a,sh,dayId)-coverRatio(b,sh,dayId);
+  }
 
-  // Rôles vides à remplir
+  // ── Construire la queue de tous les rôles vides pour toute la semaine ──
   const rolesQueue=[];
-  shifts.forEach(sh=>{
-    [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(role=>{
-      if(!getAssign(wk,sh.id,role))
-        rolesQueue.push({sh,role,isOpt:(sh._optSlots||sh.optional||[]).includes(role)});
+  DAYS.forEach(day=>{
+    const dayDate_=dayDate(oMon,day.dow);
+    if(dayDate_<today)return; // ignorer les jours passés
+    const closed=(closedDays[wk]||new Set()).has(day.id);
+    if(closed)return;
+    (SHIFTS[day.id]||[]).forEach(sh=>{
+      [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(role=>{
+        if(!getAssign(wk,sh.id,role))
+          rolesQueue.push({sh,role,dayId:day.id,isOpt:(sh._optSlots||sh.optional||[]).includes(role)});
+      });
     });
   });
 
-  // ── Règle 2 : couverture horaire complète du shift ──
-  // coverRatio = minutes de chevauchement / durée du shift (1.0 = couverture complète)
-  function coverRatio(name,sh){
-    const ov=overlapFor(wk,name,sh,dayId);if(!ov)return 0;
-    const shiftDur=sh.toH*60-sh.fromH*60;
-    return(ov.e-ov.s)/shiftDur;
-  }
-
-  // ── Règle 3 : score de préférence de rôle ──
-  // Les préférences stockées sont des noms propres (ex: 'Pizzaiolo')
-  // Les slots peuvent avoir un suffixe # (ex: 'Pizzaiolo#2') — on compare par display label
-  function prefScore(name,role){
-    const p=getPerson(name);
-    if(!p||!p.roles)return 0;
-    const displayRole=roleDisplayLabel(role);
-    // Correspondance exacte par label d'affichage
-    const idx=p.roles.findIndex(r=>r&&(r===role||r===displayRole||roleDisplayLabel(r)===displayRole));
-    if(idx===0)return 3;
-    if(idx===1)return 2;
-    if(idx===2)return 1;
-    return 0;
-  }
-
-  // ── Règle 4 : versatilité (moins = plus spécialisé = priorité si égalité) ──
-  function versatility(name){const p=getPerson(name);return p?p.roles.filter(Boolean).length:0;}
-
-  // ── Comparateur : retourne >0 si a est meilleur candidat que b pour ce rôle ──
-  function compare(a,b,role,sh){
-    // R3 : préférence de rôle
-    const pa=prefScore(a,role),pb=prefScore(b,role);
-    if(pa!==pb)return pa-pb;
-    // R4 : moins versatile gagne (à préférence égale)
-    const va=versatility(a),vb=versatility(b);
-    if(va!==vb)return vb-va;
-    // R2 : meilleure couverture horaire
-    return coverRatio(a,sh)-coverRatio(b,sh);
-  }
-
+  // Requis avant optionnels
+  rolesQueue.sort((a,b)=>a.isOpt===b.isOpt?0:a.isOpt?1:-1);
 
   const toSave=[];
 
-  const sorted=[...rolesQueue].sort((a,b)=>a.isOpt===b.isOpt?0:a.isOpt?1:-1);
-
-  sorted.forEach(({sh,role})=>{
+  rolesQueue.forEach(({sh,role,dayId,isOpt})=>{
     if(getAssign(wk,sh.id,role))return;
 
-    const candidates=availVols.filter(n=>
-      !alreadyToday(n,sh.id)&&
-      volCoversShiftFor(wk,n,sh,dayId)&&
-      !quotaReached(n)
+    // Bénévoles disponibles ce jour, quota non atteint, pas déjà dans ce shift
+    const candidates=Object.keys(wkData).filter(n=>
+      !isEmp(n)&&
+      !quotaReached(n)&&
+      !alreadyOnShift(n,dayId,sh.id)&&
+      volCoversShiftFor(wk,n,sh,dayId)
     );
     if(!candidates.length)return;
 
-    const best=candidates.reduce((b,c)=>compare(c,b,role,sh)>0?c:b);
-    if(prefScore(best,role)===0)return;
+    const best=candidates.reduce((b,c)=>compare(c,b,role,sh,dayId)>0?c:b);
+    if(prefScore(best,role)===0)return; // règle 5 : pas d'assignation sans préférence
 
-    const ov=overlapFor(wk,best,sh,dayId);
-    if(!ov)return;
+    const ov=overlapFor(wk,best,sh,dayId);if(!ov)return;
     setAssign(wk,sh.id,role,best);
     setAssignTimes(wk,sh.id,role,ov.s,ov.e);
     setAssignNote(wk,sh.id,role,null);
-    markAssigned(best,sh.id);
+    markAssigned(best,dayId,sh.id);
     toSave.push({wk,shiftId:sh.id,role,name:best,s:ov.s,e:ov.e});
   });
 
