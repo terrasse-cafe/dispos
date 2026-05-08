@@ -124,9 +124,9 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 
 /* ── HORAIRE ── */
 .h-layout{display:flex;gap:10px;align-items:start}
-.h-scroll{overflow-x:hidden;min-width:0;flex-shrink:1}
+.h-scroll{overflow-x:hidden;min-width:0;flex:1}
 .h-sidebar{width:185px;flex-shrink:0}
-.h-grid{display:inline-block;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow)}
+.h-grid{display:inline-block;min-width:100%;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow)}
 .h-head-row{display:flex;border-bottom:1px solid var(--border)}
 .h-corner{width:var(--role-col);min-width:var(--role-col);flex-shrink:0;background:var(--bg);border-right:1px solid var(--border);padding:6px 8px;font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:flex-end}
 .h-times{flex-shrink:0;background:var(--bg);position:relative;height:32px}
@@ -1338,13 +1338,14 @@ function renderHoraire(){
   document.getElementById('h-day-lbl').textContent=day.label;
   const dSH=day.oH+day.oM/60;
   const dEH=shifts.length?Math.max(...shifts.map(s=>s.toH)):day.cH+day.cM/60;
-  const numSlots=Math.round((dEH-dSH)*2); // still 30-min slots internally
-  const numHours=Math.round(dEH-dSH);     // only full hours shown
+  const numSlots=Math.round((dEH-dSH)*2);
+  const numHours=Math.round(dEH-dSH);
   const hScroll=document.querySelector('.h-scroll');
   const roleColW=parseInt(getComputedStyle(document.documentElement).getPropertyValue('--role-col')||'130');
   const scrollW=hScroll?hScroll.clientWidth:800;
-  // Hard cap: 43px/slot max → worst case 21 slots × 43 = 903px, fits in grid column
-  const dynCOL=Math.min(43, Math.max(24, Math.floor((scrollW-roleColW)/numSlots)));
+  // Fill available width but never exceed it (sidebar is already excluded by flex:1)
+  const timelineW=scrollW-roleColW;
+  const dynCOL=Math.max(24, Math.floor(timelineW/numSlots));
   const TW=dynCOL*numSlots;
   function toPx(h){return Math.round((h-dSH)*2*dynCOL);}
   const wk_check=wkey(oMon);
