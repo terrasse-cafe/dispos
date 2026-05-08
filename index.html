@@ -532,9 +532,12 @@ create policy "public_all" on confirmed_weeks for all using (true) with check (t
 `.trim();
 
 function getSavedConfig() {
+  // Credentials hardcodés — la clé anon est publique par design
+  const HARDCODED_URL = 'https://gbcpfecductapxgthuhc.supabase.co';
+  const HARDCODED_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdiY3BmZWNkdWN0YXB4Z3RodWhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNTEzODYsImV4cCI6MjA5MzYyNzM4Nn0.44ossTmZbXSU-Sn_oBT3Jr2lJctm9v8uHOLrTyiXmzE';
   return {
-    url: localStorage.getItem(STORAGE_URL_KEY) || '',
-    key: localStorage.getItem(STORAGE_KEY_KEY) || ''
+    url: HARDCODED_URL,
+    key: HARDCODED_KEY
   };
 }
 
