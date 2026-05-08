@@ -670,7 +670,7 @@ const bShiftMemory={};
 function getMonday(d){const dt=new Date(d),dy=dt.getDay();dt.setDate(dt.getDate()-dy+(dy===0?-6:1));dt.setHours(0,0,0,0);return dt}
 function addWeeks(d,n){const r=new Date(d);r.setDate(r.getDate()+n*7);return r}
 function wkey(m){return m.toISOString().split('T')[0]}
-function dayDate(mon,dow){const d=new Date(mon);d.setDate(mon.getDate()+dow-1);return d}
+function dayDate(mon,dow){const d=new Date(mon);d.setDate(mon.getDate()+dow);d.setHours(0,0,0,0);return d}
 function fmt(d){return d.toLocaleDateString('fr-CA',{day:'numeric',month:'short'})}
 function fmtLong(d){return d.toLocaleDateString('fr-CA',{day:'numeric',month:'long',year:'numeric'})}
 function wlabel(mon){return fmt(dayDate(mon,3))+' – '+fmtLong(dayDate(mon,6))}
