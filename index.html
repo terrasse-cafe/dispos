@@ -12,7 +12,9 @@
 :root{
   --bg:#F7F5F2;--surface:#fff;--border:#E2DDD8;--border-light:#EDE9E4;
   --text:#1C1917;--text-2:#57534E;--text-3:#A8A29E;
-  --accent:#C2410C;--accent-light:#FFF7ED;
+  --accent:#A6C5BD;--accent-dark:#6FA39A;--accent-text:#1C1917;
+  --accent-light:#EEF5F4;
+  --brand-secondary:#FAAF5C;
   --green:#16A34A;--green-light:#F0FDF4;
   --amber:#D97706;--amber-light:#FFFBEB;
   --blue:#1D4ED8;--blue-light:#EFF6FF;
@@ -25,11 +27,11 @@
 html,body{height:100%;background:var(--bg);font-family:var(--font);color:var(--text);font-size:14px}
 .shell{display:flex;flex-direction:column;min-height:100vh}
 header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;gap:2rem;height:56px;position:sticky;top:0;z-index:100}
-.logo{font-size:15px;font-weight:600;letter-spacing:-.01em}.logo span{color:var(--accent)}
+.logo{font-size:15px;font-weight:600;letter-spacing:-.01em}.logo span{color:var(--accent-dark)}
 .main-tabs{display:flex;gap:2px}
 .main-tab{padding:6px 16px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--text-2);transition:background .15s,color .15s}
 .main-tab:hover{background:var(--bg);color:var(--text)}
-.main-tab.active{background:var(--accent-light);color:var(--accent)}
+.main-tab.active{background:var(--accent-light);color:var(--accent-dark)}
 .conn-dot{width:7px;height:7px;border-radius:50%;background:var(--border);display:inline-block;margin-left:auto;flex-shrink:0;transition:background .3s}
 .conn-dot.ok{background:var(--green)}
 .conn-dot.err{background:#EF4444}
@@ -66,7 +68,7 @@ main{flex:1;padding:1rem 1.25rem;max-width:1400px;width:100%;margin:0 auto}
 .day-tabs{display:flex;gap:8px;margin-bottom:.75rem;flex-wrap:wrap}
 .day-tab{padding:8px 20px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);font-size:14px;font-weight:500;cursor:pointer;color:var(--text-2);transition:all .15s;box-shadow:var(--shadow)}
 .day-tab:hover{background:var(--bg);border-color:#C8C4BF}
-.day-tab.active{background:var(--text);color:#fff;border-color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.day-tab.active{background:var(--accent);color:var(--accent-text);border-color:var(--accent);box-shadow:0 2px 8px rgba(166,197,189,.4)}
 .day-tab-closed{color:#DC2626;border-color:#FECACA;background:#FEF2F2}
 .day-tab-closed.active{background:#DC2626;border-color:#DC2626;color:#fff}
 /* open/closed toggle */
@@ -74,7 +76,7 @@ main{flex:1;padding:1rem 1.25rem;max-width:1400px;width:100%;margin:0 auto}
 .status-toggle{display:inline-flex;border-radius:12px;border:1.5px solid var(--border);overflow:hidden;background:var(--surface);box-shadow:var(--shadow)}
 .status-btn{padding:9px 22px;font-size:14px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--text-2);transition:background .15s,color .15s;font-family:var(--font);display:flex;align-items:center;gap:7px;white-space:nowrap}
 .status-btn:first-child{border-right:1.5px solid var(--border)}
-.status-btn.active-open{background:var(--text);color:#fff}
+.status-btn.active-open{background:var(--accent);color:var(--accent-text)}
 .status-btn.active-closed{background:#DC2626;color:#fff}
 .org-tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:1.25rem}
 .org-tab{padding:7px 18px;border-radius:var(--radius-sm) var(--radius-sm) 0 0;border:1px solid transparent;border-bottom:none;background:transparent;font-size:13px;cursor:pointer;color:var(--text-2);transition:all .12s;margin-bottom:-1px}
@@ -83,11 +85,11 @@ main{flex:1;padding:1rem 1.25rem;max-width:1400px;width:100%;margin:0 auto}
 
 /* inputs */
 input[type=text],input[type=email],select{padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;background:var(--surface);color:var(--text);outline:none;transition:border-color .15s}
-input[type=text]:focus,input[type=email]:focus,select:focus{border-color:var(--accent)}
+input[type=text]:focus,input[type=email]:focus,select:focus{border-color:var(--accent-dark)}
 select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%2357534E' d='M5 6L0 0h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
 .btn{padding:7px 18px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;background:var(--surface);color:var(--text);transition:background .12s;line-height:1}
 .btn:hover{background:var(--bg)}
-.btn-primary{background:var(--text);color:#fff;border-color:var(--text)}.btn-primary:hover{background:#292524}
+.btn-primary{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}.btn-primary:hover{background:var(--accent-dark);color:#fff}
 .btn-green{background:var(--green);color:#fff;border-color:var(--green)}.btn-green:hover{background:#15803d}
 .btn-blue{background:var(--blue);color:#fff;border-color:var(--blue)}.btn-blue:hover{background:#1e40af}
 .btn-danger{color:#DC2626;border-color:#FECACA}.btn-danger:hover{background:#FEF2F2}
@@ -97,18 +99,18 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 /* ── BÉNÉVOLE CARDS ── */
 .b-days-wrap{display:flex;flex-direction:column;gap:10px;max-width:680px}
 .b-day-card{border:1px solid var(--border);border-radius:12px;background:var(--surface);box-shadow:var(--shadow);padding:16px 18px;transition:box-shadow .15s}
-.b-day-card.active{box-shadow:0 0 0 2px #16A34A40,var(--shadow)}
+.b-day-card.active{box-shadow:0 0 0 2px rgba(166,197,189,.5),var(--shadow)}
 .b-day-card-head{display:flex;align-items:center;justify-content:space-between}
 .b-day-card-title{font-size:15px;font-weight:700;letter-spacing:-.01em}
 .b-day-card-title span{font-size:13px;font-weight:400;color:var(--text-3);margin-left:6px}
 .b-day-card-body{margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .b-field label{display:block;font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}
 .b-field select{width:100%;padding:10px 36px 10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:var(--font);background:var(--surface);color:var(--text);appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%2357534E' d='M5 6L0 0h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;outline:none;transition:border-color .15s}
-.b-field select:focus{border-color:var(--accent)}
+.b-field select:focus{border-color:var(--accent-dark)}
 .b-toggle{position:relative;width:46px;height:26px;cursor:pointer;flex-shrink:0}
 .b-toggle input{opacity:0;width:0;height:0;position:absolute}
 .b-toggle-track{position:absolute;inset:0;background:var(--border);border-radius:13px;transition:background .2s}
-.b-toggle input:checked~.b-toggle-track{background:var(--green)}
+.b-toggle input:checked~.b-toggle-track{background:var(--accent)}
 .b-toggle-thumb{position:absolute;top:3px;left:3px;width:20px;height:20px;background:#fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.18);transition:transform .2s}
 .b-day-card.readonly{opacity:.65;pointer-events:none}
 .b-readonly-week{opacity:.5;cursor:not-allowed}
@@ -222,7 +224,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .tp-btn.p{background:var(--text);color:#fff;border-color:var(--text)}.tp-btn.p:hover{background:#292524}
 .tp-remove{width:100%;margin-top:6px;padding:4px;border:none;background:none;font-size:11px;color:#DC2626;cursor:pointer}
 .tp-remove:hover{text-decoration:underline}
-#tp-note:focus{border-color:var(--accent);outline:none}
+#tp-note:focus{border-color:var(--accent-dark);outline:none}
 </style>
 </head>
 <body>
@@ -968,7 +970,7 @@ function buildShiftChips(){
     const btn=document.createElement('button');
     const active=bShiftsDesired===opt.value;
     btn.textContent=opt.label;
-    btn.style.cssText='padding:8px 18px;border-radius:20px;border:1.5px solid '+(active?'var(--accent)':'var(--border)')+';background:'+(active?'var(--accent-light)':'var(--surface)')+';color:'+(active?'var(--accent)':'var(--text-2)')+';font-size:13px;font-weight:'+(active?'600':'400')+';cursor:pointer;transition:all .12s;font-family:var(--font)';
+    btn.style.cssText='padding:8px 18px;border-radius:20px;border:1.5px solid '+(active?'var(--accent-dark)':'var(--border)')+';background:'+(active?'var(--accent)':'var(--surface)')+';color:'+(active?'var(--accent-text)':'var(--text-2)')+';font-size:13px;font-weight:'+(active?'600':'400')+';cursor:pointer;transition:all .12s;font-family:var(--font)';
     btn.onclick=()=>{
       const name=document.getElementById('vol-select').value;
       bShiftsDesired=opt.value;
