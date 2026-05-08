@@ -33,7 +33,7 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 .conn-dot{width:7px;height:7px;border-radius:50%;background:var(--border);display:inline-block;margin-left:auto;flex-shrink:0;transition:background .3s}
 .conn-dot.ok{background:var(--green)}
 .conn-dot.err{background:#EF4444}
-main{flex:1;padding:1rem 1.25rem;max-width:1400px;width:100%;margin:0 auto}
+main{flex:1;padding:1rem 1.25rem;width:100%;overflow-x:hidden}
 .pane{display:none}.pane.visible{display:block}
 
 /* ── SETUP BANNER ── */
@@ -1277,6 +1277,14 @@ function clearDZHighlights(){document.querySelectorAll('.h-dz').forEach(dz=>dz.c
    RENDER HORAIRE
 ══════════════════════════════════════════════ */
 function renderHoraire(){
+  // Si le conteneur n'est pas encore dimensionné (clientWidth=0), attendre le prochain frame
+  const hScrollEarly=document.querySelector('.h-scroll');
+  if(hScrollEarly&&hScrollEarly.clientWidth===0){
+    requestAnimationFrame(renderHoraire);return;
+  }
+  _renderHoraire();
+}
+function _renderHoraire(){
   const wk=wkey(oMon),wkData=avail[wk]||{};
   const day=DAYS.find(d=>d.id===curDay);
   const shifts=SHIFTS[curDay]||[];
@@ -1286,7 +1294,9 @@ function renderHoraire(){
   const numSlots=Math.round((dEH-dSH)*2);
   const hScroll=document.querySelector('.h-scroll');
   const roleColW=parseInt(getComputedStyle(document.documentElement).getPropertyValue('--role-col')||'165');
-  const scrollW=hScroll?hScroll.clientWidth:800;
+  // Mesurer le conteneur parent (cellule 1fr de la grille) pour la largeur disponible
+  const gridCell=hScroll?hScroll.parentElement:null;
+  const scrollW=gridCell?gridCell.clientWidth:(hScroll?hScroll.clientWidth:800);
   const availW=Math.max(scrollW-roleColW,numSlots*28);
   const dynCOL=Math.floor(availW/numSlots);
   const TW=dynCOL*numSlots;
@@ -2309,6 +2319,19 @@ function exportPdfTable(){
   window.addEventListener('resize',()=>{
     if(document.getElementById('pane-organisatrice').classList.contains('visible'))renderHoraire();
   });
+
+  // ResizeObserver sur le conteneur grille pour recalculer si le layout change
+  if(window.ResizeObserver){
+    let roTimer=null;
+    const ro=new ResizeObserver(()=>{
+      clearTimeout(roTimer);
+      roTimer=setTimeout(()=>{
+        if(document.getElementById('pane-organisatrice').classList.contains('visible'))renderHoraire();
+      },60);
+    });
+    const hScrollEl=document.querySelector('.h-scroll');
+    if(hScrollEl)ro.observe(hScrollEl.parentElement||hScrollEl);
+  }
 })();
 </script>
 </body>
