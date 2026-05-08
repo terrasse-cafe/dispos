@@ -1995,30 +1995,23 @@ async function openAutoAssign(){
 
   const toSave=[];
 
-  // ── PASSE UNIQUE : on itère jusqu'à stabilité ──
-  // Pour chaque rôle vide (requis d'abord), on cherche le meilleur candidat
-  // SEULEMENT s'il a une préférence explicite pour ce rôle (règle 5 : sinon on ne force pas)
-  // Requis avant optionnels
   const sorted=[...rolesQueue].sort((a,b)=>a.isOpt===b.isOpt?0:a.isOpt?1:-1);
 
-  sorted.forEach(({sh,role,isOpt})=>{
+  sorted.forEach(({sh,role})=>{
     if(getAssign(wk,sh.id,role))return;
+
     const candidates=availVols.filter(n=>
+      // Ne pas assigner le même bénévole deux fois au même shift
       !alreadyToday(n,sh.id)&&
       volCoversShiftFor(wk,n,sh,dayId)&&
       !quotaReached(n)
     );
     if(!candidates.length)return;
 
-    // Trouver le meilleur selon le comparateur
     const best=candidates.reduce((b,c)=>compare(c,b,role,sh)>0?c:b);
 
-    // Règle 5 : n'assigner que si le meilleur a une préférence explicite
-    // OU si c'est un rôle requis et qu'il est le seul candidat possible
-    const hasPref=prefScore(best,role)>0;
-    const isSoleCandidate=candidates.length===1;
-
-    if(!hasPref&&!isSoleCandidate)return; // laisser l'organisatrice décider
+    // Règle 5 : n'assigner automatiquement que si préférence explicite
+    if(prefScore(best,role)===0)return;
 
     const ov=overlapFor(wk,best,sh,dayId);if(!ov)return;
     setAssign(wk,sh.id,role,best);
