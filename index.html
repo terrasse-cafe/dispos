@@ -61,20 +61,22 @@ main{flex:1;padding:1rem 1.25rem;max-width:1400px;width:100%;margin:0 auto}
 /* topbar */
 .topbar{display:flex;align-items:center;gap:10px;margin-bottom:1.25rem;flex-wrap:wrap}
 .week-nav{display:flex;align-items:center;gap:6px}
-.wbtn{width:30px;height:30px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:15px;color:var(--text-2);display:flex;align-items:center;justify-content:center;transition:background .1s}
+.wbtn{width:32px;height:32px;border-radius:6px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:15px;color:var(--text-2);display:flex;align-items:center;justify-content:center;transition:background .1s;box-shadow:none;flex-shrink:0}
 .wbtn:hover{background:var(--bg)}
 .wlabel{font-size:13px;color:var(--text-2);min-width:210px;text-align:center;font-weight:500}
 .pill{font-size:12px;padding:3px 10px;border:1px solid var(--border);border-radius:20px;color:var(--text-2);background:var(--surface)}
+.b-shift-chip{height:32px;padding:0 18px;border-radius:999px;border:1.5px solid var(--border);background:var(--surface);font-size:13px;font-weight:500;cursor:pointer;color:var(--text-2);display:inline-flex;align-items:center;transition:all .12s;font-family:var(--font);box-shadow:none}
+.b-shift-chip.active{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
 .day-tabs{display:flex;gap:8px;margin-bottom:.75rem;flex-wrap:wrap}
-.day-tab{padding:8px 20px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);font-size:14px;font-weight:500;cursor:pointer;color:var(--text-2);transition:all .15s;box-shadow:none}
+.day-tab{height:32px;padding:0 18px;border-radius:6px;border:1.5px solid var(--border);background:var(--surface);font-size:13px;font-weight:500;cursor:pointer;color:var(--text-2);transition:all .15s;box-shadow:none;display:inline-flex;align-items:center}
 .day-tab:hover{background:var(--bg);border-color:#C8C4BF}
-.day-tab.active{background:var(--accent);color:var(--accent-text);border-color:var(--accent);box-shadow:none}
+.day-tab.active{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
 .day-tab-closed{color:#DC2626;border-color:#FECACA;background:#FEF2F2}
 .day-tab-closed.active{background:#DC2626;border-color:#DC2626;color:#fff}
 /* open/closed toggle */
 .day-status-bar{display:flex;align-items:center;gap:10px;margin-bottom:1.25rem}
-.status-toggle{display:inline-flex;border-radius:12px;border:1.5px solid var(--border);overflow:hidden;background:var(--surface);box-shadow:none}
-.status-btn{padding:9px 22px;font-size:14px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--text-2);transition:background .15s,color .15s;font-family:var(--font);display:flex;align-items:center;gap:7px;white-space:nowrap}
+.status-toggle{display:inline-flex;border-radius:6px;border:1.5px solid var(--border);overflow:hidden;background:var(--surface);box-shadow:none}
+.status-btn{height:32px;padding:0 20px;font-size:13px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--text-2);transition:background .15s,color .15s;font-family:var(--font);display:flex;align-items:center;gap:6px;white-space:nowrap;border-radius:0}
 .status-btn:first-child{border-right:1.5px solid var(--border)}
 .status-btn.active-open{background:var(--accent);color:var(--accent-text)}
 .status-btn.active-closed{background:#DC2626;color:#fff}
@@ -87,15 +89,15 @@ main{flex:1;padding:1rem 1.25rem;max-width:1400px;width:100%;margin:0 auto}
 input[type=text],input[type=email],select{padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;background:var(--surface);color:var(--text);outline:none;transition:border-color .15s}
 input[type=text]:focus,input[type=email]:focus,select:focus{border-color:var(--accent-dark)}
 select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%2357534E' d='M5 6L0 0h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
-.btn{height:32px;padding:0 16px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;background:var(--surface);color:var(--text);transition:background .12s,color .12s;line-height:1;display:inline-flex;align-items:center;justify-content:center;gap:5px;box-shadow:none;white-space:nowrap}
+.btn{height:32px;padding:0 16px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;background:var(--surface);color:var(--text);transition:background .12s,color .12s;line-height:1;display:inline-flex;align-items:center;justify-content:center;gap:5px;box-shadow:none;white-space:nowrap}
 .btn:hover{background:var(--bg)}
 .btn-primary{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}.btn-primary:hover{background:var(--accent-dark);color:#fff}
-.btn-secondary{background:var(--brand-secondary);color:#fff;border-color:var(--brand-secondary)}.btn-secondary:hover{background:#E89A3C;border-color:#E89A3C}
+.btn-secondary{background:var(--brand-secondary);color:var(--text);border-color:var(--brand-secondary)}.btn-secondary:hover{background:#E89A3C;border-color:#E89A3C}
 .btn-green{background:var(--green);color:#fff;border-color:var(--green)}.btn-green:hover{background:#15803d}
 .btn-blue{background:var(--blue);color:#fff;border-color:var(--blue)}.btn-blue:hover{background:#1e40af}
 .btn-danger{color:#DC2626;border-color:#FECACA;background:transparent}.btn-danger:hover{background:#FEF2F2}
-.btn-sm{height:28px;padding:0 12px;font-size:12px}
-.btn-icon{width:28px;height:28px;padding:0;font-size:13px}
+.btn-sm{height:32px;padding:0 14px;font-size:12px}
+.btn-icon{width:32px;height:32px;padding:0;font-size:13px}
 
 /* ── BÉNÉVOLE CARDS ── */
 .b-days-wrap{display:flex;flex-direction:column;gap:10px;max-width:680px}
@@ -232,7 +234,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 <div class="shell">
 <header>
   <div class="logo">Terrasse <span>Café</span></div>
-  <nav class="main-tabs">
+  <nav class="main-tabs" id="main-tabs" style="display:none">
     <button class="main-tab active" onclick="switchMain('benevole',this)">Mes disponibilités</button>
     <button class="main-tab" id="tab-org" onclick="switchMain('organisatrice',this)" style="display:none">Organisatrice</button>
   </nav>
@@ -259,7 +261,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     <div id="b-name-section" style="display:none">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid var(--border-light)">
         <div style="font-size:15px;font-weight:600;color:var(--text)" id="b-greeting"></div>
-        <button class="btn btn-sm" onclick="resetVolSelect()" style="margin-left:auto;color:var(--text-3);font-size:12px">Changer</button>
+        <button class="btn btn-sm" onclick="resetVolSelect()" style="margin-left:auto">Changer</button>
       </div>
       <div class="week-nav" style="margin-bottom:1.5rem">
         <button class="wbtn" onclick="bShift(-1)">&#8592;</button>
@@ -284,7 +286,6 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       </div>
       <div class="b-actions">
         <button class="btn btn-secondary" onclick="submitAvail()">Envoyer mes disponibilités</button>
-        <button class="btn btn-sm" id="b-clear-btn" onclick="clearBSel()" style="display:none">Effacer tout</button>
         <span id="b-sync-badge" class="sync-badge offline" style="display:none"></span>
       </div>
     </div>
@@ -335,8 +336,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <button class="wbtn" onclick="oShift(1)">&#8594;</button>
       </div>
       <span class="pill" id="o-stat">—</span>
-      <button class="btn btn-sm" id="auto-btn" onclick="openAutoAssign()" style="display:flex;align-items:center;gap:5px">⚡ Assignation auto</button>
-      <button class="btn btn-sm btn-secondary" id="finaliser-btn" onclick="openFinaliser()" style="display:flex;align-items:center;gap:5px">✓ Finaliser l'horaire</button>
+      <button class="btn btn-sm" id="auto-btn" onclick="openAutoAssign()">⚡ Assignation auto</button>
+      <button class="btn btn-sm btn-secondary" id="finaliser-btn" onclick="openFinaliser()">✓ Finaliser l'horaire</button>
       <span id="o-sync-badge" class="sync-badge offline" style="display:none"></span>
     </div>
     <div class="day-tabs" id="o-daytabs"></div>
@@ -971,7 +972,7 @@ function buildShiftChips(){
     const btn=document.createElement('button');
     const active=bShiftsDesired===opt.value;
     btn.textContent=opt.label;
-    btn.style.cssText='padding:8px 18px;border-radius:20px;border:1.5px solid '+(active?'var(--accent-dark)':'var(--border)')+';background:'+(active?'var(--accent)':'var(--surface)')+';color:'+(active?'var(--accent-text)':'var(--text-2)')+';font-size:13px;font-weight:'+(active?'600':'400')+';cursor:pointer;transition:all .12s;font-family:var(--font)';
+    btn.className='b-shift-chip'+(active?' active':'');
     btn.onclick=()=>{
       const name=document.getElementById('vol-select').value;
       bShiftsDesired=opt.value;
@@ -979,7 +980,6 @@ function buildShiftChips(){
       buildShiftChips();
       const showWeek=opt.value!==0;
       document.getElementById('b-week-section').style.display=showWeek?'block':'none';
-      document.getElementById('b-clear-btn').style.display=showWeek?'':'none';
       if(showWeek)renderB();
     };
     wrap.appendChild(btn);
@@ -1023,15 +1023,23 @@ async function onVolSelect(){
   buildShiftChips();
   const showWeek=bShiftsDesired!==0;
   document.getElementById('b-week-section').style.display=showWeek?'block':'none';
-  document.getElementById('b-clear-btn').style.display=showWeek?'':'none';
   if(showWeek)renderB();
 }
 
 function resetVolSelect(){
+  const prevName=document.getElementById('vol-select').value;
+  // Clear in-memory selections for the previous volunteer so they don't leak to the next person
+  if(prevName){
+    const wk=wkey(bMon);
+    if(bSel[wk])delete bSel[wk][prevName];
+    // Reset the whole week selection object for this person
+    bSel[wkey(bMon)]={};
+    delete bShiftMemory[prevName];
+  }
+  bShiftsDesired=0;
   document.getElementById('vol-select').value='';
   document.getElementById('b-empty-state').style.display='block';
   document.getElementById('b-name-section').style.display='none';
-  bShiftsDesired=0;
 }
 
 async function onVolEmailBlur(){
@@ -1088,11 +1096,9 @@ function renderB(){
   if(!bSel[wk])bSel[wk]={};
   document.getElementById('b-wlabel').textContent=wlabel(bMon);
   const readOnly=isWeekReadOnly(wk);
-  const submitBtn=document.querySelector('#pane-benevole .btn-primary');
-  const clearBtn=document.getElementById('b-clear-btn');
+  const submitBtn=document.querySelector('#pane-benevole .btn-secondary');
   if(readOnly){
     if(submitBtn)submitBtn.style.display='none';
-    if(clearBtn)clearBtn.style.display='none';
   } else {
     if(submitBtn)submitBtn.style.display='';
   }
@@ -2222,6 +2228,9 @@ function exportPdfTable(){
   if(orgUnlocked){
     const orgTab=document.getElementById('tab-org');
     if(orgTab)orgTab.style.display='';
+    // Show the nav bar only when there are 2 tabs
+    const mainTabs=document.getElementById('main-tabs');
+    if(mainTabs)mainTabs.style.display='flex';
     const orgBtn=document.querySelector('.main-tab:last-child');
     switchMain._orgLoaded=true; // déjà chargé dans init
     switchMain('organisatrice',orgBtn);
