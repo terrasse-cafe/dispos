@@ -583,26 +583,50 @@ const DAYS=[
   {id:'dimanche', label:'Dimanche', oH:11,oM:0, cH:17,cM:0,  dow:6},
 ];
 const SHIFTS={
-  jeudi:[{id:'j_s',label:'Soir',fromH:15,toH:21,roles:['Caissier','Barista','Préposé remplissage']}],
+  jeudi:[{id:'j_s',label:'Soir',fromH:15,toH:21,
+    roles:['Caissier','Barista','Préposé remplissage']}],
   vendredi:[
-    {id:'v_j',label:'Jour',fromH:11,toH:17,roles:['Caissier','Barista','Mise en place']},
+    {id:'v_j',label:'Jour',fromH:11,toH:17,
+      roles:['Caissier','Barista','Mise en place']},
     {id:'v_s',label:'Soir',fromH:17,toH:21.5,
-     roles:['Caissier','Barista','Préposé remplissage','Préposé vaisselle','Busboy / Busgirl','Préposé au service','Pizzaiolo (1)','Pizzaiolo (2)','Préposé à la pâte','Cuisinier (1)','Cuisinier (2)','Préposé à la passe (1)','Préposé à la passe (2)'],
-     optional:['Caissier bar','Barmaid']}
+      roles:['Caissier','Barista','Préposé remplissage','Préposé vaisselle','Busboy / Busgirl','Préposé au service','Pizzaiolo','Pizzaiolo','Préposé à la pâte','Cuisinier','Cuisinier','Préposé à la passe','Préposé à la passe'],
+      optional:['Caissier bar','Barmaid']}
   ],
   samedi:[
-    {id:'s_j',label:'Jour',fromH:11,toH:17,roles:['Caissier','Barista','Mise en place']},
+    {id:'s_j',label:'Jour',fromH:11,toH:17,
+      roles:['Caissier','Barista','Mise en place']},
     {id:'s_s',label:'Soir',fromH:17,toH:21.5,
-     roles:['Caissier','Barista','Préposé remplissage','Préposé vaisselle','Busboy / Busgirl','Préposé au service','Pizzaiolo (1)','Pizzaiolo (2)','Cuisinier (1)','Cuisinier (2)','Préposé à la passe (1)','Préposé à la passe (2)'],
-     optional:['Caissier bar','Barmaid']}
+      roles:['Caissier','Barista','Préposé remplissage','Préposé vaisselle','Busboy / Busgirl','Préposé au service','Pizzaiolo','Pizzaiolo','Cuisinier','Cuisinier','Préposé à la passe','Préposé à la passe'],
+      optional:['Caissier bar','Barmaid']}
   ],
-  dimanche:[{id:'d_j',label:'Jour',fromH:11,toH:17,roles:['Caissier','Barista','Préposé remplissage']}],
+  dimanche:[{id:'d_j',label:'Jour',fromH:11,toH:17,
+    roles:['Caissier','Barista','Préposé remplissage']}],
 };
-const ALL_ROLES=[...new Set(Object.values(SHIFTS).flat().flatMap(s=>[...s.roles,...(s.optional||[])]))];
-function roleLabel(r){return r.replace(/\s*\(\d+\)$/,'');}
-const DISPLAY_ROLES=[...new Set(ALL_ROLES.map(roleLabel))];
-function labelToRole(label){return ALL_ROLES.find(r=>roleLabel(r)===label)||label;}
-function roleToLabel(r){return roleLabel(r);}
+
+// Générer les clés uniques pour chaque slot de rôle (role#index si dupliqué)
+function expandRoles(roles){
+  const count={};
+  return roles.map(r=>{
+    count[r]=(count[r]||0)+1;
+    return count[r]>1?r+'#'+count[r]:r;
+  });
+}
+// Clé de slot unique : 'Pizzaiolo' → 'Pizzaiolo', 2e 'Pizzaiolo' → 'Pizzaiolo#2'
+// Label affiché : toujours sans le suffixe #
+function roleSlotKey(r){return r;} // identité, le # est déjà dans le nom de slot
+function roleDisplayLabel(r){return r.replace(/#\d+$/,'');}
+
+// Pré-calculer les shifts avec slots étendus
+Object.values(SHIFTS).flat().forEach(sh=>{
+  sh._slots=expandRoles(sh.roles);
+  sh._optSlots=expandRoles(sh.optional||[]);
+});
+
+const ALL_ROLES=[...new Set(Object.values(SHIFTS).flat().flatMap(s=>s.roles.concat(s.optional||[])))];
+function roleLabel(r){return roleDisplayLabel(r);}
+const DISPLAY_ROLES=[...new Set(ALL_ROLES)];
+function labelToRole(label){return label;}
+function roleToLabel(r){return roleDisplayLabel(r);}
 const VCOLS=[
   {bg:'#DBEAFE',fg:'#1D4ED8'},{bg:'#D1FAE5',fg:'#065F46'},
   {bg:'#FCE7F3',fg:'#9D174D'},{bg:'#FEF3C7',fg:'#92400E'},
@@ -1200,7 +1224,7 @@ function highlightDZs(wk,shifts){
     const fromRole=draggingFromRole;
     const alreadyOnShift=!isEmp(draggingVol)&&volAssignedToShift(wk,draggingVol,sh)
       &&!(fromRole&&fromRole.shiftId===sh.id);
-    [...sh.roles,...(sh.optional||[])].forEach(role=>{
+    [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(role=>{
       const dz=document.getElementById('dz-'+sh.id+'-'+role.replace(/[^a-z0-9]/gi,'_'));
       if(!dz)return;
       // La source elle-même n'est pas une cible valide
@@ -1263,16 +1287,16 @@ function renderHoraire(){
     ss.textContent=mStr(shift.fromH*60)+' – '+mStr(shift.toH*60);
     sb2.appendChild(ss);sr.appendChild(sl);sr.appendChild(sb2);grid.appendChild(sr);
 
-    const allRoles=[...shift.roles,...(shift.optional||[])];
+    const allRoles=[...(shift._slots||shift.roles),...(shift._optSlots||[])];
     allRoles.forEach(role=>{
-      const isOpt=(shift.optional||[]).includes(role);
+      const isOpt=(shift._optSlots||shift.optional||[]).includes(role);
       if(!isOpt)totalReq++;
       const row=document.createElement('div');row.className='h-role-row';
       row.addEventListener('dragenter',()=>{if(draggingVol&&volCoversShift(wk,draggingVol,shift))row.classList.add('row-hover');});
       row.addEventListener('dragleave',e=>{if(!row.contains(e.relatedTarget))row.classList.remove('row-hover');});
       row.addEventListener('drop',()=>row.classList.remove('row-hover'));
       const nc=document.createElement('div');nc.className='h-role-name'+(isOpt?' opt':'');
-      nc.textContent=role+(isOpt?' ★':'');row.appendChild(nc);
+      nc.textContent=roleDisplayLabel(role)+(isOpt?' ★':'');row.appendChild(nc);
       const tl=document.createElement('div');tl.className='h-timeline';tl.style.width=tl.style.minWidth=TW+'px';
       const dz=document.createElement('div');dz.className='h-dz';
       dz.style.left=spx+'px';dz.style.width=sw+'px';
@@ -1414,7 +1438,7 @@ function volTotalAvailMins(wk,name){
 function volAssignedMins(wk,name){
   const shifts=SHIFTS[curDay]||[];let total=0;
   shifts.forEach(sh=>{
-    const allR=[...sh.roles,...(sh.optional||[])];
+    const allR=[...(sh._slots||sh.roles),...(sh._optSlots||[])];
     allR.forEach(role=>{
       if(getAssign(wk,sh.id,role)!==name)return;
       const ct=getAssignTimes(wk,sh.id,role);
@@ -1425,7 +1449,7 @@ function volAssignedMins(wk,name){
 }
 function volRemainingMins(wk,name){return Math.max(0,volTotalAvailMins(wk,name)-volAssignedMins(wk,name));}
 function volAssignedToShift(wk,name,shift){
-  const allR=[...shift.roles,...(shift.optional||[])];
+  const allR=[...(shift._slots||shift.roles),...(shift._optSlots||[])];
   return allR.some(role=>getAssign(wk,shift.id,role)===name);
 }
 function overlapMins(wk,name,shift){
@@ -1439,7 +1463,7 @@ function volWeekShiftCount(wk, name) {
   const seen = new Set();
   DAYS.forEach(day => {
     (SHIFTS[day.id]||[]).forEach(sh => {
-      const allR = [...sh.roles,...(sh.optional||[])];
+      const allR = [...(sh._slots||sh.roles),...(sh._optSlots||[])];
       if (allR.some(r => getAssign(wk,sh.id,r) === name)) seen.add(sh.id);
     });
   });
@@ -1501,7 +1525,7 @@ function buildCards(wk,shifts){
       if(r){
         const assigned=[];
         (SHIFTS[curDay]||[]).forEach(sh=>{
-          [...sh.roles,...(sh.optional||[])].forEach(role=>{
+          [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(role=>{
             if(getAssign(wk,sh.id,role)!==name)return;
             const ct=getAssignTimes(wk,sh.id,role);
             if(ct)assigned.push({s:ct.s,e:ct.e});
@@ -1546,7 +1570,7 @@ function buildCards(wk,shifts){
   let anyE=false;
   directory.filter(p=>p.type==='emp').forEach(p=>{
     const coverable=SHIFTS[curDay]?SHIFTS[curDay].filter(sh=>volCoversShift(wk,p.name,sh)):[];
-    const allPlaced=coverable.length&&coverable.every(sh=>[...sh.roles,...(sh.optional||[])].some(r=>getAssign(wk,sh.id,r)===p.name));
+    const allPlaced=coverable.length&&coverable.every(sh=>[...(sh._slots||sh.roles),...(sh._optSlots||[])].some(r=>getAssign(wk,sh.id,r)===p.name));
     if(allPlaced)return;
     const card=makeCard(p.name,EMP_COL,true);if(card){anyE=true;ep.appendChild(card);}
   });
@@ -1648,15 +1672,16 @@ function renderDir(){
 
 function fillRoleSelects(vals){
   const ids=['pm-r1','pm-r2','pm-r3'];
+  // Options = noms uniques d'affichage (sans suffixe #)
+  const uniqueRoles=[...new Set(ALL_ROLES.map(roleDisplayLabel))];
   ids.forEach((id,i)=>{
     const sel=document.getElementById(id);
     const myVal=vals?vals[i]||'':'';
     const otherVals=ids.filter((_,j)=>j!==i).map((_,k)=>vals?vals[[0,1,2].filter(x=>x!==i)[k]]||'':'').filter(Boolean);
     while(sel.options.length>1)sel.remove(1);
-    ALL_ROLES.forEach(role=>{
+    uniqueRoles.forEach(role=>{
       const o=document.createElement('option');
-      o.value=role;
-      o.textContent=role; // afficher le nom complet avec numéro si applicable
+      o.value=role;o.textContent=role;
       if(otherVals.includes(role)){o.disabled=true;o.style.color='#A8A29E';}
       sel.appendChild(o);
     });
@@ -1725,7 +1750,7 @@ function buildScheduleSummary(wk){
     if((closedDays[wk]||new Set()).has(day.id))return;
     curDay=day.id;
     (SHIFTS[day.id]||[]).forEach(shift=>{
-      [...shift.roles,...(shift.optional||[])].forEach(role=>{
+      [...(shift._slots||shift.roles),...(shift._optSlots||[])].forEach(role=>{
         const name=getAssign(wk,shift.id,role);if(!name)return;
         if(!byPerson[name])byPerson[name]=[];
         const ct=getAssignTimes(wk,shift.id,role);
@@ -1769,7 +1794,7 @@ function renderFinPreview(wk){
       shiftLbl.style.cssText='font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin:6px 0 3px';
       shiftLbl.textContent=shift.label+' — '+mStr(shift.fromH*60)+' – '+mStr(shift.toH*60);
       dayDiv.appendChild(shiftLbl);
-      [...shift.roles,...(shift.optional||[])].forEach(role=>{
+      [...(shift._slots||shift.roles),...(shift._optSlots||[])].forEach(role=>{
         const name=getAssign(wk,shift.id,role);
         const note=name?getAssignNote(wk,shift.id,role):'';
         const r=document.createElement('div');r.style.cssText='display:flex;gap:6px;padding:2px 0;font-size:11px';
@@ -1858,7 +1883,7 @@ function volShiftsAssignedThisWeek(wk, name) {
   const shiftIds = new Set();
   DAYS.forEach(day => {
     (SHIFTS[day.id]||[]).forEach(sh => {
-      const allR = [...sh.roles,...(sh.optional||[])];
+      const allR = [...(sh._slots||sh.roles),...(sh._optSlots||[])];
       if (allR.some(r => getAssign(wk,sh.id,r) === name)) shiftIds.add(sh.id);
     });
   });
@@ -1884,7 +1909,7 @@ async function openAutoAssign(){
   const weekShiftSeen=new Set();
   DAYS.forEach(day=>{
     (SHIFTS[day.id]||[]).forEach(sh=>{
-      [...sh.roles,...(sh.optional||[])].forEach(role=>{
+      [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(role=>{
         const ex=getAssign(wk,sh.id,role);
         if(ex&&!isEmp(ex)){
           const key=ex+'|'+sh.id;
@@ -1897,7 +1922,7 @@ async function openAutoAssign(){
   // Shifts du jour déjà assignés
   const dayShifts={}; // name -> Set<shiftId>
   shifts.forEach(sh=>{
-    [...sh.roles,...(sh.optional||[])].forEach(role=>{
+    [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(role=>{
       const ex=getAssign(wk,sh.id,role);
       if(ex){if(!dayShifts[ex])dayShifts[ex]=new Set();dayShifts[ex].add(sh.id);}
     });
@@ -1925,9 +1950,9 @@ async function openAutoAssign(){
   // Rôles vides à remplir
   const rolesQueue=[];
   shifts.forEach(sh=>{
-    [...sh.roles,...(sh.optional||[])].forEach(role=>{
+    [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(role=>{
       if(!getAssign(wk,sh.id,role))
-        rolesQueue.push({sh,role,isOpt:(sh.optional||[]).includes(role)});
+        rolesQueue.push({sh,role,isOpt:(sh._optSlots||sh.optional||[]).includes(role)});
     });
   });
 
@@ -1940,14 +1965,13 @@ async function openAutoAssign(){
   }
 
   // ── Règle 3 : score de préférence de rôle ──
-  // Correspondance exacte prioritaire, puis par label (pour gérer Pizzaiolo (1)/(2))
+  // Les préférences stockées sont des noms propres (ex: 'Pizzaiolo')
+  // Les slots peuvent avoir un suffixe # (ex: 'Pizzaiolo#2') — on compare par display label
   function prefScore(name,role){
     const p=getPerson(name);if(!p||!p.roles)return 0;
-    const roleLabel_=roleToLabel(role);
-    // 1. Chercher une correspondance exacte d'abord
-    let idx=p.roles.findIndex(r=>r===role);
-    // 2. Si pas de correspondance exacte, chercher par label
-    if(idx===-1) idx=p.roles.findIndex(r=>r&&roleToLabel(r)===roleLabel_);
+    const displayRole=roleDisplayLabel(role);
+    // Correspondance exacte par label d'affichage
+    const idx=p.roles.findIndex(r=>r&&(r===role||r===displayRole||roleDisplayLabel(r)===displayRole));
     if(idx===0)return 3;
     if(idx===1)return 2;
     if(idx===2)return 1;
@@ -2042,9 +2066,9 @@ function exportPdfTable(){
     const shifts = SHIFTS[day.id] || [];
     const rows = [];
     shifts.forEach(shift => {
-      const allRoles = [...shift.roles, ...(shift.optional||[])];
+      const allRoles = [...(shift._slots||shift.roles), ...(shift._optSlots||[])];
       allRoles.forEach(role => {
-        const isOpt = (shift.optional||[]).includes(role);
+        const isOpt = (shift._optSlots||shift.optional||[]).includes(role);
         const name = getAssign(wk, shift.id, role);
         const ct = name ? getAssignTimes(wk, shift.id, role) : null;
         const rng = (name && !isEmp(name)) ? (() => {
