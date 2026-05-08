@@ -720,7 +720,14 @@ async function loadPeople() {
 async function upsertPerson(p) {
   if (!sb) return;
   const row = {name:p.name, email:p.email, type:p.type, role1:p.roles[0]||'', role2:p.roles[1]||'', role3:p.roles[2]||''};
-  const { error } = await sb.from('people').upsert(row, {onConflict:'name'});
+  let error;
+  if (p.id) {
+    // Modification — update par id
+    ({error} = await sb.from('people').update(row).eq('id', p.id));
+  } else {
+    // Création — insert
+    ({error} = await sb.from('people').insert(row));
+  }
   if (error) console.error('upsertPerson:', error);
 }
 
