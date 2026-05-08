@@ -267,20 +267,6 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:10px">Combien de quarts souhaitez-vous faire cette semaine ?</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap" id="b-shift-chips"></div>
       </div>
-      <!-- READ-ONLY BANNER (semaine passée ou confirmée) -->
-      <div id="b-readonly-banner" style="display:none;margin-bottom:1.25rem;padding:12px 16px;background:var(--blue-light);border:1px solid #BFDBFE;border-radius:var(--radius);font-size:13px;color:var(--blue)">
-        <div style="font-weight:600;margin-bottom:4px" id="b-readonly-title">📋 Horaire confirmé</div>
-        <div id="b-readonly-msg" style="color:var(--text-2);font-size:12px">L'organisatrice a finalisé l'horaire pour cette semaine.</div>
-        <a id="b-readonly-pdf" href="#" target="_blank" style="display:none;margin-top:8px;display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--blue);font-weight:500">⬇ Voir l'horaire PDF</a>
-      </div>
-      <div id="b-week-section" style="display:none">
-        <div class="b-days-wrap" id="b-days-wrap"></div>
-        <div class="b-summary" id="b-summary"></div>
-        <div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border-light)">
-          <label style="display:block;font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Courriel de notification</label>
-          <input type="email" id="vol-email" placeholder="prenom@exemple.com" style="width:260px;font-size:13px" oninput="onVolEmailChange()"/>
-          <div style="font-size:11px;color:var(--text-3);margin-top:5px">Vous serez notifié(e) à cette adresse quand l'horaire sera confirmé.</div>
-        </div>
       </div>
       <div class="b-actions">
         <button class="btn btn-primary" onclick="submitAvail()">Envoyer mes disponibilités</button>
@@ -337,7 +323,6 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <span class="pill" id="o-stat">—</span>
       <button class="btn btn-sm" id="auto-btn" onclick="openAutoAssign()" style="display:flex;align-items:center;gap:5px">⚡ Assignation auto</button>
       <button class="btn btn-sm" id="finaliser-btn" onclick="openFinaliser()" style="display:flex;align-items:center;gap:5px;background:var(--blue);color:#fff;border-color:var(--blue)">✓ Finaliser l'horaire</button>
-      <span id="confirm-badge" style="display:none;font-size:11px;padding:2px 8px;border-radius:10px;background:var(--green-light);color:var(--green);font-weight:500">✓ Officiel</span>
       <span id="o-sync-badge" class="sync-badge offline" style="display:none"></span>
     </div>
     <div class="day-tabs" id="o-daytabs"></div>
@@ -460,16 +445,6 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
           <div style="font-size:12px;color:var(--text-2)" id="fin-email-to"></div>
           <textarea id="fin-email-body" rows="10" style="flex:1;width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:11px;font-family:var(--mono);line-height:1.7;resize:vertical;outline:none;background:var(--bg);color:var(--text);transition:border-color .15s" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"></textarea>
           <button class="btn btn-green btn-sm" onclick="sendOutlook()" style="width:100%;justify-content:center;display:flex;gap:6px">✉ Ouvrir dans Outlook ↗</button>
-        </div>
-        <!-- Confirm — discret en bas -->
-        <div style="padding:12px 16px;border-top:1px solid var(--border);background:var(--bg)">
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-            <input type="checkbox" id="fin-confirm-chk" onchange="toggleConfirm()" style="width:14px;height:14px;accent-color:var(--green);cursor:pointer">
-            <div>
-              <span style="font-size:12px;font-weight:500;color:var(--text-2)" id="fin-confirm-lbl">Marquer comme officiel</span>
-              <span style="font-size:11px;color:var(--text-3);margin-left:6px">— bloque les modifications des bénévoles</span>
-            </div>
-          </label>
         </div>
       </div>
     </div>
@@ -646,7 +621,6 @@ function getSmartBMon(){
   return isBeforeCafe?addWeeks(mon,1):mon;
 }
 let bMon=getSmartBMon();
-let confirmedWeeks=new Set(); // semaines confirmées par l'organisatrice
 let closedDays={}; // {wk: Set<dayId>} jours fermés (météo etc.)
 let bSel={},avail={},assigns={},vcols={};
 let curDay='vendredi';
@@ -768,32 +742,6 @@ async function saveAvail(wk, name, slots, quota) {
 }
 
 /* ══════════════════════════════════════════════
-   SUPABASE — CONFIRMED WEEKS
-══════════════════════════════════════════════ */
-async function loadConfirmedWeeks() {
-  if (!sb) return;
-  const { data, error } = await sb.from('confirmed_weeks').select('week_key');
-  if (error) { console.error('loadConfirmedWeeks:', error); return; }
-  confirmedWeeks = new Set((data||[]).map(r => r.week_key));
-}
-
-async function markWeekConfirmed(wk) {
-  if (!sb) return;
-  const { error } = await sb.from('confirmed_weeks').upsert(
-    {week_key: wk, confirmed_at: new Date().toISOString()},
-    {onConflict:'week_key'}
-  );
-  if (error) console.error('markWeekConfirmed:', error);
-  else confirmedWeeks.add(wk);
-}
-
-async function unconfirmWeek(wk) {
-  if (!sb) return;
-  await sb.from('confirmed_weeks').delete().eq('week_key', wk);
-  confirmedWeeks.delete(wk);
-}
-
-/* ══════════════════════════════════════════════
    SUPABASE — ASSIGNMENTS
 ══════════════════════════════════════════════ */
 async function loadAssignments(wk) {
@@ -891,7 +839,6 @@ async function bootOrgData() {
   if (!sb) return;
   const wk = wkey(oMon);
   await loadPeople();
-  await loadConfirmedWeeks();
   await loadAvail(wk);
   await loadAssignments(wk);
   subscribeRealtime(wk);
@@ -900,7 +847,7 @@ async function bootOrgData() {
 
 async function bootVolData(wk) {
   if (!sb) return;
-  await Promise.all([loadAvail(wk), loadConfirmedWeeks()]);
+  await loadAvail(wk);
 }
 
 /* ══════════════════════════════════════════════
@@ -1057,11 +1004,11 @@ function buildTimeSelect(day,type,savedVal,minMins=null){
 }
 
 function isWeekReadOnly(wk){
-  // Lecture seule si semaine passée OU horaire confirmé
+  // Lecture seule seulement si semaine passée
   const mon=new Date(wk+'T00:00:00');
   const now=new Date();now.setHours(0,0,0,0);
   const weekEnd=new Date(mon);weekEnd.setDate(mon.getDate()+6);
-  return weekEnd<now||confirmedWeeks.has(wk);
+  return weekEnd<now;
 }
 
 function renderB(){
@@ -1069,21 +1016,12 @@ function renderB(){
   if(!bSel[wk])bSel[wk]={};
   document.getElementById('b-wlabel').textContent=wlabel(bMon);
   const readOnly=isWeekReadOnly(wk);
-  const confirmed=confirmedWeeks.has(wk);
-  // Banner read-only
-  const banner=document.getElementById('b-readonly-banner');
   const submitBtn=document.querySelector('#pane-benevole .btn-primary');
   const clearBtn=document.getElementById('b-clear-btn');
   if(readOnly){
-    banner.style.display='block';
-    document.getElementById('b-readonly-title').textContent=confirmed?'📋 Horaire confirmé':'📅 Semaine passée';
-    document.getElementById('b-readonly-msg').textContent=confirmed
-      ?'L\'organisatrice a finalisé l\'horaire. Vos disponibilités sont en lecture seule.'
-      :'Cette semaine est passée. Vos disponibilités soumises sont affichées en lecture seule.';
     if(submitBtn)submitBtn.style.display='none';
     if(clearBtn)clearBtn.style.display='none';
   } else {
-    banner.style.display='none';
     if(submitBtn)submitBtn.style.display='';
   }
   const wrap=document.getElementById('b-days-wrap');wrap.innerHTML='';
@@ -1173,10 +1111,6 @@ function renderO(){
   document.getElementById('o-wlabel').textContent=wlabel(oMon);
   const nbVols=Object.keys(wkData).filter(n=>!isEmp(n)).length;
   document.getElementById('o-stat').textContent=nbVols+' bénévole(s) ont répondu';
-  // Badge confirmation
-  const isConfirmed=confirmedWeeks.has(wk);
-  const badge=document.getElementById('confirm-badge');
-  if(badge){badge.style.display=isConfirmed?'inline-flex':'none';}
   buildDayTabs();renderHoraire();
 }
 
@@ -1801,14 +1735,7 @@ function buildScheduleSummary(wk){
 function openFinaliser(){
   const wk=wkey(oMon);
   document.getElementById('fin-week-lbl').textContent='— '+wlabel(oMon);
-  // Confirm toggle
-  const isConfirmed=confirmedWeeks.has(wk);
-  const chk=document.getElementById('fin-confirm-chk');
-  chk.checked=isConfirmed;
-  document.getElementById('fin-confirm-lbl').textContent=isConfirmed?'Horaire officiel ✓':'Marquer comme officiel';
-  // PDF preview
   renderFinPreview(wk);
-  // Email
   renderFinEmail(wk);
   document.getElementById('finaliser-overlay').classList.add('open');
 }
@@ -1872,15 +1799,6 @@ Merci pour votre implication !
 Bonne semaine,
 L'équipe organisatrice`;
   document.getElementById('fin-email-body').value=body;
-}
-
-async function toggleConfirm(){
-  const wk=wkey(oMon);
-  const chk=document.getElementById('fin-confirm-chk');
-  if(chk.checked){await markWeekConfirmed(wk);}
-  else{await unconfirmWeek(wk);}
-  document.getElementById('fin-confirm-lbl').textContent=chk.checked?'Horaire officiel ✓':'Marquer comme officiel';
-  renderO();
 }
 
 function sendOutlook(){
@@ -2139,7 +2057,6 @@ async function openAutoAssign(){
 function exportPdfTable(){
   const wk = wkey(oMon);
   const wkClosed = closedDays[wk] || new Set();
-  const markConfirmed = confirmedWeeks.has(wk);
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
   const pageW = 215.9, pageH = 279.4;
@@ -2157,7 +2074,7 @@ function exportPdfTable(){
   setFill(C.accent); doc.rect(0,0,pageW,10,'F');
   doc.setFont('helvetica','bold'); doc.setFontSize(11);
   setTextColor('#FFFFFF');
-  doc.text('Terrasse Café — Horaire des bénévoles'+(markConfirmed?' — OFFICIEL':''), margin, 7);
+  doc.text('Terrasse Café — Horaire des bénévoles', margin, 7);
   doc.setFont('helvetica','normal'); doc.setFontSize(9);
   doc.text(wlabel(oMon), pageW - margin, 7, {align:'right'});
   y = 18;
@@ -2272,7 +2189,7 @@ function exportPdfTable(){
 /* ══════════════════════════════════════════════
    CONFIRMER L'HORAIRE
 ══════════════════════════════════════════════ */
-// confirmSchedule replaced by toggleConfirm inside openFinaliser
+
 
 /* ══════════════════════════════════════════════
    INIT
