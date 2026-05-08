@@ -272,7 +272,10 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <div class="b-summary" id="b-summary"></div>
         <div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border-light)">
           <label style="display:block;font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Courriel de notification</label>
-          <input type="email" id="vol-email" placeholder="prenom@exemple.com" style="width:260px;font-size:13px" oninput="onVolEmailChange()"/>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input type="email" id="vol-email" placeholder="prenom@exemple.com" style="width:260px;font-size:13px" onblur="onVolEmailBlur()"/>
+            <span id="vol-email-saved" style="font-size:11px;color:var(--green);display:none">✓ Enregistré</span>
+          </div>
           <div style="font-size:11px;color:var(--text-3);margin-top:5px">Vous serez notifié(e) quand l'horaire sera disponible.</div>
         </div>
       </div>
@@ -1016,10 +1019,19 @@ function resetVolSelect(){
   bShiftsDesired=0;
 }
 
-function onVolEmailChange(){
+async function onVolEmailBlur(){
   const name=document.getElementById('vol-select').value;
   const email=document.getElementById('vol-email').value.trim();
-  const p=getPerson(name);if(p&&email)p.email=email;
+  if(!name)return;
+  const p=getPerson(name);
+  if(!p)return;
+  if(email===p.email)return; // pas de changement
+  p.email=email;
+  // Persister dans Supabase
+  await upsertPerson(p);
+  // Feedback visuel
+  const badge=document.getElementById('vol-email-saved');
+  if(badge){badge.style.display='inline';setTimeout(()=>badge.style.display='none',2500);}
 }
 
 /* ══════════════════════════════════════════════
