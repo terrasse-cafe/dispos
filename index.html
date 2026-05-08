@@ -1342,9 +1342,9 @@ function renderHoraire(){
   const hScroll=document.querySelector('.h-scroll');
   const roleColW=parseInt(getComputedStyle(document.documentElement).getPropertyValue('--role-col')||'130');
   const scrollW=hScroll?hScroll.clientWidth:800;
-  // dynCOL = pixels per 30-min slot; size the grid so full hours take ≥38px
+  // dynCOL = pixels per 30-min slot; cap at 50px so grid never overflows on 13" laptop
   const availW=Math.max(scrollW-roleColW, numHours*38);
-  const dynCOL=Math.floor(availW/numSlots);
+  const dynCOL=Math.min(50, Math.floor(availW/numSlots));
   const TW=dynCOL*numSlots;
   function toPx(h){return Math.round((h-dSH)*2*dynCOL);}
   const wk_check=wkey(oMon);
