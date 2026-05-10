@@ -1097,6 +1097,8 @@ async function bShift(d){
   bMon=addWeeks(bMon,d);
   const wk=wkey(bMon);
   const name=document.getElementById('vol-select').value;
+  // Toujours mettre à jour le label de semaine, qu'un nom soit sélectionné ou non
+  document.getElementById('b-wlabel').textContent=wlabel(bMon);
   await bootVolData(wk);
   if(name){
     restoreWeekState(name, wk);
@@ -1413,9 +1415,15 @@ function renderHoraire(){
         if(!isOpt)totalFilled++;
         const emp=isEmp(assigned);
         const col=emp?EMP_COL:(vcols[assigned]||VCOLS[0]);
+        // Check if this volunteer is over quota (all days, week-wide)
+        const assignedQuota=emp?null:volQuota(wk,assigned);
+        const assignedUsed=emp?0:volWeekShiftCount(wk,assigned);
+        const isOverQuota=!emp&&assignedQuota!==99&&assignedUsed>assignedQuota;
+        const chipBorderColor=isOverQuota?'#DC2626':(emp?col.fg:(col.fg+'80'));
+        const chipBorderWidth=isOverQuota?'2px':(emp?'2.5px':'1.5px');
         dz.classList.add('filled');
         dz.style.background=emp?col.bg:`repeating-linear-gradient(45deg,${col.bg}55,${col.bg}55 6px,${col.bg}22 6px,${col.bg}22 12px)`;
-        dz.style.borderColor=col.fg+'40';
+        dz.style.borderColor=isOverQuota?'#DC262640':(col.fg+'40');
         const ct=getAssignTimes(wk,shift.id,role);
         const rng=emp?null:volDayRange(wk,assigned);
         let aSH,aEH;
@@ -1431,7 +1439,7 @@ function renderHoraire(){
           chip.style.top='3px';chip.style.bottom='3px';
           chip.style.paddingTop='4px';chip.style.paddingBottom='4px';
         }
-        chip.style.background=col.bg;chip.style.border=`${emp?'2.5px':'1.5px'} solid ${col.fg}${emp?'':'80'}`;
+        chip.style.background=col.bg;chip.style.border=`${chipBorderWidth} solid ${chipBorderColor}`;
         const inner=document.createElement('div');inner.className='avail-chip-inner';
         if(emp){const b=document.createElement('span');b.className='emp-badge';b.style.color=col.fg;b.textContent='EMP';inner.appendChild(b);}
         const nm=document.createElement('span');nm.className='chip-name';nm.style.color=col.fg;nm.textContent=assigned;inner.appendChild(nm);
@@ -1613,9 +1621,10 @@ function buildCards(wk,shifts){
     const quota=emp?null:volQuota(wk,name);
     const usedShifts=emp?0:volWeekShiftCount(wk,name);
     const quotaFull=!emp&&quota!==99&&usedShifts>=quota;
-    const card=document.createElement('div');card.className='vol-card'+(emp?' emp-card':'')+(quotaFull?' quota-full':'');
+    const quotaOver=!emp&&quota!==99&&usedShifts>quota;
+    const card=document.createElement('div');card.className='vol-card'+(emp?' emp-card':'')+(quotaFull?' quota-full':'')+(quotaOver?' quota-over':'');
     const isPast_=isPastDay();card.draggable=!isPast_;if(isPast_)card.style.cursor='default';
-    const borderCol=quotaFull?'#EF4444':(col.fg+(emp?'':'60'));
+    const borderCol=quotaOver?'#DC2626':(quotaFull?'#EF4444':(col.fg+(emp?'':'60')));
     card.style.background=col.bg;card.style.borderColor=borderCol;
     const nm=document.createElement('div');nm.className='vc-name';nm.style.color=col.fg;
     if(emp){nm.innerHTML=`<span class="emp-badge" style="color:${col.fg};margin-right:5px">EMP</span>${name}`;}
@@ -1642,19 +1651,23 @@ function buildCards(wk,shifts){
       }
     }
     if(t.textContent)card.appendChild(t);
-    // Quota dots (bénévoles seulement)
+    // Quota fraction display (bénévoles seulement)
     if(!emp){
-      const qw=document.createElement('div');qw.className='vc-quota';qw.style.color=col.fg;
+      const qw=document.createElement('div');qw.className='vc-quota';
       if(quota===99){
-        const inf=document.createElement('span');inf.className='vc-inf';inf.textContent='∞';inf.title='Peu importe le nombre de shifts';
-        qw.appendChild(inf);
+        const frac=document.createElement('span');
+        frac.style.cssText='font-size:10px;font-family:var(--mono);font-weight:600;opacity:.7;color:'+col.fg;
+        frac.textContent=usedShifts>0?usedShifts+'/\u221e':'\u221e';
+        frac.title='Peu importe le nombre de shifts';
+        qw.appendChild(frac);
       } else if(quota>0){
-        for(let i=0;i<quota;i++){
-          const dot=document.createElement('span');
-          dot.className='vc-dot '+(i<usedShifts?'filled':'empty');
-          dot.style.color=quotaFull?'#EF4444':col.fg;
-          qw.appendChild(dot);
-        }
+        const isOver=usedShifts>quota;
+        const fracColor=isOver?'#DC2626':(usedShifts===quota?'var(--green)':col.fg);
+        const frac=document.createElement('span');
+        frac.style.cssText='font-size:10px;font-family:var(--mono);font-weight:700;color:'+fracColor;
+        frac.textContent=usedShifts+'/'+quota;
+        frac.title=usedShifts+' shift'+(usedShifts>1?'s':'')+' assigné'+(usedShifts>1?'s':'')+' sur '+quota+' demandé'+(quota>1?'s':'');
+        qw.appendChild(frac);
       }
       if(qw.children.length)card.appendChild(qw);
     }
@@ -1666,8 +1679,32 @@ function buildCards(wk,shifts){
     return card;
   }
   const vols=Object.keys(wkData).filter(n=>!isEmp(n)&&Object.keys(wkData[n].slots||{}).some(k=>k.startsWith(curDay+'_')));
+  // Sort: 1) shifts restants + quota non atteint, 2) quota atteint (plein), 3) quota dépassé (rouge), 4) plus d'heures libres
+  function volSortPriority(name){
+    const q=volQuota(wk,name);
+    const used=volWeekShiftCount(wk,name);
+    const rem=volRemainingMins(wk,name);
+    if(rem===0)return 4;           // plus d'heures libres ce jour
+    if(q!==99&&used>q)return 3;   // quota dépassé (rouge)
+    if(q!==99&&used>=q)return 2;  // quota atteint, rien à assigner
+    return 1;                      // shifts restants disponibles
+  }
+  vols.sort((a,b)=>volSortPriority(a)-volSortPriority(b));
   let anyV=false;
-  vols.forEach(name=>{const card=makeCard(name,vcols[name]||VCOLS[0],false);if(card){anyV=true;vp.appendChild(card);}});
+  let lastPriority=0;
+  vols.forEach(name=>{
+    const card=makeCard(name,vcols[name]||VCOLS[0],false);
+    if(card){
+      const p=volSortPriority(name);
+      // Ajouter un séparateur visuel entre les groupes
+      if(anyV&&p!==lastPriority&&p>=2){
+        const sep=document.createElement('div');
+        sep.style.cssText='height:1px;background:var(--border-light);margin:2px 0;flex-shrink:0';
+        vp.appendChild(sep);
+      }
+      lastPriority=p;anyV=true;vp.appendChild(card);
+    }
+  });
   if(!anyV)vp.innerHTML='<div class="no-avail" style="color:var(--green)">&#10003; Tous les bénévoles placés</div>';
   let anyE=false;
   directory.filter(p=>p.type==='emp').forEach(p=>{
