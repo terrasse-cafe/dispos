@@ -464,7 +464,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
           <div style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em">Courriel</div>
           <div style="font-size:12px;color:var(--text-2)" id="fin-email-to"></div>
           <textarea id="fin-email-body" rows="10" style="flex:1;width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:11px;font-family:var(--mono);line-height:1.7;resize:vertical;outline:none;background:var(--bg);color:var(--text);transition:border-color .15s" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"></textarea>
-          <button class="btn btn-green btn-sm" onclick="sendOutlook()" style="width:100%;justify-content:center;display:flex;gap:6px">✉ Télécharger le PDF et ouvrir Gmail</button>
+          <button class="btn btn-secondary btn-sm" onclick="sendOutlook()" style="width:100%;justify-content:center;display:flex;gap:6px">✉ Télécharger le PDF et ouvrir Gmail</button>
           <div style="font-size:10px;color:var(--text-3);text-align:center;margin-top:6px">Le PDF sera téléchargé — glissez-le dans Gmail pour l'attacher.</div>
         </div>
       </div>
@@ -2247,29 +2247,65 @@ function exportPdfTable(){
   const wk = wkey(oMon);
   const wkClosed = closedDays[wk] || new Set();
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
-  const pageW = 215.9, pageH = 279.4;
+  // Paysage lettre
+  const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'letter' });
+  const pageW = 279.4, pageH = 215.9;
   const margin = 14;
-  const col1 = 52, col2 = 90;
-  let y = margin;
-  const C = { accent:'#C2410C', text:'#1C1917', text2:'#57534E', text3:'#A8A29E',
-               bg:'#F7F5F2', surface:'#FFFFFF', border:'#E2DDD8',
-               green:'#16A34A', greenLight:'#F0FDF4', headerBg:'#FFF7ED' };
+  // Couleur primaire de l'app
+  const C = {
+    accent:'#6FA39A',   // --accent-dark
+    accentDark:'#4E877E',
+    accentLight:'#EEF5F4',
+    text:'#1C1917', text2:'#57534E', text3:'#A8A29E',
+    bg:'#F7F5F2', surface:'#FFFFFF', border:'#E2DDD8',
+    green:'#16A34A', greenLight:'#F0FDF4',
+    red:'#DC2626', redLight:'#FEF2F2',
+    amber:'#92400E', amberLight:'#FFF7ED',
+    headerBg:'#EEF5F4'
+  };
   function hexToRgb(hex){ const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return[r,g,b]; }
   function setFill(hex){ doc.setFillColor(...hexToRgb(hex)); }
   function setDraw(hex){ doc.setDrawColor(...hexToRgb(hex)); }
   function setTextColor(hex){ doc.setTextColor(...hexToRgb(hex)); }
-  // En-tête
-  setFill(C.accent); doc.rect(0,0,pageW,10,'F');
-  doc.setFont('helvetica','bold'); doc.setFontSize(11);
-  setTextColor('#FFFFFF');
-  doc.text('Terrasse Café — Horaire des bénévoles', margin, 7);
-  doc.setFont('helvetica','normal'); doc.setFontSize(9);
-  doc.text(wlabel(oMon), pageW - margin, 7, {align:'right'});
-  y = 18;
-  const usedDays = DAYS; // tous les jours, fermés marqués différemment
+
+  // Largeurs colonnes (paysage: ~251mm utilisable)
+  const usable = pageW - margin*2;
+  const cRole = 44, cName = 60, cTime = 32;
+  const cNote = usable - cRole - cName - cTime; // reste pour la note (~115mm)
+
+  let y = margin;
+
+  // ── En-tête de page (bandeau coloré) ──
+  function drawPageHeader(){
+    setFill(C.accent); doc.rect(0,0,pageW,11,'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(12);
+    setTextColor('#FFFFFF');
+    doc.text('Terrasse Café — Horaire des bénévoles', margin, 7.5);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9);
+    doc.text(wlabel(oMon), pageW - margin, 7.5, {align:'right'});
+  }
+  drawPageHeader();
+  y = 20;
+
+  // ── En-têtes de colonnes du tableau ──
+  function drawColHeaders(){
+    setFill(C.accentLight); setDraw(C.accent);
+    doc.rect(margin, y, usable, 6, 'FD');
+    doc.setFont('helvetica','bold'); doc.setFontSize(7);
+    setTextColor(C.accent);
+    doc.text('RÔLE',              margin+3,           y+4.2);
+    doc.text('BÉNÉVOLE / EMPLOYÉ',margin+cRole+3,     y+4.2);
+    doc.text('HEURES',            margin+cRole+cName+3, y+4.2);
+    doc.text('NOTE',              margin+cRole+cName+cTime+3, y+4.2);
+    y += 6;
+  }
+
+  const usedDays = DAYS;
   usedDays.forEach((day, di) => {
     const shifts = SHIFTS[day.id] || [];
+    const isClosed = wkClosed.has(day.id);
+
+    // Collecter les lignes de ce jour
     const rows = [];
     shifts.forEach(shift => {
       const allRoles = [...(shift._slots||shift.roles), ...(shift._optSlots||[])];
@@ -2277,102 +2313,134 @@ function exportPdfTable(){
         const isOpt = (shift._optSlots||shift.optional||[]).includes(role);
         const name = getAssign(wk, shift.id, role);
         const ct = name ? getAssignTimes(wk, shift.id, role) : null;
-        const rng = (name && !isEmp(name)) ? (() => {
-          const savedDay = curDay; curDay = day.id;
-          const r = volDayRange(wk, name); curDay = savedDay; return r;
+        const rng = (name && !isEmp(name)) ? (()=>{
+          const savedDay=curDay; curDay=day.id;
+          const r=volDayRange(wk,name); curDay=savedDay; return r;
         })() : null;
         let timeStr = '';
         if(name){
-          if(isEmp(name)){ timeStr = mStr(shift.fromH*60)+' – '+mStr(shift.toH*60); }
-          else if(ct){ timeStr = mStr(ct.s)+' – '+mStr(ct.e); }
-          else if(rng){ timeStr = mStr(Math.max(rng.startMins,shift.fromH*60))+' – '+mStr(Math.min(rng.endMins,shift.toH*60)); }
+          if(isEmp(name)){ timeStr=mStr(shift.fromH*60)+' – '+mStr(shift.toH*60); }
+          else if(ct){ timeStr=mStr(ct.s)+' – '+mStr(ct.e); }
+          else if(rng){ timeStr=mStr(Math.max(rng.startMins,shift.fromH*60))+' – '+mStr(Math.min(rng.endMins,shift.toH*60)); }
         }
-        const noteVal = name ? getAssignNote(wk, shift.id, role) : '';
+        const noteVal = name ? (getAssignNote(wk, shift.id, role)||'') : '';
         rows.push({shift, role, name:name||'', timeStr, isOpt, note:noteVal});
       });
     });
-    const rowH = 7, headerH = 8, shiftH = 6;
-    const estimatedH = headerH + rows.length * rowH + shifts.length * shiftH + 4;
-    if(y + estimatedH > pageH - margin && di > 0){ doc.addPage(); y = margin; }
-    const isClosed = wkClosed.has(day.id);
-    setFill(isClosed ? '#FEF2F2' : C.headerBg); setDraw(isClosed ? '#FECACA' : C.border);
-    doc.roundedRect(margin, y, pageW - margin*2, 8, 1.5, 1.5, 'FD');
+
+    const rowH = 6.5;
+    const dayHeaderH = 9;
+    const shiftBandH = 5;
+    const colHeaderH = 6;
+    // Estimation hauteur bloc jour
+    const estH = dayHeaderH + colHeaderH + rows.length * rowH + shifts.length * shiftBandH + 6;
+    if(y + estH > pageH - margin - 8 && di > 0){
+      doc.addPage(); drawPageHeader(); y = 20;
+    }
+
+    // ── Bandeau jour ──
+    const dayBg = isClosed ? C.redLight : C.headerBg;
+    const dayBorder = isClosed ? C.red : C.accent;
+    const dayTextCol = isClosed ? C.red : C.accentDark;
+    setFill(dayBg); setDraw(dayBorder);
+    doc.roundedRect(margin, y, usable, dayHeaderH, 2, 2, 'FD');
     doc.setFont('helvetica','bold'); doc.setFontSize(10);
-    setTextColor(isClosed ? '#DC2626' : C.accent);
-    doc.text((isClosed ? '☔ ' : '') + day.label.toUpperCase() + (isClosed ? ' — FERMÉ' : ''), margin+3, y+5.5);
+    setTextColor(dayTextCol);
+    doc.text((isClosed?'☔ ':'')+day.label.toUpperCase()+(isClosed?' — FERMÉ':''), margin+4, y+6);
     doc.setFont('helvetica','normal'); doc.setFontSize(8);
     setTextColor(C.text3);
-    doc.text(fmt(dayDate(oMon, day.dow)), pageW - margin - 3, y+5.5, {align:'right'});
-    y += 11;
-    if(isClosed){ y += 4; return; } // pas de tableau pour les jours fermés
-    setFill(C.bg); setDraw(C.border);
-    doc.rect(margin, y, pageW-margin*2, 5.5, 'FD');
-    doc.setFont('helvetica','bold'); doc.setFontSize(7.5);
-    setTextColor(C.text3);
-    doc.text('RÔLE', margin+3, y+3.8);
-    doc.text('BÉNÉVOLE / EMPLOYÉ', margin+col1+3, y+3.8);
-    doc.text('HEURES', margin+col1+col2+3, y+3.8);
-    y += 5.5;
+    doc.text(fmt(dayDate(oMon,day.dow)), pageW-margin-3, y+6, {align:'right'});
+    y += dayHeaderH + 2;
+
+    if(isClosed){ y += 4; return; }
+
+    // En-têtes colonnes
+    drawColHeaders();
+
     let lastShiftId = null;
     rows.forEach((row, ri) => {
+      // ── Sous-bandeau shift ──
       if(row.shift.id !== lastShiftId){
         lastShiftId = row.shift.id;
-        if(ri > 0) y += 1.5;
-        setFill('#F0F0EE'); setDraw(C.border);
-        doc.rect(margin, y, pageW-margin*2, 5, 'FD');
+        if(ri > 0) y += 1;
+        if(y + shiftBandH + rowH > pageH - margin - 8){ doc.addPage(); drawPageHeader(); y=20; drawColHeaders(); }
+        setFill('#ECEAE7'); setDraw(C.border);
+        doc.rect(margin, y, usable, shiftBandH, 'FD');
         doc.setFont('helvetica','bold'); doc.setFontSize(7);
         setTextColor(C.text2);
-        doc.text(row.shift.label.toUpperCase()+' — '+mStr(row.shift.fromH*60)+' – '+mStr(row.shift.toH*60), margin+3, y+3.4);
-        y += 5;
+        doc.text(
+          row.shift.label.toUpperCase()+' — '+mStr(row.shift.fromH*60)+' – '+mStr(row.shift.toH*60),
+          margin+3, y+3.6
+        );
+        y += shiftBandH;
       }
-      if(y + rowH > pageH - margin){ doc.addPage(); y = margin; }
-      if(ri % 2 === 0){ setFill('#FAFAF9'); } else { setFill(C.surface); }
+
+      if(y + rowH > pageH - margin - 8){ doc.addPage(); drawPageHeader(); y=20; drawColHeaders(); }
+
+      // Fond de ligne alternée
+      setFill(ri%2===0?'#FAFAF9':C.surface); setDraw(C.border);
+      doc.rect(margin, y, usable, rowH, 'FD');
+
+      // Séparateurs verticaux de colonnes
       setDraw(C.border);
-      doc.rect(margin, y, pageW-margin*2, rowH, 'FD');
-      doc.setFont('helvetica', row.isOpt ? 'italic' : 'normal');
-      doc.setFontSize(8);
-      setTextColor(row.isOpt ? C.text3 : C.text2);
-      doc.text((row.isOpt ? '★ ' : '') + roleLabel(row.role), margin+3, y+4.8);
+      [cRole, cRole+cName, cRole+cName+cTime].forEach(cx=>{
+        doc.line(margin+cx, y, margin+cx, y+rowH);
+      });
+
+      // Col 1 : Rôle
+      doc.setFont('helvetica', row.isOpt?'italic':'normal');
+      doc.setFontSize(7.5);
+      setTextColor(row.isOpt?C.text3:C.text2);
+      const roleText=(row.isOpt?'★ ':'')+roleLabel(row.role);
+      doc.text(doc.splitTextToSize(roleText, cRole-5)[0], margin+3, y+4.4);
+
       if(row.name){
-        const emp = isEmp(row.name);
-        setTextColor(emp ? '#9A3412' : C.text);
-        doc.setFont('helvetica', emp ? 'bold' : 'normal');
-        doc.setFontSize(8.5);
-        doc.text(emp ? '▪ '+row.name : row.name, margin+col1+3, y+4.8);
+        const emp=isEmp(row.name);
+
+        // Col 2 : Nom
+        setTextColor(emp?C.amber:C.text);
+        doc.setFont('helvetica', emp?'bold':'normal');
+        doc.setFontSize(8);
+        doc.text(emp?'▪ '+row.name:row.name, margin+cRole+3, y+4.4);
+
+        // Col 3 : Heures
         doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
         setTextColor(C.text3);
-        doc.text(row.timeStr, margin+col1+col2+3, y+4.8);
-        // Note
+        doc.text(row.timeStr, margin+cRole+cName+3, y+4.4);
+
+        // Col 4 : Note
         if(row.note){
-          if(y + rowH + 5 > pageH - margin){ doc.addPage(); y = margin; }
-          y += rowH;
           doc.setFont('helvetica','italic'); doc.setFontSize(7);
-          setTextColor(C.text3);
-          const noteText = '  ↳ '+row.note;
-          const splitNote = doc.splitTextToSize(noteText, pageW - margin*2 - col1 - 6);
-          doc.text(splitNote, margin+col1+3, y+3.5);
-          y += splitNote.length * 4;
-        } else { y += rowH; }
+          setTextColor(C.text2);
+          const splitNote=doc.splitTextToSize(row.note, cNote-6);
+          // Une seule ligne dans la cellule (rowH fixe) ; déborde si trop long → tronquer
+          doc.text(splitNote[0]+(splitNote.length>1?'…':''), margin+cRole+cName+cTime+3, y+4.4);
+        }
       } else {
-        doc.setFont('helvetica','italic'); doc.setFontSize(8);
+        // Non assigné
+        doc.setFont('helvetica','italic'); doc.setFontSize(7.5);
         setTextColor(C.text3);
-        doc.text('— non assigné', margin+col1+3, y+4.8);
-        y += rowH;
+        doc.text('— non assigné', margin+cRole+3, y+4.4);
       }
+      y += rowH;
     });
-    y += 10;
+    y += 9;
   });
+
+  // ── Pied de page sur chaque page ──
   const totalPages = doc.getNumberOfPages();
-  for(let p = 1; p <= totalPages; p++){
+  for(let p=1; p<=totalPages; p++){
     doc.setPage(p);
+    setFill(C.border); doc.rect(0, pageH-9, pageW, 9, 'F');
     doc.setFont('helvetica','normal'); doc.setFontSize(7);
     setTextColor(C.text3);
-    doc.text('Terrasse Café • Généré le '+new Date().toLocaleDateString('fr-CA'), margin, pageH-6);
-    doc.text(`Page ${p} / ${totalPages}`, pageW-margin, pageH-6, {align:'right'});
+    doc.text('Terrasse Café • Généré le '+new Date().toLocaleDateString('fr-CA'), margin, pageH-3.5);
+    doc.text('Page '+p+' / '+totalPages, pageW-margin, pageH-3.5, {align:'right'});
   }
-  const filename = 'horaire-cafe-'+wkey(oMon)+'.pdf';
+
+  const filename='horaire-cafe-'+wkey(oMon)+'.pdf';
   doc.save(filename);
-  closePdfModal();
+  closeFinaliser();
 }
 
 /* ══════════════════════════════════════════════
