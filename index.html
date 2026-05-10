@@ -147,14 +147,18 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .h-dz.empty{background:var(--surface);overflow:hidden}.h-dz.filled{border-style:solid;top:3px;bottom:3px}
 .dz-ph{font-size:11px;color:var(--text-3)}
 .h-dz.dv{border-color:var(--green);background:var(--green-light);border-style:solid;box-shadow:0 0 0 2px #86EFAC50}
+.h-dz.filled.dv{border-color:var(--amber);box-shadow:0 0 0 2px #FCD34D50;filter:brightness(.96)}
 .h-dz.di{opacity:.38;cursor:not-allowed}
 .h-dz.dok{border-color:var(--green);background:#DCFCE7;border-style:solid}
+.h-dz.filled.dok{border-color:var(--amber);background:transparent;filter:brightness(.92)}
 .avail-chip{position:absolute;top:-1px;bottom:-1px;border-radius:5px;display:flex;flex-direction:column;justify-content:center;padding:2px 7px;cursor:pointer;z-index:2;transition:filter .1s}
 .avail-chip:hover{filter:brightness(.9)}
-.avail-chip-inner{display:flex;align-items:center;gap:4px;width:100%;overflow:hidden;flex:0 0 auto}
-.chip-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
-.chip-time{font-size:10px;font-family:var(--mono);opacity:.55;white-space:nowrap;flex-shrink:0;margin-left:4px}
-.chip-x{cursor:pointer;font-size:18px;opacity:.35;line-height:1;flex-shrink:0;transition:opacity .1s;padding:0 2px;margin-left:2px}
+.avail-chip-inner{display:flex;align-items:center;gap:5px;width:100%;overflow:hidden;flex:0 0 auto}
+.chip-name{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0}
+.chip-time{font-size:10px;font-family:var(--mono);opacity:.6;white-space:nowrap;flex-shrink:0}
+.chip-spacer{flex:1;min-width:4px}
+.chip-quota{font-size:9px;font-family:var(--mono);font-weight:700;white-space:nowrap;flex-shrink:0;opacity:.8}
+.chip-x{cursor:pointer;font-size:16px;opacity:.3;line-height:1;flex-shrink:0;transition:opacity .1s;padding:0 1px}
 .chip-x:hover{opacity:1}
 .emp-badge{font-size:9px;font-weight:700;letter-spacing:.05em;padding:1px 4px;border-radius:3px;flex-shrink:0;border:1px solid currentColor;opacity:.75}
 .prog-wrap{margin-top:10px}
@@ -1309,21 +1313,38 @@ function setAssignTimes(wk,sid,role,s,e){
 
 function highlightDZs(wk,shifts){
   shifts.forEach(sh=>{
-    // Si on drag depuis un bloc assigné, on ignore le "déjà assigné au shift"
-    // pour permettre de déposer sur un autre rôle du même shift
     const fromRole=draggingFromRole;
+    // alreadyOnShift: true si le bénévole est déjà sur ce shift (mais pas depuis ce rôle-ci)
     const alreadyOnShift=!isEmp(draggingVol)&&volAssignedToShift(wk,draggingVol,sh)
       &&!(fromRole&&fromRole.shiftId===sh.id);
     [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(role=>{
       const dz=document.getElementById('dz-'+sh.id+'-'+role.replace(/[^a-z0-9]/gi,'_'));
       if(!dz)return;
-      // La source elle-même n'est pas une cible valide
+      // La source elle-même n'est jamais une cible valide
       if(fromRole&&fromRole.shiftId===sh.id&&fromRole.role===role){
         dz.classList.remove('dv','di','dok');return;
       }
-      if(dz.classList.contains('filled'))return;
-      const v=volCoversShift(wk,draggingVol,sh)&&!alreadyOnShift;
-      dz.classList.toggle('dv',v);dz.classList.toggle('di',!v);
+      const covers=volCoversShift(wk,draggingVol,sh);
+      if(dz.classList.contains('filled')){
+        // Swap possible seulement si on drag depuis un chip (fromRole) et que le bénévole couvre le shift
+        // et que le bénévole occupant la cible couvre le shift source (si fromRole existe)
+        if(fromRole&&covers&&!alreadyOnShift){
+          const occupant=getAssign(wk,sh.id,role);
+          // Vérifier que l'occupant peut aller dans le rôle source
+          const srcShift=shifts.find(s=>s.id===fromRole.shiftId)||sh;
+          const occupantCoversSource=isEmp(occupant)?true:volCoversShift(wk,occupant,srcShift);
+          if(occupantCoversSource){
+            dz.classList.add('dv');dz.classList.remove('di');
+          } else {
+            dz.classList.add('di');dz.classList.remove('dv');
+          }
+        } else {
+          dz.classList.remove('dv','di');
+        }
+      } else {
+        const v=covers&&!alreadyOnShift;
+        dz.classList.toggle('dv',v);dz.classList.toggle('di',!v);
+      }
     });
   });
 }
@@ -1450,13 +1471,17 @@ function renderHoraire(){
           const em2=ct2?ct2.e:(rng2?Math.min(rng2.endMins,shift.toH*60):shift.toH*60);
           const tm=document.createElement('span');tm.className='chip-time';tm.style.color=col.fg;tm.textContent=mStr(sm)+'–'+mStr(em2);inner.appendChild(tm);
         }
-        // Quota fraction dans le chip (bénévoles seulement, pas ∞)
+        // Spacer pousse quota + × à droite
+        const spacer=document.createElement('span');spacer.className='chip-spacer';inner.appendChild(spacer);
+        // Quota fraction (bénévoles seulement, pas ∞)
         if(!emp){
           const cq=volQuota(wk,assigned);
           const cu=volWeekShiftCount(wk,assigned);
           if(cq!==99&&cq>0){
+            const isChipOver=cu>cq;
             const qspan=document.createElement('span');
-            qspan.style.cssText='font-size:9px;font-family:var(--mono);font-weight:700;color:'+col.fg+';opacity:.75;white-space:nowrap;flex-shrink:0;margin-left:auto;padding-left:4px';
+            qspan.className='chip-quota';
+            qspan.style.color=isChipOver?'#DC2626':col.fg;
             qspan.textContent=cu+'/'+cq;
             inner.appendChild(qspan);
           }
@@ -1497,15 +1522,25 @@ function renderHoraire(){
         dz.appendChild(chip);
         if(!past){
           dz.addEventListener('dragover',e=>{
-            if(!draggingVol||!volCoversShift(wk,draggingVol,shift))return;
-            if(!isEmp(draggingVol)&&volAssignedToShift(wk,draggingVol,shift)&&getAssign(wk,shift.id,role)!==draggingVol)return;
+            if(!draggingVol||!draggingFromRole)return; // swap seulement depuis un chip
+            if(!volCoversShift(wk,draggingVol,shift))return;
+            const occupant=getAssign(wk,shift.id,role);
+            if(occupant===draggingVol)return; // même bénévole
+            const srcShift=shifts.find(s=>s.id===draggingFromRole.shiftId)||shift;
+            const occupantCoversSource=isEmp(occupant)?true:volCoversShift(wk,occupant,srcShift);
+            if(!occupantCoversSource)return;
             e.preventDefault();e.dataTransfer.dropEffect='move';dz.classList.add('dok');
           });
           dz.addEventListener('dragleave',()=>dz.classList.remove('dok'));
           dz.addEventListener('drop',e=>{
-            dz.classList.remove('dok');const name=e.dataTransfer.getData('text/plain');
-            if(!name||!volCoversShift(wk,name,shift))return;
-            e.preventDefault();if(doAssign(wk,shift,role,name))renderHoraire();
+            dz.classList.remove('dok');
+            const name=e.dataTransfer.getData('text/plain');
+            if(!name||!draggingFromRole)return;
+            if(!volCoversShift(wk,name,shift))return;
+            const occupant=getAssign(wk,shift.id,role);
+            if(!occupant||occupant===name)return;
+            e.preventDefault();
+            if(doSwap(wk,shifts,draggingFromRole.shiftId,draggingFromRole.role,shift.id,role,name,occupant))renderHoraire();
           });
         }
       } else {
@@ -1514,14 +1549,28 @@ function renderHoraire(){
         ph.textContent=past?'—':'— glissez ici';dz.appendChild(ph);
         if(!past){
           dz.addEventListener('dragover',e=>{
-            if(draggingVol&&volCoversShift(wk,draggingVol,shift)&&(!isEmp(draggingVol)?!volAssignedToShift(wk,draggingVol,shift):true)){e.preventDefault();e.dataTransfer.dropEffect='move';dz.classList.add('dok');}
-            else e.dataTransfer.dropEffect='none';
+            if(!draggingVol||!volCoversShift(wk,draggingVol,shift)){e.dataTransfer.dropEffect='none';return;}
+            // Depuis le panneau : interdire si déjà sur ce shift
+            const alreadyHere=!isEmp(draggingVol)&&volAssignedToShift(wk,draggingVol,shift)
+              &&!(draggingFromRole&&draggingFromRole.shiftId===shift.id);
+            if(alreadyHere){e.dataTransfer.dropEffect='none';return;}
+            e.preventDefault();e.dataTransfer.dropEffect='move';dz.classList.add('dok');
           });
           dz.addEventListener('dragleave',()=>dz.classList.remove('dok'));
           dz.addEventListener('drop',e=>{
             dz.classList.remove('dok');const name=e.dataTransfer.getData('text/plain');
             if(!name||!volCoversShift(wk,name,shift))return;
-            e.preventDefault();if(doAssign(wk,shift,role,name))renderHoraire();
+            const alreadyHere=!isEmp(name)&&volAssignedToShift(wk,name,shift)
+              &&!(draggingFromRole&&draggingFromRole.shiftId===shift.id);
+            if(alreadyHere)return;
+            e.preventDefault();
+            // Si on vient d'un chip, libérer le slot source avant d'assigner
+            if(draggingFromRole){
+              setAssignNote(wk,draggingFromRole.shiftId,draggingFromRole.role,null);
+              setAssign(wk,draggingFromRole.shiftId,draggingFromRole.role,null);
+              deleteAssignment(wk,draggingFromRole.shiftId,draggingFromRole.role);
+            }
+            if(doAssign(wk,shift,role,name))renderHoraire();
           });
         }
       }
@@ -1726,6 +1775,38 @@ function buildCards(wk,shifts){
     const card=makeCard(p.name,EMP_COL,true);if(card){anyE=true;ep.appendChild(card);}
   });
   if(!anyE)ep.innerHTML='<div class="no-avail" style="color:var(--green)">&#10003; Tous les employés placés</div>';
+}
+
+/* ── doSwap — échange deux bénévoles entre deux rôles ── */
+function doSwap(wk, shifts, fromShiftId, fromRole, toShiftId, toRole, incomingName, occupantName){
+  const toShift=shifts.find(s=>s.id===toShiftId);
+  const fromShift=shifts.find(s=>s.id===fromShiftId);
+  if(!toShift||!fromShift)return false;
+
+  // Calculer les temps du bénévole entrant dans le rôle cible
+  const inOv=isEmp(incomingName)?null:overlapMins(wk,incomingName,toShift);
+  const inT=isEmp(incomingName)?null:inOv;
+  // Calculer les temps de l'occupant dans le rôle source
+  const outOv=isEmp(occupantName)?null:overlapMins(wk,occupantName,fromShift);
+  const outT=isEmp(occupantName)?null:outOv;
+
+  // Retirer les deux assignations existantes (notes comprises)
+  setAssignNote(wk,fromShiftId,fromRole,null);
+  setAssignNote(wk,toShiftId,toRole,null);
+  setAssign(wk,fromShiftId,fromRole,null);
+  setAssign(wk,toShiftId,toRole,null);
+
+  // Placer incomingName dans toRole
+  setAssign(wk,toShiftId,toRole,incomingName);
+  if(!isEmp(incomingName)&&inT){setAssignTimes(wk,toShiftId,toRole,inT.s,inT.e);}
+  saveAssignment(wk,toShiftId,toRole,incomingName,isEmp(incomingName)?null:(inT?inT.s:null),isEmp(incomingName)?null:(inT?inT.e:null),null);
+
+  // Placer occupantName dans fromRole
+  setAssign(wk,fromShiftId,fromRole,occupantName);
+  if(!isEmp(occupantName)&&outT){setAssignTimes(wk,fromShiftId,fromRole,outT.s,outT.e);}
+  saveAssignment(wk,fromShiftId,fromRole,occupantName,isEmp(occupantName)?null:(outT?outT.s:null),isEmp(occupantName)?null:(outT?outT.e:null),null);
+
+  return true;
 }
 
 /* ── doAssign — avec persistance ── */
