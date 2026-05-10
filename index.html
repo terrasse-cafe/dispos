@@ -1450,6 +1450,17 @@ function renderHoraire(){
           const em2=ct2?ct2.e:(rng2?Math.min(rng2.endMins,shift.toH*60):shift.toH*60);
           const tm=document.createElement('span');tm.className='chip-time';tm.style.color=col.fg;tm.textContent=mStr(sm)+'–'+mStr(em2);inner.appendChild(tm);
         }
+        // Quota fraction dans le chip (bénévoles seulement, pas ∞)
+        if(!emp){
+          const cq=volQuota(wk,assigned);
+          const cu=volWeekShiftCount(wk,assigned);
+          if(cq!==99&&cq>0){
+            const qspan=document.createElement('span');
+            qspan.style.cssText='font-size:9px;font-family:var(--mono);font-weight:700;color:'+col.fg+';opacity:.75;white-space:nowrap;flex-shrink:0;margin-left:auto;padding-left:4px';
+            qspan.textContent=cu+'/'+cq;
+            inner.appendChild(qspan);
+          }
+        }
         const x=document.createElement('span');x.className='chip-x';x.style.color=col.fg;x.textContent='×';
         if(!past)x.addEventListener('click',ev=>{
           ev.stopPropagation();
@@ -1622,9 +1633,10 @@ function buildCards(wk,shifts){
     const usedShifts=emp?0:volWeekShiftCount(wk,name);
     const quotaFull=!emp&&quota!==99&&usedShifts>=quota;
     const quotaOver=!emp&&quota!==99&&usedShifts>quota;
-    const card=document.createElement('div');card.className='vol-card'+(emp?' emp-card':'')+(quotaFull?' quota-full':'')+(quotaOver?' quota-over':'');
+    const card=document.createElement('div');card.className='vol-card'+(emp?' emp-card':'')+(quotaOver?' quota-over':'');
     const isPast_=isPastDay();card.draggable=!isPast_;if(isPast_)card.style.cursor='default';
-    const borderCol=quotaOver?'#DC2626':(quotaFull?'#EF4444':(col.fg+(emp?'':'60')));
+    // Bordure rouge seulement si DÉPASSÉ (strictement > quota), neutre si atteint
+    const borderCol=quotaOver?'#DC2626':(col.fg+(emp?'':'60'));
     card.style.background=col.bg;card.style.borderColor=borderCol;
     const nm=document.createElement('div');nm.className='vc-name';nm.style.color=col.fg;
     if(emp){nm.innerHTML=`<span class="emp-badge" style="color:${col.fg};margin-right:5px">EMP</span>${name}`;}
@@ -1661,8 +1673,8 @@ function buildCards(wk,shifts){
         frac.title='Peu importe le nombre de shifts';
         qw.appendChild(frac);
       } else if(quota>0){
-        const isOver=usedShifts>quota;
-        const fracColor=isOver?'#DC2626':(usedShifts===quota?'var(--green)':col.fg);
+        // Couleur du bénévole si normal ou atteint, rouge seulement si dépassé
+        const fracColor=quotaOver?'#DC2626':col.fg;
         const frac=document.createElement('span');
         frac.style.cssText='font-size:10px;font-family:var(--mono);font-weight:700;color:'+fracColor;
         frac.textContent=usedShifts+'/'+quota;
