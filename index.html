@@ -26,13 +26,18 @@
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:var(--bg);font-family:var(--font);color:var(--text);font-size:14px}
 .shell{display:flex;flex-direction:column;min-height:100vh}
-header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;gap:2rem;height:56px;position:sticky;top:0;z-index:100}
-.logo{font-size:15px;font-weight:600;letter-spacing:-.01em}.logo span{color:var(--accent-dark)}
-.main-tabs{display:flex;gap:2px}
-.main-tab{padding:6px 16px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--text-2);transition:background .15s,color .15s}
-.main-tab:hover{background:var(--bg);color:var(--text)}
-.main-tab.active{background:var(--accent-light);color:var(--accent-dark)}
-.conn-dot{width:7px;height:7px;border-radius:50%;background:var(--border);display:inline-block;margin-left:auto;flex-shrink:0;transition:background .3s}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;gap:0;height:56px;position:sticky;top:0;z-index:100}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0;margin-right:2rem}
+.logo-img{width:32px;height:32px;border-radius:50%;object-fit:cover}
+.logo-text{font-size:15px;font-weight:600;letter-spacing:-.01em;color:var(--text)}.logo-text span{color:var(--accent-dark)}
+.header-tabs{display:flex;align-items:stretch;gap:0;flex-shrink:0}
+.header-tab{padding:0 18px;border:none;background:transparent;font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;color:var(--text-3);transition:color .15s;position:relative;height:56px;display:flex;align-items:center}
+.header-tab::after{content:'';position:absolute;bottom:0;left:18px;right:18px;height:2px;background:var(--accent-dark);border-radius:2px 2px 0 0;transform:scaleX(0);transition:transform .15s}
+.header-tab:hover{color:var(--text)}
+.header-tab.active{color:var(--text);font-weight:600}
+.header-tab.active::after{transform:scaleX(1)}
+.header-spacer{flex:1}
+.conn-dot{width:7px;height:7px;border-radius:50%;background:var(--border);display:inline-block;flex-shrink:0;transition:background .3s;margin-left:10px}
 .conn-dot.ok{background:var(--green)}
 .conn-dot.err{background:#EF4444}
 main{flex:1;padding:1rem 1.25rem;width:100%;overflow-x:hidden}
@@ -57,6 +62,13 @@ main{flex:1;padding:1rem 1.25rem;width:100%;overflow-x:hidden}
 .sync-badge.offline{background:var(--bg);color:var(--text-3)}
 @keyframes spin{to{transform:rotate(360deg)}}
 .spin{display:inline-block;animation:spin .8s linear infinite}
+
+/* stat tooltip */
+.stat-wrap{position:relative;display:inline-flex;align-items:center}
+.stat-tooltip{position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);padding:10px 14px;font-size:12px;color:var(--text-2);white-space:nowrap;min-width:180px;pointer-events:none;opacity:0;transition:opacity .15s;z-index:200;line-height:1.7}
+.stat-tooltip strong{display:block;font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.stat-wrap.has-missing:hover .stat-tooltip{opacity:1}
+.stat-wrap.has-missing .pill{cursor:default;text-decoration:underline dotted;text-underline-offset:3px}
 
 /* topbar */
 .topbar{display:flex;align-items:center;gap:8px;margin-bottom:1rem;flex-wrap:wrap}
@@ -221,28 +233,30 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 /* ── TIME POPOVER ── */
 .time-pop{position:fixed;z-index:400;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);padding:14px 16px;width:240px;display:none}
 .time-pop.open{display:block}
-.tp-name{font-size:13px;font-weight:600;margin-bottom:2px}
+.tp-name{font-size:13px;font-weight:600}
 .tp-role{font-size:11px;color:var(--text-3);margin-bottom:12px;font-family:var(--mono)}
 .tp-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
 .tp-fields label{display:block;font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
 .tp-fields select{width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font);background:var(--surface);outline:none}
-.tp-btns{display:flex;gap:6px}
-.tp-btn{flex:1;padding:6px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;font-weight:500;cursor:pointer;background:var(--surface);color:var(--text);transition:background .1s}
-.tp-btn:hover{background:var(--bg)}
-.tp-btn.p{background:var(--text);color:#fff;border-color:var(--text)}.tp-btn.p:hover{background:#292524}
-.tp-remove{width:100%;margin-top:6px;padding:4px;border:none;background:none;font-size:11px;color:#DC2626;cursor:pointer}
-.tp-remove:hover{text-decoration:underline}
+.tp-close:hover{color:var(--text)!important}
+.tp-remove{width:100%;margin-top:2px;padding:5px;border:none;background:none;font-size:11px;color:#DC2626;cursor:pointer;border-radius:var(--radius-sm);transition:background .1s}
+.tp-remove:hover{background:#FEF2F2;text-decoration:none}
 #tp-note:focus{border-color:var(--accent-dark);outline:none}
 </style>
 </head>
 <body>
 <div class="shell">
 <header>
-  <div class="logo">Terrasse <span>Café</span></div>
-  <nav class="main-tabs" id="main-tabs" style="display:none">
-    <button class="main-tab active" onclick="switchMain('benevole',this)">Mes disponibilités</button>
-    <button class="main-tab" id="tab-org" onclick="switchMain('organisatrice',this)" style="display:none">Organisatrice</button>
+  <a class="logo" href="javascript:void(0)">
+    <img class="logo-img" src="https://raw.githubusercontent.com/terrasse-cafe/dispos/main/photos/logo-terrasse-cafe.jpg" alt="Logo Terrasse Café"/>
+    <span class="logo-text">Terrasse <span>Café</span></span>
+  </a>
+  <nav class="header-tabs" id="header-tabs" style="display:none">
+    <button class="header-tab active" id="htab-horaire" onclick="switchOrg('horaire',this)">Horaire</button>
+    <button class="header-tab" id="htab-repertoire" onclick="switchOrg('repertoire',this)">Répertoire</button>
   </nav>
+  <div class="header-spacer"></div>
+  <button class="btn btn-sm" id="btn-vue-benevole" style="display:none;gap:6px" onclick="openVolView()">↗ Vue bénévole</button>
   <div id="conn-dot" class="conn-dot" title="État de la connexion Supabase"></div>
 </header>
 <main>
@@ -327,10 +341,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     </div>
   </div>
 
-  <div class="org-tabs">
-    <button class="org-tab active" onclick="switchOrg('horaire',this)">Horaire</button>
-    <button class="org-tab" onclick="switchOrg('repertoire',this)">Répertoire</button>
-  </div>
+  <div class="org-tabs" style="display:none"></div>
 
   <!-- HORAIRE -->
   <div id="org-horaire" class="pane visible">
@@ -340,7 +351,11 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <span class="wlabel" id="o-wlabel">—</span>
         <button class="wbtn" onclick="oShift(1)">&#8594;</button>
       </div>
-      <span class="pill" id="o-stat">—</span>
+      <div class="stat-wrap">
+        <span class="pill" id="o-stat" style="cursor:default">—</span>
+        <div class="stat-tooltip" id="o-stat-tooltip"><strong>En attente de la réponse de :</strong><span id="o-stat-missing"></span></div>
+      </div>
+      <div style="flex:1"></div>
       <button class="btn btn-sm" id="auto-btn" onclick="openAutoAssign()">⚡ Assignation auto</button>
       <button class="btn btn-sm btn-secondary" id="finaliser-btn" onclick="openFinaliser()">✓ Finaliser l'horaire</button>
       <span id="o-sync-badge" class="sync-badge offline" style="display:none"></span>
@@ -393,21 +408,21 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 </div>
 
 <!-- TIME POPOVER -->
-<div class="time-pop" id="time-pop" style="width:260px">
-  <div class="tp-name" id="tp-name">—</div>
+<div class="time-pop" id="time-pop" style="width:268px">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:2px">
+    <div class="tp-name" id="tp-name" style="margin-bottom:0">—</div>
+    <button onclick="closeTP()" style="border:none;background:none;cursor:pointer;font-size:16px;line-height:1;color:var(--text-3);padding:0 0 0 8px;flex-shrink:0;transition:color .1s" title="Fermer">×</button>
+  </div>
   <div class="tp-role" id="tp-role">—</div>
   <div class="tp-fields">
     <div><label>Début</label></div>
     <div><label>Fin</label></div>
   </div>
-  <div style="margin:10px 0 8px">
+  <div style="margin:2px 0 10px">
     <label style="font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px">Note / renfort</label>
     <textarea id="tp-note" rows="2" placeholder="ex: + Marie 17h-19h en renfort" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;resize:vertical;outline:none;line-height:1.5;transition:border-color .15s"></textarea>
   </div>
-  <div class="tp-btns">
-    <button class="tp-btn p" onclick="saveTP()">Confirmer</button>
-    <button class="tp-btn" onclick="closeTP()">Annuler</button>
-  </div>
+  <div id="tp-saved-badge" style="font-size:11px;color:var(--green);text-align:right;min-height:16px;margin-bottom:4px;transition:opacity .3s;opacity:0">✓ Sauvegardé</div>
   <button class="tp-remove" onclick="removeAssignTP()">Retirer ce bénévole</button>
 </div>
 
@@ -920,8 +935,7 @@ let orgUnlocked=new URLSearchParams(location.search).get('cle')===SECRET_KEY;
    TAB SWITCHING
 ══════════════════════════════════════════════ */
 function switchMain(id,btn){
-  document.querySelectorAll('.main-tab').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
+  // En mode org, on affiche toujours le pane organisatrice
   document.getElementById('pane-benevole').classList.toggle('visible',id==='benevole');
   document.getElementById('pane-organisatrice').classList.toggle('visible',id==='organisatrice');
   if(id==='organisatrice'){
@@ -929,7 +943,6 @@ function switchMain(id,btn){
       document.getElementById('setup-banner').style.display='block';
       document.getElementById('setup-sql').textContent=SETUP_SQL;
     }
-    // Charger les données org si pas encore chargées
     if(sb&&!switchMain._orgLoaded){
       switchMain._orgLoaded=true;
       const wk=wkey(oMon);
@@ -941,9 +954,20 @@ function switchMain(id,btn){
     }
   }
 }
+
+function openVolView(){
+  // Ouvre la vue bénévole dans un nouvel onglet (sans le paramètre ?cle=)
+  const url=new URL(location.href);
+  url.searchParams.delete('cle');
+  window.open(url.toString(),'_blank');
+}
 function switchOrg(id,btn){
-  document.querySelectorAll('.org-tab').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
+  document.querySelectorAll('.header-tab').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  else{
+    const t=document.getElementById('htab-'+id);
+    if(t)t.classList.add('active');
+  }
   document.getElementById('org-horaire').classList.toggle('visible',id==='horaire');
   document.getElementById('org-repertoire').classList.toggle('visible',id==='repertoire');
   if(id==='horaire')renderO();
@@ -1235,8 +1259,26 @@ async function oShift(d){
 function renderO(){
   const wk=wkey(oMon),wkData=avail[wk]||{};
   document.getElementById('o-wlabel').textContent=wlabel(oMon);
-  const nbVols=Object.keys(wkData).filter(n=>!isEmp(n)).length;
-  document.getElementById('o-stat').textContent=nbVols+' bénévole(s) ont répondu';
+  // Stat : X/Y bénévoles ont répondu
+  const responded=new Set(Object.keys(wkData).filter(n=>!isEmp(n)));
+  const allVols=directory.filter(p=>p.type==='vol');
+  const total=allVols.length;
+  const nbResp=responded.size;
+  const statEl=document.getElementById('o-stat');
+  if(statEl){
+    statEl.textContent=nbResp+'/'+total+' bénévole'+(total>1?'s':'')+' ont répondu';
+    statEl.style.color=nbResp===total?'var(--green)':'var(--text-2)';
+    statEl.style.borderColor=nbResp===total?'var(--green)':'var(--border)';
+  }
+  // Tooltip : liste des bénévoles manquants
+  const missing=allVols.filter(p=>!responded.has(p.name));
+  const statWrap=document.querySelector('.stat-wrap');
+  const missingEl=document.getElementById('o-stat-missing');
+  if(statWrap)statWrap.classList.toggle('has-missing',missing.length>0);
+  if(missingEl){
+    missingEl.textContent=missing.map(p=>p.name).join('\n');
+    missingEl.style.whiteSpace='pre';
+  }
   buildDayTabs();renderHoraire();
 }
 
@@ -1859,27 +1901,45 @@ function openTP(e,name,sid,role,shift,wk){
   if(top+popH>window.innerHeight-8)top=window.innerHeight-popH-8;
   pop.style.left=Math.max(8,left)+'px';pop.style.top=Math.max(8,top)+'px';
 }
-function closeTP(){document.getElementById('time-pop').classList.remove('open');tpCtx=null;}
-function saveTP(){
-  if(!tpCtx)return;
-  const s=parseInt(document.getElementById('tp-start').value);
-  const e=parseInt(document.getElementById('tp-end').value);
-  if(e<=s){alert("L'heure de fin doit être après le début.");return;}
-  const note=document.getElementById('tp-note').value.trim()||null;
-  setAssignTimes(tpCtx.wk,tpCtx.sid,tpCtx.role,s,e);
-  setAssignNote(tpCtx.wk,tpCtx.sid,tpCtx.role,note);
-  saveAssignment(tpCtx.wk,tpCtx.sid,tpCtx.role,tpCtx.name,s,e,note);
-  closeTP();renderHoraire();
+function closeTP(){
+  if(!tpCtx){document.getElementById('time-pop').classList.remove('open');return;}
+  // Auto-save à la fermeture
+  const s=parseInt(document.getElementById('tp-start')?.value);
+  const e=parseInt(document.getElementById('tp-end')?.value);
+  if(!isNaN(s)&&!isNaN(e)&&e>s){
+    const note=document.getElementById('tp-note').value.trim()||null;
+    setAssignTimes(tpCtx.wk,tpCtx.sid,tpCtx.role,s,e);
+    setAssignNote(tpCtx.wk,tpCtx.sid,tpCtx.role,note);
+    saveAssignment(tpCtx.wk,tpCtx.sid,tpCtx.role,tpCtx.name,s,e,note);
+    document.getElementById('time-pop').classList.remove('open');
+    tpCtx=null;
+    renderHoraire();
+  } else {
+    document.getElementById('time-pop').classList.remove('open');
+    tpCtx=null;
+  }
+}
+function saveTP(){closeTP();} // garde la compatibilité si appelé ailleurs
+function showTPSaved(){
+  const badge=document.getElementById('tp-saved-badge');
+  if(!badge)return;
+  badge.style.opacity='1';
+  clearTimeout(showTPSaved._t);
+  showTPSaved._t=setTimeout(()=>badge.style.opacity='0',1800);
 }
 function removeAssignTP(){
   if(!tpCtx)return;
   setAssign(tpCtx.wk,tpCtx.sid,tpCtx.role,null);
   deleteAssignment(tpCtx.wk,tpCtx.sid,tpCtx.role);
-  closeTP();renderHoraire();
+  document.getElementById('time-pop').classList.remove('open');
+  tpCtx=null;
+  renderHoraire();
 }
 document.addEventListener('click',e=>{
   const tp=document.getElementById('time-pop');
-  if(tp.classList.contains('open')&&!tp.contains(e.target))closeTP();
+  if(tp.classList.contains('open')&&!tp.contains(e.target)){
+    closeTP();
+  }
 },true);
 
 /* ══════════════════════════════════════════════
@@ -2328,12 +2388,12 @@ function exportPdfTable(){
       });
     });
 
-    const rowH = 6.5;
     const dayHeaderH = 9;
     const shiftBandH = 5;
     const colHeaderH = 6;
-    // Estimation hauteur bloc jour
-    const estH = dayHeaderH + colHeaderH + rows.length * rowH + shifts.length * shiftBandH + 6;
+    // Estimation hauteur bloc jour (utilise rowH min pour l'estimation)
+    const estRowH = 6.5;
+    const estH = dayHeaderH + colHeaderH + rows.length * estRowH + shifts.length * shiftBandH + 6;
     if(y + estH > pageH - margin - 8 && di > 0){
       doc.addPage(); drawPageHeader(); y = 20;
     }
@@ -2375,24 +2435,35 @@ function exportPdfTable(){
         y += shiftBandH;
       }
 
-      if(y + rowH > pageH - margin - 8){ doc.addPage(); drawPageHeader(); y=20; drawColHeaders(); }
+      // Calculer la hauteur de la ligne selon le contenu de la note
+      const noteLines = row.note
+        ? doc.splitTextToSize(row.note, cNote - 7)
+        : [];
+      const lineH = 4.2; // hauteur d'une ligne de note
+      const minRowH = 6.5;
+      const dynRowH = Math.max(minRowH, noteLines.length * lineH + 2.5);
+
+      if(y + dynRowH > pageH - margin - 8){ doc.addPage(); drawPageHeader(); y=20; drawColHeaders(); }
 
       // Fond de ligne alternée
       setFill(ri%2===0?'#FAFAF9':C.surface); setDraw(C.border);
-      doc.rect(margin, y, usable, rowH, 'FD');
+      doc.rect(margin, y, usable, dynRowH, 'FD');
 
       // Séparateurs verticaux de colonnes
       setDraw(C.border);
       [cRole, cRole+cName, cRole+cName+cTime].forEach(cx=>{
-        doc.line(margin+cx, y, margin+cx, y+rowH);
+        doc.line(margin+cx, y, margin+cx, y+dynRowH);
       });
+
+      // Centre vertical des cellules courtes
+      const midY = y + dynRowH/2 + 1.5;
 
       // Col 1 : Rôle
       doc.setFont('helvetica', row.isOpt?'italic':'normal');
       doc.setFontSize(7.5);
       setTextColor(row.isOpt?C.text3:C.text2);
       const roleText=(row.isOpt?'★ ':'')+roleLabel(row.role);
-      doc.text(doc.splitTextToSize(roleText, cRole-5)[0], margin+3, y+4.4);
+      doc.text(doc.splitTextToSize(roleText, cRole-5)[0], margin+3, midY);
 
       if(row.name){
         const emp=isEmp(row.name);
@@ -2401,28 +2472,31 @@ function exportPdfTable(){
         setTextColor(emp?C.amber:C.text);
         doc.setFont('helvetica', emp?'bold':'normal');
         doc.setFontSize(8);
-        doc.text(emp?'▪ '+row.name:row.name, margin+cRole+3, y+4.4);
+        doc.text(emp?'▪ '+row.name:row.name, margin+cRole+3, midY);
 
         // Col 3 : Heures
         doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
         setTextColor(C.text3);
-        doc.text(row.timeStr, margin+cRole+cName+3, y+4.4);
+        doc.text(row.timeStr, margin+cRole+cName+3, midY);
 
-        // Col 4 : Note
-        if(row.note){
+        // Col 4 : Note avec wrapping
+        if(noteLines.length){
           doc.setFont('helvetica','italic'); doc.setFontSize(7);
           setTextColor(C.text2);
-          const splitNote=doc.splitTextToSize(row.note, cNote-6);
-          // Une seule ligne dans la cellule (rowH fixe) ; déborde si trop long → tronquer
-          doc.text(splitNote[0]+(splitNote.length>1?'…':''), margin+cRole+cName+cTime+3, y+4.4);
+          // Centrer verticalement le bloc de lignes dans la cellule
+          const blockH = noteLines.length * lineH;
+          const noteStartY = y + (dynRowH - blockH)/2 + lineH - 1;
+          noteLines.forEach((line, li)=>{
+            doc.text(line, margin+cRole+cName+cTime+3, noteStartY + li*lineH);
+          });
         }
       } else {
         // Non assigné
         doc.setFont('helvetica','italic'); doc.setFontSize(7.5);
         setTextColor(C.text3);
-        doc.text('— non assigné', margin+cRole+3, y+4.4);
+        doc.text('— non assigné', margin+cRole+3, midY);
       }
-      y += rowH;
+      y += dynRowH;
     });
     y += 9;
   });
@@ -2477,16 +2551,16 @@ function exportPdfTable(){
 
   renderB();
 
-  // Afficher l'onglet organisatrice seulement si la clé est dans l'URL
+  // Afficher l'interface organisatrice seulement si la clé est dans l'URL
   if(orgUnlocked){
-    const orgTab=document.getElementById('tab-org');
-    if(orgTab)orgTab.style.display='';
-    // Show the nav bar only when there are 2 tabs
-    const mainTabs=document.getElementById('main-tabs');
-    if(mainTabs)mainTabs.style.display='flex';
-    const orgBtn=document.querySelector('.main-tab:last-child');
-    switchMain._orgLoaded=true; // déjà chargé dans init
-    switchMain('organisatrice',orgBtn);
+    // Montrer les onglets header et le bouton Vue bénévole
+    const headerTabs=document.getElementById('header-tabs');
+    if(headerTabs)headerTabs.style.display='flex';
+    const vueBtn=document.getElementById('btn-vue-benevole');
+    if(vueBtn)vueBtn.style.display='';
+    // Afficher directement le pane organisatrice (pas de toggle benevole/org)
+    switchMain._orgLoaded=true;
+    switchMain('organisatrice',null);
     if(!sb){
       document.getElementById('setup-banner').style.display='block';
       document.getElementById('setup-sql').textContent=SETUP_SQL;
