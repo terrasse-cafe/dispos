@@ -32,7 +32,7 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 .logo-text{font-size:15px;font-weight:600;letter-spacing:-.01em;color:var(--text)}.logo-text span{color:var(--accent-dark)}
 .header-tabs{display:flex;align-items:stretch;gap:0;flex-shrink:0}
 .header-tab{padding:0 18px;border:none;background:transparent;font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;color:var(--text-3);transition:color .15s;position:relative;height:56px;display:flex;align-items:center}
-.header-tab::after{content:'';position:absolute;bottom:0;left:18px;right:18px;height:2px;background:var(--accent-dark);border-radius:2px 2px 0 0;transform:scaleX(0);transition:transform .15s}
+.header-tab::after{content:'';position:absolute;bottom:0;left:18px;right:18px;height:3px;background:var(--brand-secondary);border-radius:3px 3px 0 0;transform:scaleX(0);transition:transform .15s}
 .header-tab:hover{color:var(--text)}
 .header-tab.active{color:var(--text);font-weight:600}
 .header-tab.active::after{transform:scaleX(1)}
@@ -40,6 +40,9 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 .conn-dot{width:7px;height:7px;border-radius:50%;background:var(--border);display:inline-block;flex-shrink:0;transition:background .3s;margin-left:10px}
 .conn-dot.ok{background:var(--green)}
 .conn-dot.err{background:#EF4444}
+/* inline SVG icon helper */
+.ic{width:15px;height:15px;display:inline-block;flex-shrink:0}
+.ic svg,.ic svg path{stroke:currentColor}
 main{flex:1;padding:1rem 1.25rem;width:100%;overflow-x:hidden}
 .pane{display:none}.pane.visible{display:block}
 
@@ -65,33 +68,40 @@ main{flex:1;padding:1rem 1.25rem;width:100%;overflow-x:hidden}
 
 /* stat tooltip */
 .stat-wrap{position:relative;display:inline-flex;align-items:center}
-.stat-tooltip{position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);padding:10px 14px;font-size:12px;color:var(--text-2);white-space:nowrap;min-width:180px;pointer-events:none;opacity:0;transition:opacity .15s;z-index:200;line-height:1.7}
+.stat-tooltip{position:absolute;top:calc(100% + 8px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);padding:10px 14px;font-size:12px;color:var(--text-2);white-space:nowrap;min-width:180px;pointer-events:none;opacity:0;transition:opacity .15s;z-index:200;line-height:1.7}
 .stat-tooltip strong{display:block;font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
-.stat-wrap.has-missing:hover .stat-tooltip{opacity:1}
-.stat-wrap.has-missing .pill{cursor:default;text-decoration:underline dotted;text-underline-offset:3px}
+.stat-wrap.has-info:hover .stat-tooltip{opacity:1}
+.stat-wrap.has-info .o-stat-text{text-decoration:underline dotted;text-underline-offset:3px;cursor:default}
 
 /* topbar */
 .topbar{display:flex;align-items:center;gap:8px;margin-bottom:1rem;flex-wrap:wrap}
-.week-nav{display:flex;align-items:center;gap:6px}
-.wbtn{width:32px;height:32px;border-radius:6px;border:1px solid var(--border);background:var(--surface);cursor:pointer;font-size:15px;color:var(--text-2);display:flex;align-items:center;justify-content:center;transition:background .1s;box-shadow:none;flex-shrink:0}
-.wbtn:hover{background:var(--bg)}
-.wlabel{font-size:13px;color:var(--text-2);min-width:170px;text-align:center;font-weight:500}
+.week-nav{display:inline-flex;align-items:center;gap:4px;background:#DEE6E3;border-radius:999px;padding:3px}
+.wbtn{width:30px;height:30px;border-radius:999px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .1s;flex-shrink:0;color:var(--text-2)}
+.wbtn:hover{background:rgba(0,0,0,.07)}
+.wbtn svg{pointer-events:none}
+/* left arrow = flip the right arrow */
+.wbtn-left svg{transform:scaleX(-1)}
+.day-tab{height:30px;padding:0 12px;border-radius:999px;border:none;background:transparent;font-size:13px;font-weight:500;cursor:pointer;color:var(--text-2);transition:all .15s;display:inline-flex;align-items:center;white-space:nowrap;gap:3px}
+.day-tab:hover{background:rgba(0,0,0,.06)}
+.day-tab.active{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.day-tab-closed{color:#DC2626}
+.day-tab-closed.active{background:#DC2626;color:#fff}
+.day-tab .day-letter{font-weight:700}
+/* stat italic text */
+.o-stat-text{font-size:13px;font-style:italic;color:#756F6B;cursor:default}
+.o-stat-text.all-responded{color:var(--green)}
 .pill{font-size:12px;padding:3px 10px;border:1px solid var(--border);border-radius:20px;color:var(--text-2);background:var(--surface)}
 .b-shift-chip{height:32px;padding:0 18px;border-radius:999px;border:1.5px solid var(--border);background:var(--surface);font-size:13px;font-weight:500;cursor:pointer;color:var(--text-2);display:inline-flex;align-items:center;transition:all .12s;font-family:var(--font);box-shadow:none}
 .b-shift-chip.active{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
 .day-tabs{display:flex;gap:8px;margin-bottom:.75rem;flex-wrap:wrap}
-.day-tab{height:32px;padding:0 18px;border-radius:999px;border:1.5px solid var(--border);background:var(--surface);font-size:13px;font-weight:500;cursor:pointer;color:var(--text-2);transition:all .15s;box-shadow:none;display:inline-flex;align-items:center}
-.day-tab:hover{background:var(--bg);border-color:#C8C4BF}
-.day-tab.active{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
-.day-tab-closed{color:#DC2626;border-color:#FECACA;background:#FEF2F2}
-.day-tab-closed.active{background:#DC2626;border-color:#DC2626;color:#fff}
-/* open/closed toggle — pill container, flat inner borders */
+/* open/closed toggle — pill, 24px height */
 .day-status-bar{display:flex;align-items:center;gap:10px;margin-bottom:1.25rem}
-.status-toggle{display:inline-flex;border-radius:999px;border:1.5px solid var(--border);overflow:hidden;background:var(--surface);box-shadow:none}
-.status-btn{height:32px;padding:0 20px;font-size:13px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--text-2);transition:background .15s,color .15s;font-family:var(--font);display:flex;align-items:center;gap:6px;white-space:nowrap;border-radius:0}
+.status-toggle{display:inline-flex;border-radius:999px;border:1.5px solid var(--border);overflow:hidden;background:var(--surface)}
+.status-btn{height:24px;padding:0 14px;font-size:12px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--text-2);transition:background .15s,color .15s;font-family:var(--font);display:flex;align-items:center;gap:5px;white-space:nowrap;border-radius:0}
 .status-btn:first-child{border-right:1.5px solid var(--border)}
 .status-btn.active-open{background:var(--accent);color:var(--accent-text)}
 .status-btn.active-closed{background:#DC2626;color:#fff}
+.status-btn svg path{stroke:currentColor}
 .org-tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:1.25rem}
 .org-tab{padding:7px 18px;border-radius:var(--radius-sm) var(--radius-sm) 0 0;border:1px solid transparent;border-bottom:none;background:transparent;font-size:13px;cursor:pointer;color:var(--text-2);transition:all .12s;margin-bottom:-1px}
 .org-tab.active{background:var(--surface);border-color:var(--border);border-bottom-color:var(--surface);color:var(--text);font-weight:500}
@@ -105,6 +115,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .btn:hover{background:var(--bg)}
 .btn-primary{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}.btn-primary:hover{background:var(--accent-dark);color:#fff}
 .btn-secondary{background:var(--brand-secondary);color:var(--text);border-color:var(--brand-secondary)}.btn-secondary:hover{background:#E89A3C;border-color:#E89A3C}
+.btn-subtle{background:#DEE6E3;color:var(--text-2);border-color:#DEE6E3}.btn-subtle:hover{background:#CDD9D5;border-color:#CDD9D5}
 .btn-green{background:var(--green);color:#fff;border-color:var(--green)}.btn-green:hover{background:#15803d}
 .btn-blue{background:var(--blue);color:#fff;border-color:var(--blue)}.btn-blue:hover{background:#1e40af}
 .btn-danger{color:#DC2626;border-color:#FECACA;background:transparent}.btn-danger:hover{background:#FEF2F2}
@@ -256,7 +267,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     <button class="header-tab" id="htab-repertoire" onclick="switchOrg('repertoire',this)">Répertoire</button>
   </nav>
   <div class="header-spacer"></div>
-  <button class="btn btn-sm" id="btn-vue-benevole" style="display:none;gap:6px" onclick="openVolView()">↗ Vue bénévole</button>
+  <button class="btn btn-sm btn-subtle" id="btn-vue-benevole" style="display:none;gap:6px" onclick="openVolView()"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M12 8.667V12.667C12 13.404 11.403 14 10.667 14H3.333C2.597 14 2 13.404 2 12.667V5.333C2 4.597 2.597 4 3.333 4H7.333M14 6V2h-4M14 2 6.667 9.333" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/></svg> Vue bénévole</button>
   <div id="conn-dot" class="conn-dot" title="État de la connexion Supabase"></div>
 </header>
 <main>
@@ -346,25 +357,24 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   <!-- HORAIRE -->
   <div id="org-horaire" class="pane visible">
     <div class="topbar">
-      <div class="week-nav">
-        <button class="wbtn" onclick="oShift(-1)">&#8592;</button>
-        <span class="wlabel" id="o-wlabel">—</span>
-        <button class="wbtn" onclick="oShift(1)">&#8594;</button>
+      <div class="week-nav" id="o-week-nav">
+        <button class="wbtn wbtn-left" onclick="oShift(-1)" title="Semaine précédente"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3.333 8h9.334M8 3.333 12.667 8 8 12.667" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <div id="o-daytabs" style="display:contents"></div>
+        <button class="wbtn" onclick="oShift(1)" title="Semaine suivante"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3.333 8h9.334M8 3.333 12.667 8 8 12.667" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div>
       <div class="stat-wrap">
-        <span class="pill" id="o-stat" style="cursor:default">—</span>
-        <div class="stat-tooltip" id="o-stat-tooltip"><strong>En attente de la réponse de :</strong><span id="o-stat-missing"></span></div>
+        <span class="o-stat-text" id="o-stat">—</span>
+        <div class="stat-tooltip" id="o-stat-tooltip"><strong id="o-stat-tooltip-label">En attente de la réponse de :</strong><span id="o-stat-missing"></span></div>
       </div>
       <div style="flex:1"></div>
-      <button class="btn btn-sm" id="auto-btn" onclick="openAutoAssign()">⚡ Assignation auto</button>
-      <button class="btn btn-sm btn-secondary" id="finaliser-btn" onclick="openFinaliser()">✓ Finaliser l'horaire</button>
+      <button class="btn btn-sm" id="auto-btn" onclick="openAutoAssign()"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8.667 1.333 2 9.333h6l-.667 5.334L14 6.667H8l.667-5.334Z" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/></svg> Assignation auto</button>
+      <button class="btn btn-sm btn-secondary" id="finaliser-btn" onclick="openFinaliser()"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M13.333 4 6 11.333 2.667 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Finaliser l'horaire</button>
       <span id="o-sync-badge" class="sync-badge offline" style="display:none"></span>
     </div>
-    <div class="day-tabs" id="o-daytabs"></div>
     <div class="day-status-bar" id="day-status-bar">
       <div class="status-toggle">
-        <button class="status-btn" id="status-btn-open" onclick="setDayOpen(true)">⛅ Ouvert</button>
-        <button class="status-btn" id="status-btn-closed" onclick="setDayOpen(false)">☔ Fermé</button>
+        <button class="status-btn" id="status-btn-open" onclick="setDayOpen(true)"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 0.667V2M8 14v1.333M2.813 2.813l.947.947M12.24 12.24l.947.947M0.667 8H2M14 8h1.333M2.813 13.187l.947-.947M12.24 3.76l.947-.947M11.333 8a3.333 3.333 0 1 1-6.666 0 3.333 3.333 0 0 1 6.666 0Z" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/></svg> Ouvert</button>
+        <button class="status-btn" id="status-btn-closed" onclick="setDayOpen(false)"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M5.333 12.667V14M5.333 8.667V10M10.667 12.667V14M10.667 8.667V10M8 14v1.333M8 10v1.333M13.333 11.053a3.333 3.333 0 0 0-1.333-6.387h-.84A6 6 0 1 0 2.667 10.167" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/></svg> Fermé</button>
       </div>
     </div>
     <div class="h-layout">
@@ -392,7 +402,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   <!-- RÉPERTOIRE -->
   <div id="org-repertoire" class="pane">
     <div class="dir-toolbar">
-      <button class="btn btn-primary btn-sm" onclick="openPersonModal(null)">+ Ajouter</button>
+      <button class="btn btn-primary btn-sm" onclick="openPersonModal(null)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 3.333v9.334M3.333 8h9.334" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Ajouter</button>
       <span class="pill" id="dir-count">—</span>
     </div>
     <div class="dir-wrap">
@@ -1258,7 +1268,6 @@ async function oShift(d){
 
 function renderO(){
   const wk=wkey(oMon),wkData=avail[wk]||{};
-  document.getElementById('o-wlabel').textContent=wlabel(oMon);
   // Stat : X/Y bénévoles ont répondu
   const responded=new Set(Object.keys(wkData).filter(n=>!isEmp(n)));
   const allVols=directory.filter(p=>p.type==='vol');
@@ -1266,19 +1275,22 @@ function renderO(){
   const nbResp=responded.size;
   const statEl=document.getElementById('o-stat');
   if(statEl){
-    statEl.textContent=nbResp+'/'+total+' bénévole'+(total>1?'s':'')+' ont répondu';
-    statEl.style.color=nbResp===total?'var(--green)':'var(--text-2)';
-    statEl.style.borderColor=nbResp===total?'var(--green)':'var(--border)';
+    statEl.textContent=nbResp+'/'+total+' bénévoles ont répondu';
+    statEl.className='o-stat-text'+(nbResp===total?' all-responded':'');
   }
-  // Tooltip : liste des bénévoles manquants
-  const missing=allVols.filter(p=>!responded.has(p.name));
+  // Tooltip : si < moitié ont répondu → montrer qui a répondu
+  //            si >= moitié ont répondu → montrer qui n'a pas répondu
   const statWrap=document.querySelector('.stat-wrap');
   const missingEl=document.getElementById('o-stat-missing');
-  if(statWrap)statWrap.classList.toggle('has-missing',missing.length>0);
-  if(missingEl){
-    missingEl.textContent=missing.map(p=>p.name).join('\n');
-    missingEl.style.whiteSpace='pre';
-  }
+  const labelEl=document.getElementById('o-stat-tooltip-label');
+  const showResponded=nbResp>0&&nbResp<total/2;
+  const listNames=showResponded
+    ?allVols.filter(p=>responded.has(p.name)).map(p=>p.name)
+    :allVols.filter(p=>!responded.has(p.name)).map(p=>p.name);
+  const hasInfo=listNames.length>0&&nbResp<total;
+  if(statWrap)statWrap.classList.toggle('has-info',hasInfo);
+  if(labelEl)labelEl.textContent=showResponded?'A répondu :':'En attente de la réponse de :';
+  if(missingEl){missingEl.textContent=listNames.join('\n');missingEl.style.whiteSpace='pre';}
   buildDayTabs();renderHoraire();
 }
 
@@ -1286,11 +1298,18 @@ function buildDayTabs(){
   const wk=wkey(oMon);
   if(!closedDays[wk])closedDays[wk]=new Set();
   const el=document.getElementById('o-daytabs');el.innerHTML='';
+  const DAY_LETTERS={jeudi:'J',vendredi:'V',samedi:'S',dimanche:'D'};
   DAYS.forEach(day=>{
     const isClosed=closedDays[wk].has(day.id);
+    const d=dayDate(oMon,day.dow);
+    const dateStr=d.toLocaleDateString('fr-CA',{day:'numeric',month:'short'});
+    // "14 avr." → split on space
+    const parts=dateStr.split(' ');
+    const dayNum=parts[0];
+    const monthShort=(parts[1]||'').replace('.','').slice(0,4); // max 4 chars
     const btn=document.createElement('button');
     btn.className='day-tab'+(day.id===curDay?' active':'')+(isClosed?' day-tab-closed':'');
-    btn.textContent=(isClosed?'☔ ':'')+day.label;
+    btn.innerHTML=`<span class="day-letter">${DAY_LETTERS[day.id]||day.id[0].toUpperCase()}</span><span>${dayNum} ${monthShort}</span>`;
     btn.onclick=()=>{curDay=day.id;buildDayTabs();renderStatusToggle();renderHoraire();};
     el.appendChild(btn);
   });
