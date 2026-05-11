@@ -74,34 +74,37 @@ main{flex:1;padding:1rem 1.25rem;width:100%;overflow-x:hidden}
 .stat-wrap.has-info .o-stat-text{text-decoration:underline dotted;text-underline-offset:3px;cursor:default}
 
 /* topbar */
-.topbar{display:flex;align-items:center;gap:10px;margin-bottom:1.25rem;flex-wrap:wrap}
-.week-nav{display:inline-flex;align-items:center;gap:4px;background:#D0DFD9;border-radius:999px;padding:3px}
-.wbtn{width:32px;height:32px;border-radius:999px;border:none;background:var(--accent);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .1s;flex-shrink:0;color:var(--text)}
-.wbtn:hover{background:var(--accent-dark);color:#fff}
+.topbar{display:flex;align-items:center;gap:8px;margin-bottom:1.25rem;flex-wrap:wrap}
+/* Navigation semaine : pas de fond groupé */
+.week-nav{display:inline-flex;align-items:center;gap:6px;background:transparent;padding:0}
+/* Flèches : subtle primary, radius 6px, 32px */
+.wbtn{width:32px;height:32px;border-radius:6px;border:1px solid #DEE6E3;background:#DEE6E3;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .1s,border-color .1s;flex-shrink:0;color:var(--text);box-shadow:none}
+.wbtn:hover{background:#CDD9D5;border-color:#CDD9D5}
 .wbtn svg{pointer-events:none}
-/* left arrow = flip the right arrow */
 .wbtn-left svg{transform:scaleX(-1)}
-.day-tab{height:32px;padding:0 14px;border-radius:999px;border:none;background:transparent;font-size:13px;font-weight:500;cursor:pointer;color:var(--text-2);transition:all .15s;display:inline-flex;align-items:center;white-space:nowrap;gap:4px}
-.day-tab:hover{background:rgba(0,0,0,.06)}
-.day-tab.active{background:var(--accent);color:var(--accent-text);font-weight:600;box-shadow:none}
-.day-tab-closed{color:#DC2626}
-.day-tab-closed.active{background:#DC2626;color:#fff}
+/* Day tabs : pill buttons, outlined non-sélectionné, filled primary sélectionné */
+.day-tab{height:32px;padding:0 14px;border-radius:100px;border:1px solid #E1DDD9;background:var(--surface);font-size:13px;font-weight:500;cursor:pointer;color:var(--text);transition:all .15s;display:inline-flex;align-items:center;white-space:nowrap;gap:4px;box-shadow:none}
+.day-tab:hover{background:var(--bg)}
+.day-tab.active{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
+.day-tab-closed{color:#DC2626;border-color:#FECACA}
+.day-tab-closed.active{background:#DC2626;color:#fff;border-color:#DC2626}
 .day-tab .day-letter{font-weight:700}
 /* stat italic text */
 .o-stat-text{font-size:14px;font-style:italic;color:#756F6B;cursor:default}
 .o-stat-text.all-responded{color:var(--green)}
 .pill{font-size:12px;padding:3px 10px;border:1px solid var(--border);border-radius:20px;color:var(--text-2);background:var(--surface)}
-.b-shift-chip{height:32px;padding:0 18px;border-radius:999px;border:1.5px solid var(--border);background:var(--surface);font-size:13px;font-weight:500;cursor:pointer;color:var(--text-2);display:inline-flex;align-items:center;transition:all .12s;font-family:var(--font);box-shadow:none}
+.b-shift-chip{height:32px;padding:0 16px;border-radius:100px;border:1px solid #E1DDD9;background:var(--surface);font-size:13px;font-weight:500;cursor:pointer;color:var(--text);display:inline-flex;align-items:center;transition:all .12s;font-family:var(--font);box-shadow:none}
+.b-shift-chip:hover{background:var(--bg)}
 .b-shift-chip.active{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
 .day-tabs{display:flex;gap:8px;margin-bottom:.75rem;flex-wrap:wrap}
-/* open/closed toggle — pill, 24px height */
-.day-status-bar{display:flex;align-items:center;gap:10px;margin-bottom:1.25rem}
-.status-toggle{display:inline-flex;border-radius:999px;border:1.5px solid var(--border);overflow:hidden;background:var(--surface);box-shadow:var(--shadow)}
-.status-btn{height:32px;padding:0 16px;font-size:13px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--text-2);transition:background .15s,color .15s;font-family:var(--font);display:flex;align-items:center;gap:6px;white-space:nowrap;border-radius:0}
-.status-btn:first-child{border-right:1.5px solid var(--border)}
-.status-btn.active-open{background:var(--accent);color:var(--accent-text)}
-.status-btn.active-closed{background:#DC2626;color:#fff}
-.status-btn svg path{stroke:currentColor}
+/* open/closed — 2 pill buttons séparés, taille small */
+.day-status-bar{display:flex;align-items:center;gap:8px;margin-bottom:1.25rem}
+.status-toggle{display:inline-flex;gap:6px;background:transparent;border:none;padding:0}
+.status-btn{height:24px;padding:0 12px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid #E1DDD9;background:var(--surface);color:var(--text);transition:background .15s,color .15s,border-color .15s;font-family:var(--font);display:inline-flex;align-items:center;gap:5px;white-space:nowrap;border-radius:100px;box-shadow:none}
+.status-btn:hover{background:var(--bg)}
+.status-btn svg{flex-shrink:0;overflow:visible}
+.status-btn.active-open{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
+.status-btn.active-closed{background:#DC2626;color:#fff;border-color:#DC2626}
 .org-tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:1.25rem}
 .org-tab{padding:7px 18px;border-radius:var(--radius-sm) var(--radius-sm) 0 0;border:1px solid transparent;border-bottom:none;background:transparent;font-size:13px;cursor:pointer;color:var(--text-2);transition:all .12s;margin-bottom:-1px}
 .org-tab.active{background:var(--surface);border-color:var(--border);border-bottom-color:var(--surface);color:var(--text);font-weight:500}
@@ -111,21 +114,32 @@ main{flex:1;padding:1rem 1.25rem;width:100%;overflow-x:hidden}
 input[type=text],input[type=email],select{padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;background:var(--surface);color:var(--text);outline:none;transition:border-color .15s}
 input[type=text]:focus,input[type=email]:focus,select:focus{border-color:var(--accent-dark)}
 select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%2357534E' d='M5 6L0 0h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
-.btn{height:32px;padding:0 16px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;background:var(--surface);color:var(--text);transition:background .12s,color .12s;line-height:1;display:inline-flex;align-items:center;justify-content:center;gap:5px;box-shadow:none;white-space:nowrap}
-.btn:hover{background:var(--bg)}
-.btn-primary{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}.btn-primary:hover{background:var(--accent-dark);color:#fff}
-.btn-secondary{background:var(--brand-secondary);color:var(--text);border-color:var(--brand-secondary)}.btn-secondary:hover{background:#E89A3C;border-color:#E89A3C}
-.btn-subtle{background:#DEE6E3;color:var(--text-2);border-color:#DEE6E3}.btn-subtle:hover{background:#CDD9D5;border-color:#CDD9D5}
-.btn-green{background:var(--green);color:#fff;border-color:var(--green)}.btn-green:hover{background:#15803d}
-.btn-blue{background:var(--blue);color:#fff;border-color:var(--blue)}.btn-blue:hover{background:#1e40af}
+/* ── BOUTONS — système design ── */
+/* Base */
+.btn{height:32px;padding:0 14px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;background:var(--surface);color:var(--text);transition:background .12s,color .12s,border-color .12s;line-height:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;box-shadow:none;white-space:nowrap}
+/* Filled primary — bg #A5C4BD */
+.btn-primary{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}.btn-primary:hover{background:var(--accent-dark);border-color:var(--accent-dark);color:var(--accent-text)}
+/* Filled secondary — bg #FAAF5C */
+.btn-secondary{background:var(--brand-secondary);color:var(--text);border-color:var(--brand-secondary)}.btn-secondary:hover{background:#F09D42;border-color:#F09D42}
+/* Subtle primary — bg #DEE6E3 */
+.btn-subtle{background:#DEE6E3;color:var(--text);border-color:#DEE6E3}.btn-subtle:hover{background:#CDD9D5;border-color:#CDD9D5}
+/* Outlined — bg white, border #E1DDD9 */
+.btn-outlined{background:var(--surface);color:var(--text);border-color:#E1DDD9}.btn-outlined:hover{background:var(--bg)}
+/* Danger */
 .btn-danger{color:#DC2626;border-color:#FECACA;background:transparent}.btn-danger:hover{background:#FEF2F2}
-.btn-sm{height:32px;padding:0 14px;font-size:12px}
-.btn-icon{width:32px;height:32px;padding:0;font-size:13px}
+/* Sizes */
+.btn-sm{height:24px;padding:0 10px;font-size:12px;border-radius:6px}
+.btn-icon{width:32px;height:32px;padding:0}
+/* Pill — border-radius 100px, used for exclusive selection */
+.btn-pill{border-radius:100px}
+/* Pill states: outlined = non-sélectionné, filled primary = sélectionné */
+.btn-pill.selected{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
+.btn-pill.selected:hover{background:var(--accent-dark);border-color:var(--accent-dark)}
 
 /* ── BÉNÉVOLE CARDS ── */
 .b-days-wrap{display:flex;flex-direction:column;gap:10px;max-width:680px}
-.b-day-card{border:1px solid var(--border);border-radius:12px;background:var(--surface);box-shadow:var(--shadow);padding:16px 18px;transition:box-shadow .15s}
-.b-day-card.active{box-shadow:0 0 0 2px rgba(166,197,189,.5),var(--shadow)}
+.b-day-card{border:1px solid var(--border);border-radius:12px;background:var(--surface);box-shadow:none;padding:16px 18px;transition:border-color .15s}
+.b-day-card.active{border-color:var(--accent-dark);box-shadow:none}
 .b-day-card-head{display:flex;align-items:center;justify-content:space-between}
 .b-day-card-title{font-size:15px;font-weight:700;letter-spacing:-.01em}
 .b-day-card-title span{font-size:13px;font-weight:400;color:var(--text-3);margin-left:6px}
@@ -148,7 +162,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 /* ── HORAIRE ── */
 .h-layout{display:grid;grid-template-columns:1fr 240px;gap:14px;align-items:start}
 .h-scroll{overflow-x:auto}
-.h-grid{display:inline-block;min-width:100%;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow)}
+.h-grid{display:inline-block;min-width:100%;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);box-shadow:none}
 .h-head-row{display:flex;border-bottom:1px solid var(--border)}
 .h-corner{width:var(--role-col);min-width:var(--role-col);flex-shrink:0;background:var(--bg);border-right:1px solid var(--border);padding:6px 8px;font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:flex-end}
 .h-times{flex-shrink:0;background:var(--bg);position:relative;height:32px}
@@ -188,7 +202,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .prog-track{height:4px;background:var(--border-light);border-radius:2px;overflow:hidden}
 .prog-fill{height:4px;background:var(--green);border-radius:2px;transition:width .4s}
 .prog-lbl{font-size:11px;color:var(--text-2);margin-top:5px;text-align:right;font-family:var(--mono)}
-.vol-panel{border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow);overflow:hidden;position:sticky;top:76px;max-height:calc(100vh - 94px);display:flex;flex-direction:column;transition:outline .1s}
+.vol-panel{border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);box-shadow:none;overflow:hidden;position:sticky;top:76px;max-height:calc(100vh - 94px);display:flex;flex-direction:column;transition:outline .1s}
 .vol-cards{transition:outline .1s}
 .emp-cards{transition:outline .1s}
 .vp-head{padding:6px 10px;background:var(--bg);border-bottom:1px solid var(--border);font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;flex-shrink:0}
@@ -214,7 +228,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 
 /* ── RÉPERTOIRE ── */
 .dir-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:1rem}
-.dir-wrap{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--surface);box-shadow:var(--shadow)}
+.dir-wrap{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--surface);box-shadow:none}
 .dir-wrap table{width:100%;border-collapse:collapse}
 .dir-wrap th{background:var(--bg);padding:9px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)}
 .dir-wrap td{padding:9px 14px;border-bottom:1px solid var(--border-light);font-size:13px;vertical-align:middle}
@@ -267,7 +281,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     <button class="header-tab" id="htab-repertoire" onclick="switchOrg('repertoire',this)">Répertoire</button>
   </nav>
   <div class="header-spacer"></div>
-  <button class="btn btn-sm btn-subtle" id="btn-vue-benevole" style="display:none;gap:6px;margin-right:8px" onclick="openVolView()"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M12 8.667V12.667C12 13.404 11.403 14 10.667 14H3.333C2.597 14 2 13.404 2 12.667V5.333C2 4.597 2.597 4 3.333 4H7.333M14 6V2h-4M14 2 6.667 9.333" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/></svg> Vue bénévole</button>
+  <button class="btn btn-outlined" id="btn-vue-benevole" style="display:none;gap:6px;margin-right:8px" onclick="openVolView()"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M12 8.667V12.667C12 13.404 11.403 14 10.667 14H3.333C2.597 14 2 13.404 2 12.667V5.333C2 4.597 2.597 4 3.333 4H7.333M14 6V2h-4M14 2 6.667 9.333" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/></svg> Vue bénévole</button>
   <div id="conn-dot" class="conn-dot" title="État de la connexion Supabase"></div>
 </header>
 <main>
@@ -291,12 +305,12 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     <div id="b-name-section" style="display:none">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid var(--border-light)">
         <div style="font-size:15px;font-weight:600;color:var(--text)" id="b-greeting"></div>
-        <button class="btn btn-sm" onclick="resetVolSelect()" style="margin-left:auto">Changer</button>
+        <button class="btn btn-outlined" onclick="resetVolSelect()" style="margin-left:auto">Changer</button>
       </div>
-      <div class="week-nav" style="margin-bottom:1.5rem">
-        <button class="wbtn" onclick="bShift(-1)">&#8592;</button>
-        <span class="wlabel" id="b-wlabel">&#8212;</span>
-        <button class="wbtn" onclick="bShift(1)">&#8594;</button>
+      <div style="display:inline-flex;align-items:center;gap:8px;margin-bottom:1.5rem">
+        <button class="btn btn-subtle btn-icon" onclick="bShift(-1)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <span style="font-size:14px;font-weight:500;color:var(--text)" id="b-wlabel">—</span>
+        <button class="btn btn-subtle btn-icon" onclick="bShift(1)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M6 12l4-4-4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </div>
       <div style="margin-bottom:1.5rem">
         <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:10px">Combien de quarts souhaitez-vous faire cette semaine ?</div>
@@ -367,14 +381,20 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <div class="stat-tooltip" id="o-stat-tooltip"><strong id="o-stat-tooltip-label">En attente de la réponse de :</strong><span id="o-stat-missing"></span></div>
       </div>
       <div style="flex:1"></div>
-      <button class="btn btn-sm" id="auto-btn" onclick="openAutoAssign()"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8.667 1.333 2 9.333h6l-.667 5.334L14 6.667H8l.667-5.334Z" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/></svg> Assignation auto</button>
-      <button class="btn btn-sm btn-secondary" id="finaliser-btn" onclick="openFinaliser()"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M13.333 4 6 11.333 2.667 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Finaliser l'horaire</button>
+      <button class="btn btn-subtle" id="auto-btn" onclick="openAutoAssign()"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8.667 1.333 2 9.333h6l-.667 5.334L14 6.667H8l.667-5.334Z" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/></svg> Assignation auto</button>
+      <button class="btn btn-secondary" id="finaliser-btn" onclick="openFinaliser()"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M13.333 4 6 11.333 2.667 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Finaliser l'horaire</button>
       <span id="o-sync-badge" class="sync-badge offline" style="display:none"></span>
     </div>
     <div class="day-status-bar" id="day-status-bar">
       <div class="status-toggle">
-        <button class="status-btn" id="status-btn-open" onclick="setDayOpen(true)"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 0.667V2M8 14v1.333M2.813 2.813l.947.947M12.24 12.24l.947.947M0.667 8H2M14 8h1.333M2.813 13.187l.947-.947M12.24 3.76l.947-.947M11.333 8a3.333 3.333 0 1 1-6.666 0 3.333 3.333 0 0 1 6.666 0Z" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/></svg> Ouvert</button>
-        <button class="status-btn" id="status-btn-closed" onclick="setDayOpen(false)"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M5.333 12.667V14M5.333 8.667V10M10.667 12.667V14M10.667 8.667V10M8 14v1.333M8 10v1.333M13.333 11.053a3.333 3.333 0 0 0-1.333-6.387h-.84A6 6 0 1 0 2.667 10.167" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/></svg> Fermé</button>
+        <button class="status-btn" id="status-btn-open" onclick="setDayOpen(true)">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><path d="M8 0.667V2M8 14v1.333M2.813 2.813l.947.947M12.24 12.24l.947.947M0.667 8H2M14 8h1.333M2.813 13.187l.947-.947M12.24 3.76l.947-.947M11.333 8a3.333 3.333 0 1 1-6.666 0 3.333 3.333 0 0 1 6.666 0Z" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Ouvert
+        </button>
+        <button class="status-btn" id="status-btn-closed" onclick="setDayOpen(false)">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;overflow:visible"><path d="M5.333 12.667V14M5.333 8.667V10M10.667 12.667V14M10.667 8.667V10M8 14v1.333M8 10v1.333M13.333 11.053a3.333 3.333 0 0 0-1.333-6.387h-.84A6 6 0 1 0 2.667 10.167" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Fermé
+        </button>
       </div>
     </div>
     <div class="h-layout">
@@ -402,7 +422,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   <!-- RÉPERTOIRE -->
   <div id="org-repertoire" class="pane">
     <div class="dir-toolbar">
-      <button class="btn btn-primary btn-sm" onclick="openPersonModal(null)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 3.333v9.334M3.333 8h9.334" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Ajouter</button>
+      <button class="btn btn-subtle" onclick="openPersonModal(null)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 3.333v9.334M3.333 8h9.334" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Ajouter</button>
       <span class="pill" id="dir-count">—</span>
     </div>
     <div class="dir-wrap">
@@ -456,9 +476,9 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       </div>
     </div>
     <div class="modal-btns">
-      <button class="btn btn-danger btn-sm" id="pm-delete" onclick="deletePersonFromModal()" style="margin-right:auto;display:none">Supprimer</button>
-      <button class="btn btn-sm" onclick="closePersonModal()">Annuler</button>
-      <button class="btn btn-primary btn-sm" onclick="savePerson()">Enregistrer</button>
+      <button class="btn btn-danger" id="pm-delete" onclick="deletePersonFromModal()" style="margin-right:auto;display:none">Supprimer</button>
+      <button class="btn btn-outlined" onclick="closePersonModal()">Annuler</button>
+      <button class="btn btn-secondary" onclick="savePerson()">Enregistrer</button>
     </div>
   </div>
 </div>
@@ -1974,7 +1994,7 @@ function renderDir(){
       <td><span class="type-badge ${p.type}">${p.type==='vol'?'Bénévole':'Employé'}</span></td>
       <td><div class="role-tags">${p.roles.filter(Boolean).map(r=>`<span class="role-tag">${roleLabel(r)}</span>`).join('')||'<span style="color:var(--text-3);font-size:12px">—</span>'}</div></td>
       <td style="white-space:nowrap;text-align:right">
-        <button class="btn btn-sm btn-icon" title="Modifier" onclick="openPersonModal(${p.id})">✏</button>
+        <button class="btn btn-outlined" title="Modifier" onclick="openPersonModal(${p.id})"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M7.3335 2.66665H2.66683C2.31321 2.66665 1.97407 2.80713 1.72402 3.05718C1.47397 3.30723 1.3335 3.64637 1.3335 3.99999V13.3333C1.3335 13.6869 1.47397 14.0261 1.72402 14.2761C1.97407 14.5262 2.31321 14.6667 2.66683 14.6667H12.0002C12.3538 14.6667 12.6929 14.5262 12.943 14.2761C13.193 14.0261 13.3335 13.6869 13.3335 13.3333V8.66666M12.3335 1.66665C12.5987 1.40144 12.9584 1.25244 13.3335 1.25244C13.7086 1.25244 14.0683 1.40144 14.3335 1.66665C14.5987 1.93187 14.7477 2.29158 14.7477 2.66665C14.7477 3.04173 14.5987 3.40144 14.3335 3.66665L8.00016 9.99999L5.3335 10.6667L6.00016 7.99999L12.3335 1.66665Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Modifier</button>
       </td>`;
     tbody.appendChild(tr);
   });
