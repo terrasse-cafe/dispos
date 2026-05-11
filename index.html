@@ -86,8 +86,6 @@ main{flex:1;padding:1rem 1.25rem;width:100%;overflow-x:hidden}
 .day-tab{height:32px;padding:0 14px;border-radius:100px;border:1px solid #E1DDD9;background:var(--surface);font-size:13px;font-weight:500;cursor:pointer;color:var(--text);transition:all .15s;display:inline-flex;align-items:center;white-space:nowrap;gap:4px;box-shadow:none}
 .day-tab:hover{background:var(--bg)}
 .day-tab.active{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
-.day-tab-closed{color:#DC2626;border-color:#FECACA}
-.day-tab-closed.active{background:#DC2626;color:#fff;border-color:#DC2626}
 .day-tab .day-letter{font-weight:700}
 /* stat italic text */
 .o-stat-text{font-size:14px;font-style:italic;color:#756F6B;cursor:default}
@@ -100,11 +98,32 @@ main{flex:1;padding:1rem 1.25rem;width:100%;overflow-x:hidden}
 /* open/closed — 2 pill buttons séparés, taille small */
 .day-status-bar{display:flex;align-items:center;gap:8px;margin-bottom:1.25rem}
 .status-toggle{display:inline-flex;gap:6px;background:transparent;border:none;padding:0}
+/* Les deux boutons ont toujours le style filled primary */
 .status-btn{height:24px;padding:0 12px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid #E1DDD9;background:var(--surface);color:var(--text);transition:background .15s,color .15s,border-color .15s;font-family:var(--font);display:inline-flex;align-items:center;gap:5px;white-space:nowrap;border-radius:100px;box-shadow:none}
 .status-btn:hover{background:var(--bg)}
 .status-btn svg{flex-shrink:0;overflow:visible}
-.status-btn.active-open{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
-.status-btn.active-closed{background:#DC2626;color:#fff;border-color:#DC2626}
+.status-btn.active-open,.status-btn.active-closed{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
+
+/* Day tab fermé — non sélectionné : border #FDA2A2 + diagonale SVG clippée */
+.day-tab-closed{color:var(--text);border-color:#FDA2A2;position:relative;overflow:hidden}
+.day-tab-closed::after{
+  content:'';
+  position:absolute;
+  /* Ligne diagonale de coin en coin, fine, #FDA2A2 */
+  top:0;left:0;right:0;bottom:0;
+  background:linear-gradient(
+    to bottom right,
+    transparent calc(50% - 0.6px),
+    #FDA2A2 calc(50% - 0.6px),
+    #FDA2A2 calc(50% + 0.6px),
+    transparent calc(50% + 0.6px)
+  );
+  pointer-events:none;
+  border-radius:100px;
+}
+/* Sélectionné fermé : bg #FDA2A2, pas de diagonale */
+.day-tab-closed.active{background:#FDA2A2;color:var(--text);border-color:#FDA2A2}
+.day-tab-closed.active::after{display:none}
 .org-tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:1.25rem}
 .org-tab{padding:7px 18px;border-radius:var(--radius-sm) var(--radius-sm) 0 0;border:1px solid transparent;border-bottom:none;background:transparent;font-size:13px;cursor:pointer;color:var(--text-2);transition:all .12s;margin-bottom:-1px}
 .org-tab.active{background:var(--surface);border-color:var(--border);border-bottom-color:var(--surface);color:var(--text);font-weight:500}
@@ -1343,8 +1362,9 @@ function renderStatusToggle(){
   const btnOpen=document.getElementById('status-btn-open');
   const btnClosed=document.getElementById('status-btn-closed');
   if(!btnOpen||!btnClosed)return;
+  // Les deux utilisent filled primary (active-open), seul le bouton actif est coloré
   btnOpen.className='status-btn'+(isClosed?'':' active-open');
-  btnClosed.className='status-btn'+(isClosed?' active-closed':'');
+  btnClosed.className='status-btn'+(isClosed?' active-open':'');
 }
 
 function setDayOpen(open){
@@ -1671,8 +1691,13 @@ function renderHoraire(){
     if(isClosed){
       const overlay=document.createElement('div');
       overlay.className='day-closed-overlay';
-      overlay.style.cssText='position:absolute;inset:0;background:rgba(255,255,255,.75);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;border-radius:var(--radius);z-index:10;pointer-events:none';
-      overlay.innerHTML='<div style="font-size:32px">☔</div><div style="font-size:15px;font-weight:600;color:var(--text-2)">Journée fermée</div><div style="font-size:12px;color:var(--text-3)">Utilisez le toggle Ouvert / Fermé ci-dessus</div>';
+      overlay.style.cssText='position:absolute;inset:0;background:rgba(247,245,242,.82);backdrop-filter:blur(2px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border-radius:var(--radius);z-index:10;pointer-events:all;cursor:default';
+      overlay.innerHTML='<div style="font-size:15px;font-weight:600;color:var(--text-2)">Journée fermée</div><div style="font-size:12px;color:var(--text-3)">Modifiez le statut avec le bouton ci-dessus</div>';
+      // Bloquer tous les événements souris/touch pour empêcher l'interaction avec la grille dessous
+      overlay.addEventListener('mousedown',e=>e.stopPropagation());
+      overlay.addEventListener('click',e=>e.stopPropagation());
+      overlay.addEventListener('dragover',e=>{e.preventDefault();e.stopPropagation();});
+      overlay.addEventListener('drop',e=>{e.preventDefault();e.stopPropagation();});
       scrollDiv.appendChild(overlay);
     }
   }
@@ -1710,9 +1735,11 @@ function overlapMins(wk,name,shift){
 }
 
 function volWeekShiftCount(wk, name) {
-  // Nombre de shifts distincts assignés cette semaine (toutes journées)
+  // Nombre de shifts distincts assignés cette semaine, hors jours fermés
+  const wkClosed=closedDays[wk]||new Set();
   const seen = new Set();
   DAYS.forEach(day => {
+    if(wkClosed.has(day.id))return; // ignorer les jours fermés
     (SHIFTS[day.id]||[]).forEach(sh => {
       const allR = [...(sh._slots||sh.roles),...(sh._optSlots||[])];
       if (allR.some(r => getAssign(wk,sh.id,r) === name)) seen.add(sh.id);
@@ -2236,12 +2263,13 @@ async function openAutoAssign(){
   const wkData=avail[wk]||{};
   const today=new Date();today.setHours(0,0,0,0);
 
-  // ── Comptage shifts déjà assignés cette semaine ──
+  // ── Comptage shifts déjà assignés cette semaine (hors jours fermés) ──
   const weekShiftCounts={};
   const weekShiftSeen=new Set();
   // name -> Set<shiftId> par jour
   const assignedShifts={}; // name+'|'+dayId -> Set<shiftId>
   DAYS.forEach(day=>{
+    if((closedDays[wk]||new Set()).has(day.id))return; // ignorer les jours fermés
     (SHIFTS[day.id]||[]).forEach(sh=>{
       [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(role=>{
         const ex=getAssign(wk,sh.id,role);
