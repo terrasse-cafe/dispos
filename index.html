@@ -400,9 +400,9 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <div class="stat-tooltip" id="o-stat-tooltip"><strong id="o-stat-tooltip-label">En attente de la réponse de :</strong><span id="o-stat-missing"></span></div>
       </div>
       <div style="flex:1"></div>
+      <span id="o-sync-badge" class="sync-badge offline" style="display:none"></span>
       <button class="btn btn-subtle" id="auto-btn" onclick="openAutoAssign()"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8.667 1.333 2 9.333h6l-.667 5.334L14 6.667H8l.667-5.334Z" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/></svg> Assignation auto</button>
       <button class="btn btn-secondary" id="finaliser-btn" onclick="openFinaliser()"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M13.333 4 6 11.333 2.667 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Finaliser l'horaire</button>
-      <span id="o-sync-badge" class="sync-badge offline" style="display:none"></span>
     </div>
     <div class="day-status-bar" id="day-status-bar">
       <div class="status-toggle">
@@ -442,7 +442,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   <div id="org-repertoire" class="pane">
     <div class="dir-toolbar">
       <button class="btn btn-subtle" onclick="openPersonModal(null)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 3.333v9.334M3.333 8h9.334" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Ajouter</button>
-      <span class="pill" id="dir-count">—</span>
+      <span class="o-stat-text" id="dir-count">—</span>
     </div>
     <div class="dir-wrap">
       <table>
@@ -887,7 +887,6 @@ async function loadAssignments(wk) {
 
 async function saveAssignment(wk, shiftId, role, name, startMins, endMins, note=null) {
   if (!sb) return;
-  setSyncBadge('o-sync-badge','saving','Enregistrement…');
   const row = {
     week_key: wk,
     shift_id: shiftId,
@@ -901,10 +900,8 @@ async function saveAssignment(wk, shiftId, role, name, startMins, endMins, note=
   const { error } = await sb.from('assignments').upsert(row, {onConflict:'week_key,shift_id,role'});
   if (error) {
     console.error('saveAssignment:', error);
-    setSyncBadge('o-sync-badge','error','Erreur');
-  } else {
-    setSyncBadge('o-sync-badge','saved','✓ Sauvegardé');
-    setTimeout(()=>setSyncBadge('o-sync-badge','saved',''),2000);
+    setSyncBadge('o-sync-badge','error','Erreur de sauvegarde');
+    setTimeout(()=>setSyncBadge('o-sync-badge','error',''),3000);
   }
 }
 
@@ -2017,11 +2014,11 @@ function renderDir(){
     const tr=document.createElement('tr');
     tr.innerHTML=`
       <td><strong>${p.name}</strong></td>
-      <td><a href="mailto:${p.email}" style="color:var(--accent);font-size:12px">${p.email||'—'}</a></td>
+      <td><a href="mailto:${p.email}" style="color:var(--text);font-size:13px">${p.email||'—'}</a></td>
       <td><span class="type-badge ${p.type}">${p.type==='vol'?'Bénévole':'Employé'}</span></td>
       <td><div class="role-tags">${p.roles.filter(Boolean).map(r=>`<span class="role-tag">${roleLabel(r)}</span>`).join('')||'<span style="color:var(--text-3);font-size:12px">—</span>'}</div></td>
       <td style="white-space:nowrap;text-align:right">
-        <button class="btn btn-outlined" title="Modifier" onclick="openPersonModal(${p.id})"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M7.3335 2.66665H2.66683C2.31321 2.66665 1.97407 2.80713 1.72402 3.05718C1.47397 3.30723 1.3335 3.64637 1.3335 3.99999V13.3333C1.3335 13.6869 1.47397 14.0261 1.72402 14.2761C1.97407 14.5262 2.31321 14.6667 2.66683 14.6667H12.0002C12.3538 14.6667 12.6929 14.5262 12.943 14.2761C13.193 14.0261 13.3335 13.6869 13.3335 13.3333V8.66666M12.3335 1.66665C12.5987 1.40144 12.9584 1.25244 13.3335 1.25244C13.7086 1.25244 14.0683 1.40144 14.3335 1.66665C14.5987 1.93187 14.7477 2.29158 14.7477 2.66665C14.7477 3.04173 14.5987 3.40144 14.3335 3.66665L8.00016 9.99999L5.3335 10.6667L6.00016 7.99999L12.3335 1.66665Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Modifier</button>
+        <button class="btn btn-outlined btn-icon" title="Modifier" onclick="openPersonModal(${p.id})"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M7.3335 2.66665H2.66683C2.31321 2.66665 1.97407 2.80713 1.72402 3.05718C1.47397 3.30723 1.3335 3.64637 1.3335 3.99999V13.3333C1.3335 13.6869 1.47397 14.0261 1.72402 14.2761C1.97407 14.5262 2.31321 14.6667 2.66683 14.6667H12.0002C12.3538 14.6667 12.6929 14.5262 12.943 14.2761C13.193 14.0261 13.3335 13.6869 13.3335 13.3333V8.66666M12.3335 1.66665C12.5987 1.40144 12.9584 1.25244 13.3335 1.25244C13.7086 1.25244 14.0683 1.40144 14.3335 1.66665C14.5987 1.93187 14.7477 2.29158 14.7477 2.66665C14.7477 3.04173 14.5987 3.40144 14.3335 3.66665L8.00016 9.99999L5.3335 10.6667L6.00016 7.99999L12.3335 1.66665Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       </td>`;
     tbody.appendChild(tr);
   });
