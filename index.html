@@ -1481,7 +1481,7 @@ function renderHoraire(){
   const past=isPastDay();
   const autoBtn=document.getElementById('auto-btn');
   const wkPast=DAYS.every(d=>dayDate(oMon,d.dow)<new Date(new Date().setHours(0,0,0,0)));
-  if(autoBtn){autoBtn.disabled=wkPast||isClosed;autoBtn.style.opacity=(wkPast||isClosed)?'0.4':'1';}
+  if(autoBtn){autoBtn.disabled=wkPast;autoBtn.style.opacity=wkPast?'0.4':'1';}
   const grid=document.getElementById('h-grid');grid.innerHTML='';
 
   const hRow=document.createElement('div');hRow.className='h-head-row';
@@ -2363,6 +2363,16 @@ async function openAutoAssign(){
 
   for(const a of toSave)await saveAssignment(a.wk,a.shiftId,a.role,a.name,a.s,a.e);
   renderHoraire();
+
+  // Feedback
+  const n=toSave.length;
+  if(n>0){
+    setSyncBadge('o-sync-badge','saved',`✓ ${n} assignation${n>1?'s':''} ajoutée${n>1?'s':''}`);
+    setTimeout(()=>setSyncBadge('o-sync-badge','saved',''),3500);
+  } else {
+    setSyncBadge('o-sync-badge','saved','✓ Horaire déjà optimisé');
+    setTimeout(()=>setSyncBadge('o-sync-badge','saved',''),3500);
+  }
 }
 
 /* ══════════════════════════════════════════════
