@@ -26,13 +26,13 @@
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:var(--bg);font-family:var(--font);color:var(--text);font-size:14px}
 .shell{display:flex;flex-direction:column;min-height:100vh}
-header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;gap:0;height:60px;position:sticky;top:0;z-index:100}
-.logo{display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0;margin-right:2rem}
-.logo-img{width:36px;height:36px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 2px var(--border)}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;gap:0;height:52px;position:sticky;top:0;z-index:100}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0;margin-right:1.5rem;cursor:default}
+.logo-img{width:32px;height:32px;border-radius:50%;object-fit:cover}
 .logo-text{font-size:16px;font-weight:700;letter-spacing:-.02em;color:var(--text)}.logo-text span{color:var(--text)}
 .header-tabs{display:flex;align-items:stretch;gap:0;flex-shrink:0}
-.header-tab{padding:0 20px;border:none;background:transparent;font-family:var(--font);font-size:14px;font-weight:500;cursor:pointer;color:var(--text-3);transition:color .15s;position:relative;height:60px;display:flex;align-items:center}
-.header-tab::after{content:'';position:absolute;bottom:0;left:20px;right:20px;height:3px;background:var(--brand-secondary);border-radius:3px 3px 0 0;transform:scaleX(0);transition:transform .15s}
+.header-tab{padding:0 14px;border:none;background:transparent;font-family:var(--font);font-size:14px;font-weight:500;cursor:pointer;color:var(--text-3);transition:color .15s;position:relative;height:52px;display:flex;align-items:center}
+.header-tab::after{content:'';position:absolute;bottom:0;left:14px;right:14px;height:3px;background:var(--brand-secondary);border-radius:3px 3px 0 0;transform:scaleX(0);transition:transform .15s}
 .header-tab:hover{color:var(--text)}
 .header-tab.active{color:var(--text);font-weight:700}
 .header-tab.active::after{transform:scaleX(1)}
@@ -221,7 +221,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .prog-track{height:4px;background:var(--border-light);border-radius:2px;overflow:hidden}
 .prog-fill{height:4px;background:var(--green);border-radius:2px;transition:width .4s}
 .prog-lbl{font-size:11px;color:var(--text-2);margin-top:5px;text-align:right;font-family:var(--mono)}
-.vol-panel{border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);box-shadow:none;overflow:hidden;position:sticky;top:76px;max-height:calc(100vh - 94px);display:flex;flex-direction:column;transition:outline .1s}
+.vol-panel{border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);box-shadow:none;overflow:hidden;position:sticky;top:68px;max-height:calc(100vh - 86px);display:flex;flex-direction:column;transition:outline .1s}
 .vol-cards{transition:outline .1s}
 .emp-cards{transition:outline .1s}
 .vp-head{padding:6px 10px;background:var(--bg);border-bottom:1px solid var(--border);font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;flex-shrink:0}
@@ -291,10 +291,10 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 <body>
 <div class="shell">
 <header>
-  <a class="logo" href="javascript:void(0)">
+  <div class="logo">
     <img class="logo-img" src="https://raw.githubusercontent.com/terrasse-cafe/dispos/main/photos/logo-terrasse-cafe.jpg" alt="Logo Terrasse Café"/>
     <span class="logo-text">Terrasse Café</span>
-  </a>
+  </div>
   <nav class="header-tabs" id="header-tabs" style="display:none">
     <button class="header-tab active" id="htab-horaire" onclick="switchOrg('horaire',this)">Horaire</button>
     <button class="header-tab" id="htab-repertoire" onclick="switchOrg('repertoire',this)">Répertoire</button>
