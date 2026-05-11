@@ -26,15 +26,15 @@
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:var(--bg);font-family:var(--font);color:var(--text);font-size:14px}
 .shell{display:flex;flex-direction:column;min-height:100vh}
-header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;gap:0;height:56px;position:sticky;top:0;z-index:100}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;gap:0;height:60px;position:sticky;top:0;z-index:100}
 .logo{display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0;margin-right:2rem}
-.logo-img{width:32px;height:32px;border-radius:50%;object-fit:cover}
-.logo-text{font-size:15px;font-weight:600;letter-spacing:-.01em;color:var(--text)}.logo-text span{color:var(--accent-dark)}
+.logo-img{width:36px;height:36px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 2px var(--border)}
+.logo-text{font-size:16px;font-weight:700;letter-spacing:-.02em;color:var(--text)}.logo-text span{color:var(--text)}
 .header-tabs{display:flex;align-items:stretch;gap:0;flex-shrink:0}
-.header-tab{padding:0 18px;border:none;background:transparent;font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;color:var(--text-3);transition:color .15s;position:relative;height:56px;display:flex;align-items:center}
-.header-tab::after{content:'';position:absolute;bottom:0;left:18px;right:18px;height:3px;background:var(--brand-secondary);border-radius:3px 3px 0 0;transform:scaleX(0);transition:transform .15s}
+.header-tab{padding:0 20px;border:none;background:transparent;font-family:var(--font);font-size:14px;font-weight:500;cursor:pointer;color:var(--text-3);transition:color .15s;position:relative;height:60px;display:flex;align-items:center}
+.header-tab::after{content:'';position:absolute;bottom:0;left:20px;right:20px;height:3px;background:var(--brand-secondary);border-radius:3px 3px 0 0;transform:scaleX(0);transition:transform .15s}
 .header-tab:hover{color:var(--text)}
-.header-tab.active{color:var(--text);font-weight:600}
+.header-tab.active{color:var(--text);font-weight:700}
 .header-tab.active::after{transform:scaleX(1)}
 .header-spacer{flex:1}
 .conn-dot{width:7px;height:7px;border-radius:50%;background:var(--border);display:inline-block;flex-shrink:0;transition:background .3s;margin-left:10px}
@@ -68,27 +68,27 @@ main{flex:1;padding:1rem 1.25rem;width:100%;overflow-x:hidden}
 
 /* stat tooltip */
 .stat-wrap{position:relative;display:inline-flex;align-items:center}
-.stat-tooltip{position:absolute;top:calc(100% + 8px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);padding:10px 14px;font-size:12px;color:var(--text-2);white-space:nowrap;min-width:180px;pointer-events:none;opacity:0;transition:opacity .15s;z-index:200;line-height:1.7}
-.stat-tooltip strong{display:block;font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.stat-tooltip{position:absolute;top:calc(100% + 8px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);padding:12px 16px;font-size:13px;color:var(--text-2);white-space:nowrap;min-width:220px;pointer-events:none;opacity:0;transition:opacity .15s;z-index:200;line-height:1.8}
+.stat-tooltip strong{display:block;font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
 .stat-wrap.has-info:hover .stat-tooltip{opacity:1}
 .stat-wrap.has-info .o-stat-text{text-decoration:underline dotted;text-underline-offset:3px;cursor:default}
 
 /* topbar */
-.topbar{display:flex;align-items:center;gap:8px;margin-bottom:1rem;flex-wrap:wrap}
-.week-nav{display:inline-flex;align-items:center;gap:4px;background:#DEE6E3;border-radius:999px;padding:3px}
-.wbtn{width:30px;height:30px;border-radius:999px;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .1s;flex-shrink:0;color:var(--text-2)}
-.wbtn:hover{background:rgba(0,0,0,.07)}
+.topbar{display:flex;align-items:center;gap:10px;margin-bottom:1.25rem;flex-wrap:wrap}
+.week-nav{display:inline-flex;align-items:center;gap:4px;background:#D0DFD9;border-radius:999px;padding:3px}
+.wbtn{width:32px;height:32px;border-radius:999px;border:none;background:var(--accent);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .1s;flex-shrink:0;color:var(--text)}
+.wbtn:hover{background:var(--accent-dark);color:#fff}
 .wbtn svg{pointer-events:none}
 /* left arrow = flip the right arrow */
 .wbtn-left svg{transform:scaleX(-1)}
-.day-tab{height:30px;padding:0 12px;border-radius:999px;border:none;background:transparent;font-size:13px;font-weight:500;cursor:pointer;color:var(--text-2);transition:all .15s;display:inline-flex;align-items:center;white-space:nowrap;gap:3px}
+.day-tab{height:32px;padding:0 14px;border-radius:999px;border:none;background:transparent;font-size:13px;font-weight:500;cursor:pointer;color:var(--text-2);transition:all .15s;display:inline-flex;align-items:center;white-space:nowrap;gap:4px}
 .day-tab:hover{background:rgba(0,0,0,.06)}
-.day-tab.active{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.day-tab.active{background:var(--accent);color:var(--accent-text);font-weight:600;box-shadow:none}
 .day-tab-closed{color:#DC2626}
 .day-tab-closed.active{background:#DC2626;color:#fff}
 .day-tab .day-letter{font-weight:700}
 /* stat italic text */
-.o-stat-text{font-size:13px;font-style:italic;color:#756F6B;cursor:default}
+.o-stat-text{font-size:14px;font-style:italic;color:#756F6B;cursor:default}
 .o-stat-text.all-responded{color:var(--green)}
 .pill{font-size:12px;padding:3px 10px;border:1px solid var(--border);border-radius:20px;color:var(--text-2);background:var(--surface)}
 .b-shift-chip{height:32px;padding:0 18px;border-radius:999px;border:1.5px solid var(--border);background:var(--surface);font-size:13px;font-weight:500;cursor:pointer;color:var(--text-2);display:inline-flex;align-items:center;transition:all .12s;font-family:var(--font);box-shadow:none}
@@ -96,8 +96,8 @@ main{flex:1;padding:1rem 1.25rem;width:100%;overflow-x:hidden}
 .day-tabs{display:flex;gap:8px;margin-bottom:.75rem;flex-wrap:wrap}
 /* open/closed toggle — pill, 24px height */
 .day-status-bar{display:flex;align-items:center;gap:10px;margin-bottom:1.25rem}
-.status-toggle{display:inline-flex;border-radius:999px;border:1.5px solid var(--border);overflow:hidden;background:var(--surface)}
-.status-btn{height:24px;padding:0 14px;font-size:12px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--text-2);transition:background .15s,color .15s;font-family:var(--font);display:flex;align-items:center;gap:5px;white-space:nowrap;border-radius:0}
+.status-toggle{display:inline-flex;border-radius:999px;border:1.5px solid var(--border);overflow:hidden;background:var(--surface);box-shadow:var(--shadow)}
+.status-btn{height:32px;padding:0 16px;font-size:13px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--text-2);transition:background .15s,color .15s;font-family:var(--font);display:flex;align-items:center;gap:6px;white-space:nowrap;border-radius:0}
 .status-btn:first-child{border-right:1.5px solid var(--border)}
 .status-btn.active-open{background:var(--accent);color:var(--accent-text)}
 .status-btn.active-closed{background:#DC2626;color:#fff}
@@ -188,7 +188,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .prog-track{height:4px;background:var(--border-light);border-radius:2px;overflow:hidden}
 .prog-fill{height:4px;background:var(--green);border-radius:2px;transition:width .4s}
 .prog-lbl{font-size:11px;color:var(--text-2);margin-top:5px;text-align:right;font-family:var(--mono)}
-.vol-panel{border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow);overflow:hidden;position:sticky;top:72px;max-height:calc(100vh - 90px);display:flex;flex-direction:column;transition:outline .1s}
+.vol-panel{border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow);overflow:hidden;position:sticky;top:76px;max-height:calc(100vh - 94px);display:flex;flex-direction:column;transition:outline .1s}
 .vol-cards{transition:outline .1s}
 .emp-cards{transition:outline .1s}
 .vp-head{padding:6px 10px;background:var(--bg);border-bottom:1px solid var(--border);font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;flex-shrink:0}
@@ -260,14 +260,14 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 <header>
   <a class="logo" href="javascript:void(0)">
     <img class="logo-img" src="https://raw.githubusercontent.com/terrasse-cafe/dispos/main/photos/logo-terrasse-cafe.jpg" alt="Logo Terrasse Café"/>
-    <span class="logo-text">Terrasse <span>Café</span></span>
+    <span class="logo-text">Terrasse Café</span>
   </a>
   <nav class="header-tabs" id="header-tabs" style="display:none">
     <button class="header-tab active" id="htab-horaire" onclick="switchOrg('horaire',this)">Horaire</button>
     <button class="header-tab" id="htab-repertoire" onclick="switchOrg('repertoire',this)">Répertoire</button>
   </nav>
   <div class="header-spacer"></div>
-  <button class="btn btn-sm btn-subtle" id="btn-vue-benevole" style="display:none;gap:6px" onclick="openVolView()"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M12 8.667V12.667C12 13.404 11.403 14 10.667 14H3.333C2.597 14 2 13.404 2 12.667V5.333C2 4.597 2.597 4 3.333 4H7.333M14 6V2h-4M14 2 6.667 9.333" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/></svg> Vue bénévole</button>
+  <button class="btn btn-sm btn-subtle" id="btn-vue-benevole" style="display:none;gap:6px;margin-right:8px" onclick="openVolView()"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M12 8.667V12.667C12 13.404 11.403 14 10.667 14H3.333C2.597 14 2 13.404 2 12.667V5.333C2 4.597 2.597 4 3.333 4H7.333M14 6V2h-4M14 2 6.667 9.333" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/></svg> Vue bénévole</button>
   <div id="conn-dot" class="conn-dot" title="État de la connexion Supabase"></div>
 </header>
 <main>
