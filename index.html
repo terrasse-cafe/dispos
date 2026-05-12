@@ -375,6 +375,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <div class="pin-error-msg" id="pin-vol-error"></div>
         <div class="pin-keypad" id="pin-vol-keypad"></div>
         <div class="pin-hint" id="pin-vol-hint"></div>
+        <button onclick="pinVolCancel()" style="margin-top:1rem;background:none;border:none;cursor:pointer;font-size:12px;color:var(--text-3);font-family:var(--font);padding:4px 8px;border-radius:4px;transition:color .15s" onmouseover="this.style.color='var(--text-2)'" onmouseout="this.style.color='var(--text-3)'">Oups, mauvais nom</button>
       </div>
     </div>
 
@@ -1244,6 +1245,16 @@ function closeVolPin() {
     document.removeEventListener('keydown', overlay._keyHandler);
     overlay._keyHandler = null;
   }
+}
+
+function pinVolCancel() {
+  closeVolPin();
+  // Remettre le select à zéro sans déclencher onVolSelect
+  document.getElementById('vol-select').value = '';
+  document.getElementById('b-empty-state').style.display = 'block';
+  document.getElementById('b-name-section').style.display = 'none';
+  pinVolEntry = '';
+  pinVolName = '';
 }
 
 /* ══════════════════════════════════════════════
