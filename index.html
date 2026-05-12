@@ -1,0 +1,3021 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Terrasse Café — Planification bénévoles</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
+:root{
+  --bg:#F7F5F2;--surface:#fff;--border:#E2DDD8;--border-light:#EDE9E4;
+  --text:#1C1917;--text-2:#57534E;--text-3:#A8A29E;
+  --accent:#A6C5BD;--accent-dark:#6FA39A;--accent-text:#1C1917;
+  --accent-light:#EEF5F4;
+  --brand-secondary:#FAAF5C;
+  --green:#16A34A;--green-light:#F0FDF4;
+  --amber:#D97706;--amber-light:#FFFBEB;
+  --blue:#1D4ED8;--blue-light:#EFF6FF;
+  --radius:8px;--radius-sm:5px;
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.05);
+  --shadow-md:0 4px 16px rgba(0,0,0,.12);
+  --role-col:130px;--font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);font-family:var(--font);color:var(--text);font-size:14px}
+.shell{display:flex;flex-direction:column;min-height:100vh}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;gap:0;height:52px;position:sticky;top:0;z-index:100}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0;margin-right:1.5rem;cursor:default}
+.logo-img{width:32px;height:32px;border-radius:50%;object-fit:cover}
+.logo-text{font-size:16px;font-weight:700;letter-spacing:-.02em;color:var(--text)}.logo-text span{color:var(--text)}
+.header-tabs{display:flex;align-items:stretch;gap:0;flex-shrink:0}
+.header-tab{padding:0 14px;border:none;background:transparent;font-family:var(--font);font-size:14px;font-weight:500;cursor:pointer;color:var(--text-3);transition:color .15s;position:relative;height:52px;display:flex;align-items:center}
+.header-tab::after{content:'';position:absolute;bottom:0;left:14px;right:14px;height:3px;background:var(--brand-secondary);border-radius:3px 3px 0 0;transform:scaleX(0);transition:transform .15s}
+.header-tab:hover{color:var(--text)}
+.header-tab.active{color:var(--text);font-weight:700}
+.header-tab.active::after{transform:scaleX(1)}
+.header-spacer{flex:1}
+.conn-dot{width:7px;height:7px;border-radius:50%;background:var(--border);display:inline-block;flex-shrink:0;transition:background .3s;margin-left:10px}
+.conn-dot.ok{background:var(--green)}
+.conn-dot.err{background:#EF4444}
+/* inline SVG icon helper */
+.ic{width:15px;height:15px;display:inline-block;flex-shrink:0}
+.ic svg,.ic svg path{stroke:currentColor}
+main{flex:1;padding:1rem 1.25rem;width:100%;overflow-x:hidden}
+.pane{display:none}.pane.visible{display:block}
+
+/* ── SETUP BANNER ── */
+.setup-banner{background:var(--blue-light);border:1px solid #BFDBFE;border-radius:var(--radius);padding:1.25rem 1.5rem;margin-bottom:1.5rem}
+.setup-banner h2{font-size:14px;font-weight:600;color:var(--blue);margin-bottom:.75rem}
+.setup-fields{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+.setup-fields label{font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px}
+.setup-fields input{padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;font-family:var(--mono);background:var(--surface);width:340px}
+.setup-fields input:focus{outline:none;border-color:var(--blue)}
+.setup-note{font-size:11px;color:var(--text-3);margin-top:.75rem;line-height:1.6}
+.setup-note a{color:var(--blue);text-decoration:underline}
+.setup-note code{background:var(--bg);padding:1px 5px;border-radius:3px;font-family:var(--mono);font-size:10px}
+
+/* ── SYNC STATUS ── */
+.sync-badge{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500;display:inline-flex;align-items:center;gap:4px}
+.sync-badge.saving{background:var(--amber-light);color:var(--amber)}
+.sync-badge.saved{background:var(--green-light);color:var(--green)}
+.sync-badge.error{background:#FEF2F2;color:#DC2626}
+.sync-badge.offline{background:var(--bg);color:var(--text-3)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{display:inline-block;animation:spin .8s linear infinite}
+
+/* stat tooltip */
+.stat-wrap{position:relative;display:inline-flex;align-items:center}
+.stat-tooltip{position:absolute;top:calc(100% + 8px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);padding:12px 16px;font-size:13px;color:var(--text-2);white-space:nowrap;min-width:220px;pointer-events:none;opacity:0;transition:opacity .15s;z-index:200;line-height:1.8}
+.stat-tooltip strong{display:block;font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.stat-wrap.has-info:hover .stat-tooltip{opacity:1}
+.stat-wrap.has-info .o-stat-text{text-decoration:underline dotted;text-underline-offset:3px;cursor:default}
+
+/* topbar */
+.topbar{display:flex;align-items:center;gap:8px;margin-bottom:1.25rem;flex-wrap:wrap}
+/* Navigation semaine : pas de fond groupé */
+.week-nav{display:inline-flex;align-items:center;gap:6px;background:transparent;padding:0}
+/* Flèches : subtle primary, radius 6px, 32px */
+.wbtn{width:32px;height:32px;border-radius:6px;border:1px solid #DEE6E3;background:#DEE6E3;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .1s,border-color .1s;flex-shrink:0;color:var(--text);box-shadow:none}
+.wbtn:hover{background:#CDD9D5;border-color:#CDD9D5}
+.wbtn svg{pointer-events:none}
+.wbtn-left svg{transform:scaleX(-1)}
+/* Day tabs : pill buttons, outlined non-sélectionné, filled primary sélectionné */
+.day-tab{height:32px;padding:0 14px;border-radius:100px;border:1px solid #E1DDD9;background:var(--surface);font-size:13px;font-weight:500;cursor:pointer;color:var(--text);transition:all .15s;display:inline-flex;align-items:center;white-space:nowrap;gap:4px;box-shadow:none}
+.day-tab:hover{background:var(--bg)}
+.day-tab.active{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
+.day-tab .day-letter{font-weight:700}
+/* stat italic text */
+.o-stat-text{font-size:14px;font-style:italic;color:#756F6B;cursor:default}
+.o-stat-text.all-responded{color:var(--green)}
+.pill{font-size:12px;padding:3px 10px;border:1px solid var(--border);border-radius:20px;color:var(--text-2);background:var(--surface)}
+.b-shift-chip{height:32px;padding:0 16px;border-radius:100px;border:1px solid #E1DDD9;background:var(--surface);font-size:13px;font-weight:500;cursor:pointer;color:var(--text);display:inline-flex;align-items:center;transition:all .12s;font-family:var(--font);box-shadow:none}
+.b-shift-chip:hover{background:var(--bg)}
+.b-shift-chip.active{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
+.day-tabs{display:flex;gap:8px;margin-bottom:.75rem;flex-wrap:wrap}
+/* open/closed — 2 pill buttons séparés, taille small */
+.day-status-bar{display:flex;align-items:center;gap:8px;margin-bottom:1.25rem}
+.status-toggle{display:inline-flex;gap:6px;background:transparent;border:none;padding:0}
+/* Les deux boutons ont toujours le style filled primary */
+.status-btn{height:24px;padding:0 12px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid #E1DDD9;background:var(--surface);color:var(--text);transition:background .15s,color .15s,border-color .15s;font-family:var(--font);display:inline-flex;align-items:center;gap:5px;white-space:nowrap;border-radius:100px;box-shadow:none}
+.status-btn:hover{background:var(--bg)}
+.status-btn svg{flex-shrink:0;overflow:visible}
+.status-btn.active-open,.status-btn.active-closed{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
+
+/* Day tab fermé — non sélectionné : border #FDA2A2 + diagonale SVG clippée */
+.day-tab-closed{color:var(--text);border-color:#FDA2A2;position:relative;overflow:hidden}
+.day-tab-closed::after{
+  content:'';
+  position:absolute;
+  /* Ligne diagonale de coin en coin, fine, #FDA2A2 */
+  top:0;left:0;right:0;bottom:0;
+  background:linear-gradient(
+    to bottom right,
+    transparent calc(50% - 0.6px),
+    #FDA2A2 calc(50% - 0.6px),
+    #FDA2A2 calc(50% + 0.6px),
+    transparent calc(50% + 0.6px)
+  );
+  pointer-events:none;
+  border-radius:100px;
+}
+/* Sélectionné fermé : bg #FDA2A2, pas de diagonale */
+.day-tab-closed.active{background:#FDA2A2;color:var(--text);border-color:#FDA2A2}
+.day-tab-closed.active::after{display:none}
+.org-tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:1.25rem}
+.org-tab{padding:7px 18px;border-radius:var(--radius-sm) var(--radius-sm) 0 0;border:1px solid transparent;border-bottom:none;background:transparent;font-size:13px;cursor:pointer;color:var(--text-2);transition:all .12s;margin-bottom:-1px}
+.org-tab.active{background:var(--surface);border-color:var(--border);border-bottom-color:var(--surface);color:var(--text);font-weight:500}
+.org-tab:hover:not(.active){background:var(--bg)}
+
+/* inputs */
+input[type=text],input[type=email],select{padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;background:var(--surface);color:var(--text);outline:none;transition:border-color .15s}
+input[type=text]:focus,input[type=email]:focus,select:focus{border-color:var(--accent-dark)}
+select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%2357534E' d='M5 6L0 0h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
+/* ── BOUTONS — système design ── */
+/* Base */
+.btn{height:32px;padding:0 14px;border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;background:var(--surface);color:var(--text);transition:background .12s,color .12s,border-color .12s;line-height:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;box-shadow:none;white-space:nowrap}
+/* Filled primary — bg #A5C4BD */
+.btn-primary{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}.btn-primary:hover{background:var(--accent-dark);border-color:var(--accent-dark);color:var(--accent-text)}
+/* Filled secondary — bg #FAAF5C */
+.btn-secondary{background:var(--brand-secondary);color:var(--text);border-color:var(--brand-secondary)}.btn-secondary:hover{background:#F09D42;border-color:#F09D42}
+/* Subtle primary — bg #DEE6E3 */
+.btn-subtle{background:#DEE6E3;color:var(--text);border-color:#DEE6E3}.btn-subtle:hover{background:#CDD9D5;border-color:#CDD9D5}
+/* Outlined — bg white, border #E1DDD9 */
+.btn-outlined{background:var(--surface);color:var(--text);border-color:#E1DDD9}.btn-outlined:hover{background:var(--bg)}
+/* Danger */
+.btn-danger{color:#DC2626;border-color:#FECACA;background:transparent}.btn-danger:hover{background:#FEF2F2}
+/* Sizes */
+.btn-sm{height:24px;padding:0 10px;font-size:12px;border-radius:6px}
+.btn-icon{width:32px;height:32px;padding:0}
+/* Pill — border-radius 100px, used for exclusive selection */
+.btn-pill{border-radius:100px}
+/* Pill states: outlined = non-sélectionné, filled primary = sélectionné */
+.btn-pill.selected{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
+.btn-pill.selected:hover{background:var(--accent-dark);border-color:var(--accent-dark)}
+
+/* ── BÉNÉVOLE CARDS ── */
+.b-days-wrap{display:flex;flex-direction:column;gap:10px;max-width:680px}
+.b-day-card{border:1px solid var(--border);border-radius:12px;background:var(--surface);box-shadow:none;padding:16px 18px;transition:border-color .15s}
+.b-day-card.active{border-color:var(--accent-dark);box-shadow:none}
+.b-day-card-head{display:flex;align-items:center;justify-content:space-between}
+.b-day-card-title{font-size:15px;font-weight:700;letter-spacing:-.01em}
+.b-day-card-title span{font-size:13px;font-weight:400;color:var(--text-3);margin-left:6px}
+.b-day-card-body{margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.b-field label{display:block;font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}
+.b-field select{width:100%;padding:10px 36px 10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:var(--font);background:var(--surface);color:var(--text);appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%2357534E' d='M5 6L0 0h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;outline:none;transition:border-color .15s}
+.b-field select:focus{border-color:var(--accent-dark)}
+.b-toggle{position:relative;width:46px;height:26px;cursor:pointer;flex-shrink:0}
+.b-toggle input{opacity:0;width:0;height:0;position:absolute}
+.b-toggle-track{position:absolute;inset:0;background:var(--border);border-radius:13px;transition:background .2s}
+.b-toggle input:checked~.b-toggle-track{background:var(--accent)}
+.b-toggle-thumb{position:absolute;top:3px;left:3px;width:20px;height:20px;background:#fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.18);transition:transform .2s}
+.b-day-card.readonly{opacity:.65;pointer-events:none}
+.b-readonly-week{opacity:.5;cursor:not-allowed}
+.b-toggle input:checked~.b-toggle-thumb{transform:translateX(20px)}
+.b-summary{font-size:12px;color:var(--text-2);margin-top:6px;min-height:18px;font-family:var(--mono);max-width:680px}
+.b-actions{display:flex;gap:8px;margin-top:1rem;align-items:center}
+.toast{margin-top:12px;padding:9px 14px;border-radius:var(--radius-sm);background:var(--green-light);border:1px solid #86EFAC;color:var(--green);font-size:13px;display:none}
+
+/* ── HORAIRE ── */
+.h-layout{display:grid;grid-template-columns:1fr 240px;gap:14px;align-items:start}
+.h-scroll{overflow-x:auto}
+.h-grid{display:inline-block;min-width:100%;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);box-shadow:none}
+.h-head-row{display:flex;border-bottom:1px solid var(--border)}
+.h-corner{width:var(--role-col);min-width:var(--role-col);flex-shrink:0;background:var(--bg);border-right:1px solid var(--border);padding:6px 8px;font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:flex-end}
+.h-times{flex-shrink:0;background:var(--bg);position:relative;height:32px}
+.h-tick{position:absolute;top:0;bottom:0;border-left:1px solid var(--border-light);display:flex;align-items:flex-end;padding-bottom:4px;padding-left:3px;font-size:9px;font-family:var(--mono);color:var(--text-3)}
+.h-tick.hour{border-left-color:var(--border);color:var(--text-2);font-weight:500}
+.h-tick.half{border-left:1px dashed var(--border-light);}
+.h-shift-row{display:flex;background:var(--bg);border-top:1px solid var(--border);border-bottom:1px solid var(--border-light)}
+.h-shift-label{width:var(--role-col);min-width:var(--role-col);flex-shrink:0;padding:4px 8px;font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;border-right:1px solid var(--border);display:flex;align-items:center}
+.h-shift-bar{flex:1;position:relative}
+.h-shift-span{position:absolute;top:3px;bottom:3px;border-radius:3px;background:var(--border-light);display:flex;align-items:center;padding:0 6px;font-size:10px;color:var(--text-3);font-family:var(--mono)}
+.h-role-row{display:flex;border-bottom:1px solid var(--border-light);min-height:36px}
+.h-role-row.has-note{min-height:54px}
+.h-role-row:last-child{border-bottom:none}
+.h-role-row.row-hover .h-role-name{font-weight:700;color:var(--text)}
+.h-role-name{width:var(--role-col);min-width:var(--role-col);flex-shrink:0;border-right:1px solid var(--border);padding:0 8px;display:flex;align-items:center;font-size:11px;color:var(--text-2);background:var(--surface);line-height:1.3;transition:font-weight .1s,color .1s}
+.h-role-name.opt{color:var(--text-3);font-style:italic}
+.h-timeline{flex:1;position:relative;background:var(--bg);overflow:visible}
+.h-dz{position:absolute;top:5px;bottom:5px;border:2px dashed var(--border);border-radius:var(--radius-sm);display:flex;align-items:center;padding:0 10px;transition:border-color .1s,background .1s;cursor:default;overflow:visible}
+.h-dz.empty{background:var(--surface);overflow:hidden}.h-dz.filled{border-style:solid;top:3px;bottom:3px}
+.dz-ph{font-size:11px;color:var(--text-3)}
+.h-dz.dv{border-color:var(--green);background:var(--green-light);border-style:solid;box-shadow:0 0 0 2px #86EFAC50}
+.h-dz.filled.dv{border-color:var(--amber);box-shadow:0 0 0 2px #FCD34D50;filter:brightness(.96)}
+.h-dz.di{opacity:.38;cursor:not-allowed}
+.h-dz.dok{border-color:var(--green);background:#DCFCE7;border-style:solid}
+.h-dz.filled.dok{border-color:var(--amber);background:transparent;filter:brightness(.92)}
+.avail-chip{position:absolute;top:-1px;bottom:-1px;border-radius:5px;display:flex;flex-direction:column;justify-content:center;padding:2px 7px;cursor:pointer;z-index:2;transition:filter .1s}
+.avail-chip:hover{filter:brightness(.9)}
+.avail-chip-inner{display:flex;align-items:center;gap:5px;width:100%;overflow:hidden;flex:0 0 auto}
+.chip-name{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0}
+.chip-time{font-size:10px;font-family:var(--mono);opacity:.6;white-space:nowrap;flex-shrink:0}
+.chip-spacer{flex:1;min-width:4px}
+.chip-quota{font-size:9px;font-family:var(--mono);font-weight:700;white-space:nowrap;flex-shrink:0;opacity:.8}
+.chip-x{cursor:pointer;font-size:16px;opacity:.3;line-height:1;flex-shrink:0;transition:opacity .1s;padding:0 1px}
+.chip-x:hover{opacity:1}
+.emp-badge{font-size:9px;font-weight:700;letter-spacing:.05em;padding:1px 4px;border-radius:3px;flex-shrink:0;border:1px solid currentColor;opacity:.75}
+.prog-wrap{margin-top:10px}
+.prog-track{height:4px;background:var(--border-light);border-radius:2px;overflow:hidden}
+.prog-fill{height:4px;background:var(--green);border-radius:2px;transition:width .4s}
+.prog-lbl{font-size:11px;color:var(--text-2);margin-top:5px;text-align:right;font-family:var(--mono)}
+.vol-panel{border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);box-shadow:none;overflow:hidden;position:sticky;top:68px;max-height:calc(100vh - 86px);display:flex;flex-direction:column;transition:outline .1s}
+.vol-cards{transition:outline .1s}
+.emp-cards{transition:outline .1s}
+.vp-head{padding:6px 10px;background:var(--bg);border-bottom:1px solid var(--border);font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;flex-shrink:0}
+.vol-cards{padding:4px;display:flex;flex-direction:column;gap:3px;overflow-y:auto;flex:1;min-height:0}
+.emp-section{border-top:1px solid var(--border);flex-shrink:0}
+.emp-sec-lbl{padding:5px 10px 3px;font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;background:var(--bg)}
+.emp-cards{padding:4px;display:flex;flex-direction:column;gap:3px;max-height:160px;overflow-y:auto}
+.vol-card{border-radius:var(--radius-sm);padding:5px 8px;cursor:grab;border:1.5px solid transparent;user-select:none;transition:transform .1s,box-shadow .1s,opacity .15s}
+.vol-card:hover{transform:translateY(-1px);box-shadow:var(--shadow-md)}
+.vol-card:active{cursor:grabbing;transform:scale(.97)}
+.vol-card.dragging{opacity:.3;transform:scale(.95)}
+.vol-card.emp-card{border-style:solid;border-width:2px}
+.vc-name{font-size:11px;font-weight:600;line-height:1.3}
+.vc-time{font-size:9px;font-family:var(--mono);line-height:1.3;margin-top:1px}
+.no-avail{font-size:11px;color:var(--text-3);font-style:italic;padding:8px 10px;text-align:center}
+.vc-quota{display:flex;align-items:center;gap:3px;margin-top:3px}
+.vc-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;transition:background .2s}
+.vc-dot.filled{background:currentColor;opacity:.85}
+.vc-dot.empty{background:transparent;border:1.5px solid currentColor;opacity:.45}
+.vc-inf{font-size:12px;line-height:1;opacity:.55}
+.vol-card.quota-full{border-width:2px !important;opacity:.75}
+.hint-box{margin-top:6px;font-size:10px;color:var(--text-3);line-height:1.5}
+
+/* ── RÉPERTOIRE ── */
+.dir-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:1rem}
+.dir-wrap{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--surface);box-shadow:none}
+.dir-wrap table{width:100%;border-collapse:collapse}
+.dir-wrap th{background:var(--bg);padding:9px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)}
+.dir-wrap td{padding:9px 14px;border-bottom:1px solid var(--border-light);font-size:13px;vertical-align:middle}
+.dir-wrap tr:last-child td{border-bottom:none}
+.dir-wrap tr:hover td{background:#FAFAF9}
+.type-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500}
+.type-badge.vol{background:var(--green-light);color:var(--green)}
+.type-badge.emp{background:var(--amber-light);color:var(--amber);border:1px solid #FCD34D}
+.role-tags{display:flex;gap:4px;flex-wrap:wrap}
+.role-tag{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:11px;color:var(--text-2)}
+
+/* ── MODALS ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.32);z-index:300;display:none;align-items:center;justify-content:center}
+.overlay.open{display:flex}
+.modal-box{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow-md);padding:1.5rem;width:460px;max-width:95vw;max-height:90vh;overflow-y:auto}
+.modal-box.wide{width:620px}
+.modal-title{font-size:15px;font-weight:600;margin-bottom:1rem}
+.modal-sub{font-size:12px;color:var(--text-2);margin-bottom:1rem}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.field input,.field select{width:100%}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:1.25rem}
+.email-preview{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:1rem;font-size:12px;line-height:1.75;font-family:var(--mono);white-space:pre-wrap;margin-bottom:1rem;max-height:320px;overflow-y:auto}
+.email-nav{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.email-nav span{font-size:12px;color:var(--text-2)}
+
+/* ── TIME POPOVER ── */
+.time-pop{position:fixed;z-index:400;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);padding:14px 16px;width:240px;display:none}
+.time-pop.open{display:block}
+.tp-name{font-size:13px;font-weight:600}
+.tp-role{font-size:11px;color:var(--text-3);margin-bottom:12px;font-family:var(--mono)}
+.tp-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.tp-fields label{display:block;font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.tp-fields select{width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font);background:var(--surface);outline:none}
+.tp-close:hover{color:var(--text)!important}
+.tp-remove{width:100%;margin-top:2px;padding:5px;border:none;background:none;font-size:11px;color:#DC2626;cursor:pointer;border-radius:var(--radius-sm);transition:background .1s}
+.tp-remove:hover{background:#FEF2F2;text-decoration:none}
+#tp-note:focus{border-color:var(--accent-dark);outline:none}
+
+/* ── PIN MODAL ── */
+.pin-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;display:none;align-items:center;justify-content:center}
+.pin-overlay.open{display:flex}
+.pin-box{background:var(--surface);border-radius:16px;box-shadow:var(--shadow-md);padding:2rem 2rem 1.75rem;width:320px;max-width:95vw;text-align:center}
+.pin-logo{width:72px;height:72px;border-radius:50%;object-fit:cover;margin-bottom:1rem}
+.pin-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px}
+.pin-sub{font-size:13px;color:var(--text-2);margin-bottom:1.5rem;line-height:1.5}
+.pin-dots{display:flex;justify-content:center;gap:12px;margin-bottom:1.25rem}
+.pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--border);background:transparent;transition:background .15s,border-color .15s}
+.pin-dot.filled{background:var(--accent-dark);border-color:var(--accent-dark)}
+.pin-dot.error{background:#DC2626;border-color:#DC2626}
+.pin-keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:220px;margin:0 auto 1rem}
+.pin-key{height:52px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);font-size:20px;font-weight:600;cursor:pointer;transition:background .1s,transform .08s;color:var(--text);display:flex;align-items:center;justify-content:center;user-select:none}
+.pin-key:hover{background:var(--bg)}
+.pin-key:active{transform:scale(.93);background:var(--border-light)}
+.pin-key.del{font-size:16px;color:var(--text-3)}
+.pin-hint{font-size:11px;color:var(--text-3);line-height:1.6;margin-top:.25rem}
+.pin-error-msg{font-size:12px;color:#DC2626;min-height:18px;margin-bottom:.5rem}
+/* champ PIN dans le répertoire modal */
+.pin-field-wrap{display:flex;align-items:center;gap:8px}
+.pin-input-admin{width:100px;letter-spacing:.2em;font-family:var(--mono);font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+<!-- PIN ORGANISATRICE -->
+<div id="pin-org-overlay" class="pin-overlay">
+  <div class="pin-box">
+    <img class="pin-logo" src="https://raw.githubusercontent.com/terrasse-cafe/dispos/main/photos/logo-terrasse-cafe.jpg" alt="Terrasse Café"/>
+    <div class="pin-title">Accès organisatrice</div>
+    <div class="pin-sub">Entrez le code PIN pour accéder à l'interface de gestion.</div>
+    <div class="pin-dots" id="pin-org-dots">
+      <div class="pin-dot" id="pod0"></div>
+      <div class="pin-dot" id="pod1"></div>
+      <div class="pin-dot" id="pod2"></div>
+      <div class="pin-dot" id="pod3"></div>
+    </div>
+    <div class="pin-error-msg" id="pin-org-error"></div>
+    <div class="pin-keypad" id="pin-org-keypad"></div>
+  </div>
+</div>
+
+<div class="shell">
+<header>
+  <div class="logo">
+    <img class="logo-img" src="https://raw.githubusercontent.com/terrasse-cafe/dispos/main/photos/logo-terrasse-cafe.jpg" alt="Logo Terrasse Café"/>
+    <span class="logo-text">Terrasse Café</span>
+  </div>
+  <nav class="header-tabs" id="header-tabs" style="display:none">
+    <button class="header-tab active" id="htab-horaire" onclick="switchOrg('horaire',this)">Horaire</button>
+    <button class="header-tab" id="htab-repertoire" onclick="switchOrg('repertoire',this)">Répertoire</button>
+  </nav>
+  <div class="header-spacer"></div>
+  <button class="btn btn-outlined" id="btn-vue-benevole" style="display:none;gap:6px;margin-right:8px" onclick="openVolView()"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M12 8.667V12.667C12 13.404 11.403 14 10.667 14H3.333C2.597 14 2 13.404 2 12.667V5.333C2 4.597 2.597 4 3.333 4H7.333M14 6V2h-4M14 2 6.667 9.333" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/></svg> Vue bénévole</button>
+  <div id="conn-dot" class="conn-dot" title="État de la connexion Supabase"></div>
+</header>
+<main>
+
+<!-- ═══ BÉNÉVOLE ═══ -->
+<div id="pane-benevole" class="pane visible">
+  <div style="max-width:680px;margin:0 auto">
+
+    <!-- EMPTY STATE -->
+    <div id="b-empty-state" style="margin-top:3rem;text-align:center;padding:2.5rem 2rem;border:1px solid var(--border);border-radius:16px;background:var(--surface);box-shadow:var(--shadow)">
+      <img src="https://raw.githubusercontent.com/terrasse-cafe/dispos/main/photos/logo-terrasse-cafe.jpg" alt="Terrasse Café" style="width:140px;height:140px;object-fit:contain;margin-bottom:1.25rem;opacity:.9"/>
+      <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:6px">Entrez vos disponibilités</div>
+      <div style="font-size:13px;color:var(--text-2);margin-bottom:1.5rem;line-height:1.6;max-width:340px;margin-left:auto;margin-right:auto">Sélectionnez votre nom pour indiquer vos disponibilités pour la semaine.</div>
+      <div id="b-loading" style="font-size:13px;color:var(--text-3);margin-bottom:1rem;display:none">Chargement de la liste…</div>
+      <select id="vol-select" style="width:260px;font-size:14px;padding:10px 36px 10px 14px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface)" onchange="onVolSelect()">
+        <option value="">&#8212; Mon nom &#8212;</option>
+      </select>
+    </div>
+
+
+    <!-- PIN BÉNÉVOLE -->
+    <div id="pin-vol-overlay" class="pin-overlay">
+      <div class="pin-box">
+        <img class="pin-logo" src="https://raw.githubusercontent.com/terrasse-cafe/dispos/main/photos/logo-terrasse-cafe.jpg" alt="Terrasse Café"/>
+        <div class="pin-title" id="pin-vol-title">Bonjour !</div>
+        <div class="pin-sub" id="pin-vol-sub">Entrez votre code PIN à 4 chiffres.</div>
+        <div class="pin-dots" id="pin-vol-dots">
+          <div class="pin-dot" id="pvd0"></div>
+          <div class="pin-dot" id="pvd1"></div>
+          <div class="pin-dot" id="pvd2"></div>
+          <div class="pin-dot" id="pvd3"></div>
+        </div>
+        <div class="pin-error-msg" id="pin-vol-error"></div>
+        <div class="pin-keypad" id="pin-vol-keypad"></div>
+        <div class="pin-hint" id="pin-vol-hint"></div>
+      </div>
+    </div>
+
+    <!-- AFTER NAME SELECTED -->
+    <div id="b-name-section" style="display:none">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid var(--border-light)">
+        <div style="font-size:15px;font-weight:600;color:var(--text)" id="b-greeting"></div>
+        <button class="btn btn-outlined" onclick="resetVolSelect()" style="margin-left:auto">Changer</button>
+      </div>
+      <div style="display:inline-flex;align-items:center;gap:8px;margin-bottom:1.5rem">
+        <button class="btn btn-subtle btn-icon" onclick="bShift(-1)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <span style="font-size:14px;font-weight:500;color:var(--text)" id="b-wlabel">—</span>
+        <button class="btn btn-subtle btn-icon" onclick="bShift(1)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M6 12l4-4-4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      </div>
+      <div style="margin-bottom:1.5rem">
+        <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:10px">Combien de quarts souhaitez-vous faire cette semaine ?</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap" id="b-shift-chips"></div>
+      </div>
+      <div id="b-week-section" style="display:none">
+        <div class="b-days-wrap" id="b-days-wrap"></div>
+        <div class="b-summary" id="b-summary"></div>
+        <div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border-light)">
+          <label style="display:block;font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Courriel de notification</label>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input type="email" id="vol-email" placeholder="prenom@exemple.com" style="width:260px;font-size:13px" onblur="onVolEmailBlur()"/>
+            <span id="vol-email-saved" style="font-size:11px;color:var(--green);display:none">✓ Enregistré</span>
+          </div>
+          <div style="font-size:11px;color:var(--text-3);margin-top:5px">Vous serez notifié(e) quand l'horaire sera disponible.</div>
+        </div>
+      </div>
+      <div class="b-actions">
+        <button class="btn btn-secondary" onclick="submitAvail()">Envoyer mes disponibilités</button>
+        <span id="b-sync-badge" class="sync-badge offline" style="display:none"></span>
+      </div>
+    </div>
+
+  </div>
+  <div class="toast" id="b-toast">&#10003; Disponibilités enregistrées. Merci !</div>
+</div>
+
+<!-- ═══ ORGANISATRICE ═══ -->
+<div id="pane-organisatrice" class="pane">
+
+  <!-- SETUP BANNER -->
+  <div id="setup-banner" class="setup-banner" style="display:none">
+    <h2>⚙️ Configuration Supabase requise</h2>
+    <div class="setup-fields">
+      <div>
+        <label>URL du projet</label>
+        <input type="text" id="sb-url" placeholder="https://xxxx.supabase.co" style="width:320px"/>
+      </div>
+      <div>
+        <label>Clé anon publique</label>
+        <input type="text" id="sb-key" placeholder="eyJ..." style="width:320px"/>
+      </div>
+      <button class="btn btn-blue btn-sm" onclick="saveSupabaseConfig()">Connecter</button>
+    </div>
+    <div class="setup-note">
+      1. Créez un projet gratuit sur <a href="https://supabase.com" target="_blank">supabase.com</a><br>
+      2. Allez dans <strong>Settings → API</strong> pour trouver l'URL et la clé <code>anon public</code><br>
+      3. Copiez le SQL ci-dessous dans <strong>SQL Editor</strong> pour créer les tables, puis collez vos identifiants ici.<br><br>
+      <details style="cursor:pointer">
+        <summary style="font-weight:500;color:var(--text-2)">Voir le SQL à exécuter dans Supabase ▾</summary>
+        <pre id="setup-sql" style="margin-top:8px;background:var(--bg);padding:10px;border-radius:4px;font-size:10px;font-family:var(--mono);white-space:pre;overflow-x:auto;line-height:1.5"></pre>
+      </details>
+    </div>
+  </div>
+
+  <div class="org-tabs" style="display:none"></div>
+
+  <!-- HORAIRE -->
+  <div id="org-horaire" class="pane visible">
+    <div class="topbar">
+      <div class="week-nav" id="o-week-nav">
+        <button class="wbtn wbtn-left" onclick="oShift(-1)" title="Semaine précédente"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3.333 8h9.334M8 3.333 12.667 8 8 12.667" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <div id="o-daytabs" style="display:contents"></div>
+        <button class="wbtn" onclick="oShift(1)" title="Semaine suivante"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3.333 8h9.334M8 3.333 12.667 8 8 12.667" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      </div>
+      <div class="stat-wrap">
+        <span class="o-stat-text" id="o-stat">—</span>
+        <div class="stat-tooltip" id="o-stat-tooltip"><strong id="o-stat-tooltip-label">En attente de la réponse de :</strong><span id="o-stat-missing"></span></div>
+      </div>
+      <div style="flex:1"></div>
+      <span id="o-sync-badge" class="sync-badge offline" style="display:none"></span>
+      <button class="btn btn-subtle" id="auto-btn" onclick="openAutoAssign()"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8.667 1.333 2 9.333h6l-.667 5.334L14 6.667H8l.667-5.334Z" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/></svg> Assignation auto</button>
+      <button class="btn btn-secondary" id="finaliser-btn" onclick="openFinaliser()"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M13.333 4 6 11.333 2.667 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Finaliser l'horaire</button>
+    </div>
+    <div class="day-status-bar" id="day-status-bar">
+      <div class="status-toggle">
+        <button class="status-btn" id="status-btn-open" onclick="setDayOpen(true)">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0"><path d="M8 0.667V2M8 14v1.333M2.813 2.813l.947.947M12.24 12.24l.947.947M0.667 8H2M14 8h1.333M2.813 13.187l.947-.947M12.24 3.76l.947-.947M11.333 8a3.333 3.333 0 1 1-6.666 0 3.333 3.333 0 0 1 6.666 0Z" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Ouvert
+        </button>
+        <button class="status-btn" id="status-btn-closed" onclick="setDayOpen(false)">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;overflow:visible"><path d="M5.333 12.667V14M5.333 8.667V10M10.667 12.667V14M10.667 8.667V10M8 14v1.333M8 10v1.333M13.333 11.053a3.333 3.333 0 0 0-1.333-6.387h-.84A6 6 0 1 0 2.667 10.167" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Fermé
+        </button>
+      </div>
+    </div>
+    <div class="h-layout">
+      <div>
+        <div class="h-scroll"><div class="h-grid" id="h-grid"></div></div>
+        <div class="prog-wrap">
+          <div class="prog-track"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+          <div class="prog-lbl" id="prog-lbl">— / —</div>
+        </div>
+      </div>
+      <div>
+        <div class="vol-panel">
+          <div class="vp-head">Bénévoles — <span id="h-day-lbl">—</span></div>
+          <div class="vol-cards" id="vol-cards"></div>
+          <div class="emp-section">
+            <div class="emp-sec-lbl">Employés</div>
+            <div class="emp-cards" id="emp-cards"></div>
+          </div>
+        </div>
+        <div class="hint-box">Glissez les cartes dans les zones.<br>Employés couvrent le shift complet.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RÉPERTOIRE -->
+  <div id="org-repertoire" class="pane">
+    <div class="dir-toolbar">
+      <button class="btn btn-subtle" onclick="openPersonModal(null)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 3.333v9.334M3.333 8h9.334" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Ajouter</button>
+      <span class="o-stat-text" id="dir-count">—</span>
+    </div>
+    <div class="dir-wrap">
+      <table>
+        <thead><tr><th>Nom</th><th>Courriel</th><th>Type</th><th>Rôles préférés</th><th></th></tr></thead>
+        <tbody id="dir-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+</main>
+</div>
+
+<!-- TIME POPOVER -->
+<div class="time-pop" id="time-pop" style="width:268px">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:2px">
+    <div class="tp-name" id="tp-name" style="margin-bottom:0">—</div>
+    <button onclick="closeTP()" style="border:none;background:none;cursor:pointer;font-size:16px;line-height:1;color:var(--text-3);padding:0 0 0 8px;flex-shrink:0;transition:color .1s" title="Fermer">×</button>
+  </div>
+  <div class="tp-role" id="tp-role">—</div>
+  <div class="tp-fields">
+    <div><label>Début</label></div>
+    <div><label>Fin</label></div>
+  </div>
+  <div style="margin:2px 0 10px">
+    <label style="font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px">Note / renfort</label>
+    <textarea id="tp-note" rows="2" placeholder="ex: + Marie 17h-19h en renfort" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;resize:vertical;outline:none;line-height:1.5;transition:border-color .15s"></textarea>
+  </div>
+  <div id="tp-saved-badge" style="font-size:11px;color:var(--green);text-align:right;min-height:16px;margin-bottom:4px;transition:opacity .3s;opacity:0">✓ Sauvegardé</div>
+  <button class="tp-remove" onclick="removeAssignTP()">Retirer ce bénévole</button>
+</div>
+
+
+
+<!-- PERSON MODAL -->
+<div class="overlay" id="person-overlay" onclick="if(event.target===this)closePersonModal()">
+  <div class="modal-box">
+    <div class="modal-title" id="pm-title">Ajouter</div>
+    <div class="field"><label>Nom complet</label><input type="text" id="pm-name" placeholder="Prénom Nom"/></div>
+    <div class="field"><label>Courriel</label><input type="email" id="pm-email" placeholder="prenom@exemple.com"/></div>
+    <div class="field" id="pm-pin-field">
+      <label>Code PIN (4 chiffres)</label>
+      <div class="pin-field-wrap">
+        <input type="text" id="pm-pin" class="pin-input-admin" maxlength="4" placeholder="••••" inputmode="numeric" pattern="[0-9]{4}"/>
+        <span style="font-size:11px;color:var(--text-3)">Visible uniquement par l'organisatrice</span>
+      </div>
+    </div>
+    <div class="field"><label>Type</label>
+      <select id="pm-type"><option value="vol">Bénévole</option><option value="emp">Employé</option></select>
+    </div>
+    <div class="field">
+      <label>Rôles préférés (priorité auto-assignation)</label>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <select id="pm-r1"></select>
+        <select id="pm-r2"></select>
+        <select id="pm-r3"></select>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-danger" id="pm-delete" onclick="deletePersonFromModal()" style="margin-right:auto;display:none">Supprimer</button>
+      <button class="btn btn-outlined" onclick="closePersonModal()">Annuler</button>
+      <button class="btn btn-secondary" onclick="savePerson()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- FINALISER MODAL -->
+<div class="overlay" id="finaliser-overlay" onclick="if(event.target===this)closeFinaliser()">
+  <div class="modal-box" style="width:900px;max-width:97vw;padding:0;overflow:hidden;display:flex;flex-direction:column;max-height:92vh">
+    <div style="padding:1rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0">
+      <div class="modal-title" style="margin:0">Finaliser l'horaire</div>
+      <span id="fin-week-lbl" style="font-size:13px;color:var(--text-2)"></span>
+      <button class="btn btn-icon" onclick="closeFinaliser()" style="margin-left:auto;font-size:16px;color:var(--text-3)">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 340px;flex:1;min-height:0;overflow:hidden">
+      <!-- LEFT: PDF preview -->
+      <div style="border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden">
+        <div style="padding:10px 14px;background:var(--bg);border-bottom:1px solid var(--border);font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;flex-shrink:0">Aperçu de l'horaire</div>
+        <div id="fin-preview" style="flex:1;overflow-y:auto;padding:16px;font-size:12px;font-family:var(--mono);line-height:1.7"></div>
+      </div>
+      <!-- RIGHT: Actions -->
+      <div style="display:flex;flex-direction:column;overflow-y:auto">
+        <!-- PDF download -->
+        <div style="padding:14px 16px;border-bottom:1px solid var(--border)">
+          <div style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">PDF</div>
+          <button class="btn btn-primary btn-sm" onclick="exportPdfTable()" style="width:100%;justify-content:center;display:flex;gap:6px">⬇ Télécharger le PDF</button>
+        </div>
+        <!-- Email -->
+        <div style="padding:14px 16px;flex:1;display:flex;flex-direction:column;gap:10px">
+          <div style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em">Courriel</div>
+          <div style="font-size:12px;color:var(--text-2)" id="fin-email-to"></div>
+          <textarea id="fin-email-body" rows="10" style="flex:1;width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:11px;font-family:var(--mono);line-height:1.7;resize:vertical;outline:none;background:var(--bg);color:var(--text);transition:border-color .15s" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+          <button class="btn btn-secondary btn-sm" onclick="sendOutlook()" style="width:100%;justify-content:center;display:flex;gap:6px">✉ Télécharger le PDF et ouvrir Gmail</button>
+          <div style="font-size:10px;color:var(--text-3);text-align:center;margin-top:6px">Le PDF sera téléchargé — glissez-le dans Gmail pour l'attacher.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════
+   SUPABASE CONFIG
+══════════════════════════════════════════════ */
+const STORAGE_URL_KEY = 'cafe_sb_url';
+const STORAGE_KEY_KEY = 'cafe_sb_key';
+
+let sb = null; // Supabase client, null until configured
+let realtimeSub = null;
+
+const SETUP_SQL = `
+-- Table des personnes (bénévoles + employés)
+create table if not exists people (
+  id        bigint generated always as identity primary key,
+  name      text not null unique,
+  email     text,
+  type      text not null default 'vol', -- 'vol' ou 'emp'
+  role1     text default '',
+  role2     text default '',
+  role3     text default '',
+  pin       text default '',
+  created_at timestamptz default now()
+);
+
+-- Table des disponibilités soumises par les bénévoles
+create table if not exists availabilities (
+  id         bigint generated always as identity primary key,
+  week_key   text not null,       -- ex: '2025-05-05'
+  person_name text not null,
+  slots_json text not null,       -- JSON stringifié des slots
+  updated_at timestamptz default now(),
+  unique(week_key, person_name)
+);
+
+-- Table des assignations faites par l'organisatrice
+create table if not exists assignments (
+  id          bigint generated always as identity primary key,
+  week_key    text not null,
+  shift_id    text not null,
+  role        text not null,
+  person_name text,
+  start_mins  integer,
+  end_mins    integer,
+  updated_at  timestamptz default now(),
+  unique(week_key, shift_id, role)
+);
+
+-- Migration : ajouter la colonne note si elle n'existe pas
+alter table assignments add column if not exists note text;
+
+-- Migration : ajouter la colonne pin si elle n'existe pas
+alter table people add column if not exists pin text default '';
+
+-- Activer la sécurité par ligne (RLS) avec accès public en lecture/écriture
+-- (pour usage interne sans authentification)
+alter table people enable row level security;
+alter table availabilities enable row level security;
+alter table assignments enable row level security;
+
+create policy "public_all" on people for all using (true) with check (true);
+create policy "public_all" on availabilities for all using (true) with check (true);
+create policy "public_all" on assignments for all using (true) with check (true);
+
+-- Table pour marquer les semaines confirmées
+create table if not exists confirmed_weeks (
+  week_key   text primary key,
+  confirmed_at timestamptz default now(),
+  confirmed_by text default 'organisatrice'
+);
+create policy "public_all" on confirmed_weeks for all using (true) with check (true);
+`.trim();
+
+function getSavedConfig() {
+  if (TEST_MODE) {
+    // Credentials de test — remplacer par les valeurs du projet Supabase de test
+    const TEST_URL = 'https://VOTRE_PROJET_TEST.supabase.co';
+    const TEST_KEY = 'eyJ_VOTRE_CLE_ANON_TEST';
+    return { url: TEST_URL, key: TEST_KEY };
+  }
+  // Credentials hardcodés — la clé anon est publique par design
+  const HARDCODED_URL = 'https://gbcpfecductapxgthuhc.supabase.co';
+  const HARDCODED_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdiY3BmZWNkdWN0YXB4Z3RodWhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNTEzODYsImV4cCI6MjA5MzYyNzM4Nn0.44ossTmZbXSU-Sn_oBT3Jr2lJctm9v8uHOLrTyiXmzE';
+  return {
+    url: HARDCODED_URL,
+    key: HARDCODED_KEY
+  };
+}
+
+function initSupabase(url, key) {
+  if (!url || !key) return false;
+  try {
+    sb = supabase.createClient(url, key);
+    setConnDot('ok');
+    return true;
+  } catch(e) {
+    console.error('Supabase init error:', e);
+    setConnDot('err');
+    return false;
+  }
+}
+
+function saveSupabaseConfig() {
+  const url = document.getElementById('sb-url').value.trim();
+  const key = document.getElementById('sb-key').value.trim();
+  if (!url || !key) { alert('Les deux champs sont requis.'); return; }
+  localStorage.setItem(STORAGE_URL_KEY, url);
+  localStorage.setItem(STORAGE_KEY_KEY, key);
+  if (initSupabase(url, key)) {
+    document.getElementById('setup-banner').style.display = 'none';
+    bootOrgData();
+  }
+}
+
+function setConnDot(state) {
+  const d = document.getElementById('conn-dot');
+  d.className = 'conn-dot ' + state;
+  d.title = state === 'ok' ? 'Connecté à Supabase' : state === 'err' ? 'Erreur de connexion' : 'Non connecté';
+}
+
+function setSyncBadge(id, state, msg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.display = msg ? 'inline-flex' : 'none';
+  el.className = 'sync-badge ' + state;
+  el.innerHTML = state === 'saving' ? `<span class="spin">↻</span> ${msg}` : msg;
+}
+
+/* ══════════════════════════════════════════════
+   CONSTANTS
+══════════════════════════════════════════════ */
+const DAYS=[
+  {id:'jeudi',    label:'Jeudi',    oH:15,oM:0, cH:21,cM:0,  dow:3},
+  {id:'vendredi', label:'Vendredi', oH:11,oM:0, cH:21,cM:30, dow:4},
+  {id:'samedi',   label:'Samedi',   oH:11,oM:0, cH:21,cM:30, dow:5},
+  {id:'dimanche', label:'Dimanche', oH:11,oM:0, cH:17,cM:0,  dow:6},
+];
+const SHIFTS={
+  jeudi:[{id:'j_s',label:'Soir',fromH:15,toH:21,
+    roles:['Caissier','Barista','Préposé remplissage']}],
+  vendredi:[
+    {id:'v_j',label:'Jour',fromH:11,toH:17,
+      roles:['Caissier','Barista','Mise en place']},
+    {id:'v_s',label:'Soir',fromH:17,toH:21.5,
+      roles:['Caissier','Barista','Préposé remplissage','Préposé vaisselle','Busboy / Busgirl','Préposé au service','Pizzaiolo','Pizzaiolo','Préposé à la pâte','Cuisinier','Cuisinier','Préposé à la passe','Préposé à la passe'],
+      optional:['Caissier bar','Barmaid']}
+  ],
+  samedi:[
+    {id:'s_j',label:'Jour',fromH:11,toH:17,
+      roles:['Caissier','Barista','Mise en place']},
+    {id:'s_s',label:'Soir',fromH:17,toH:21.5,
+      roles:['Caissier','Barista','Préposé remplissage','Préposé vaisselle','Busboy / Busgirl','Préposé au service','Pizzaiolo','Pizzaiolo','Cuisinier','Cuisinier','Préposé à la passe','Préposé à la passe'],
+      optional:['Caissier bar','Barmaid']}
+  ],
+  dimanche:[{id:'d_j',label:'Jour',fromH:11,toH:17,
+    roles:['Caissier','Barista','Préposé remplissage']}],
+};
+
+// Générer les clés uniques pour chaque slot de rôle (role#index si dupliqué)
+function expandRoles(roles){
+  const count={};
+  return roles.map(r=>{
+    count[r]=(count[r]||0)+1;
+    return count[r]>1?r+'#'+count[r]:r;
+  });
+}
+// Clé de slot unique : 'Pizzaiolo' → 'Pizzaiolo', 2e 'Pizzaiolo' → 'Pizzaiolo#2'
+// Label affiché : toujours sans le suffixe #
+function roleSlotKey(r){return r;} // identité, le # est déjà dans le nom de slot
+function roleDisplayLabel(r){return r.replace(/#\d+$/,'');}
+
+// Pré-calculer les shifts avec slots étendus
+Object.values(SHIFTS).flat().forEach(sh=>{
+  sh._slots=expandRoles(sh.roles);
+  sh._optSlots=expandRoles(sh.optional||[]);
+});
+
+const ALL_ROLES=[...new Set(Object.values(SHIFTS).flat().flatMap(s=>s.roles.concat(s.optional||[])))];
+function roleLabel(r){return roleDisplayLabel(r);}
+const DISPLAY_ROLES=[...new Set(ALL_ROLES)];
+function labelToRole(label){return label;}
+function roleToLabel(r){return roleDisplayLabel(r);}
+const VCOLS=[
+  {bg:'#DBEAFE',fg:'#1D4ED8'},{bg:'#D1FAE5',fg:'#065F46'},
+  {bg:'#FCE7F3',fg:'#9D174D'},{bg:'#FEF3C7',fg:'#92400E'},
+  {bg:'#EDE9FE',fg:'#5B21B6'},{bg:'#FFE4E6',fg:'#9F1239'},
+  {bg:'#ECFDF5',fg:'#064E3B'},{bg:'#FDF4FF',fg:'#6B21A8'},
+];
+const EMP_COL={bg:'#FFF7ED',fg:'#9A3412'};
+const GSH=11,GEH=22,TOTAL_SLOTS=(GEH-GSH)*2;
+
+/* ══════════════════════════════════════════════
+   STATE (in-memory, synced from Supabase)
+══════════════════════════════════════════════ */
+let oMon=getMonday(new Date());
+
+// Semaine bénévole : si on est lun-mer → semaine prochaine (prochain jeudi)
+// Si on est jeu-dim → semaine courante
+function getSmartBMon(){
+  const now=new Date();
+  const dow=now.getDay(); // 0=dim,1=lun,...,6=sam
+  // Jours de café : jeu(4), ven(5), sam(6), dim(0)
+  // Si on est après dim (0) et avant jeu (1,2,3) → semaine prochaine
+  const isBeforeCafe=[1,2,3].includes(dow);
+  const mon=getMonday(now);
+  return isBeforeCafe?addWeeks(mon,1):mon;
+}
+let bMon=getSmartBMon();
+let closedDays={}; // {wk: Set<dayId>} jours fermés (météo etc.)
+let bSel={},avail={},assigns={},vcols={};
+let curDay='vendredi';
+let draggingVol=null;
+let draggingFromRole=null; // {shiftId, role, name} quand on drag depuis un bloc assigné
+let tpCtx=null,pmCtx=null;
+let directory=[],nextId=1;
+let emailList=[],emailIdx=0;
+let bShiftsDesired=0;
+const bShiftMemory={};
+
+/* ══════════════════════════════════════════════
+   UTILS
+══════════════════════════════════════════════ */
+function getMonday(d){const dt=new Date(d),dy=dt.getDay();dt.setDate(dt.getDate()-dy+(dy===0?-6:1));dt.setHours(0,0,0,0);return dt}
+function addWeeks(d,n){const r=new Date(d);r.setDate(r.getDate()+n*7);return r}
+function wkey(m){return m.toISOString().split('T')[0]}
+function dayDate(mon,dow){const d=new Date(mon);d.setDate(mon.getDate()+dow);d.setHours(0,0,0,0);return d}
+function fmt(d){return d.toLocaleDateString('fr-CA',{day:'numeric',month:'short'})}
+function fmtLong(d){return d.toLocaleDateString('fr-CA',{day:'numeric',month:'long',year:'numeric'})}
+function wlabel(mon){return fmt(dayDate(mon,3))+' – '+fmtLong(dayDate(mon,6))}
+function slotMins(s){return GSH*60+s*30}
+function isOpen(day,s){const m=slotMins(s);return m>=day.oH*60+day.oM&&m<day.cH*60+day.cM}
+function skey(dayId,s){return dayId+'_'+s}
+function pad2(n){return String(n).padStart(2,'0')}
+function mStr(m){return Math.floor(m/60)+'h'+pad2(m%60)}
+function akey(sid,role){return sid+'||'+role}
+function getPerson(name){
+  if(!name)return null;
+  const n=name.trim().toLowerCase();
+  // 1. Correspondance exacte
+  let p=directory.find(p=>p.name&&p.name.trim().toLowerCase()===n);
+  if(p)return p;
+  // 2. Le nom dans avail commence par le nom du répertoire (ex: "Béatrice" starts with "Bé")
+  p=directory.find(p=>p.name&&n.startsWith(p.name.trim().toLowerCase()));
+  if(p)return p;
+  // 3. Le nom du répertoire commence par le nom dans avail (ex: "Béatrice" in dir, "Béa" in avail)
+  p=directory.find(p=>p.name&&p.name.trim().toLowerCase().startsWith(n));
+  return p||null;
+}
+function isEmp(name){const p=getPerson(name);return!!(p&&p.type==='emp')}
+function curDayDate(){const day=DAYS.find(d=>d.id===curDay);return dayDate(oMon,day.dow)}
+function isPastDay(){const d=curDayDate();const today=new Date();today.setHours(0,0,0,0);return d<today;}
+
+function rebuildVcols(){
+  const vols=directory.filter(p=>p.type==='vol');
+  vols.forEach((p,i)=>vcols[p.name]=VCOLS[i%VCOLS.length]);
+}
+
+/* ══════════════════════════════════════════════
+   SUPABASE — PEOPLE (répertoire)
+══════════════════════════════════════════════ */
+async function loadPeople() {
+  if (!sb) return;
+  const { data, error } = await sb.from('people').select('*').order('name');
+  if (error) { console.error('loadPeople:', error); return; }
+  directory = data.map(r => ({
+    id: r.id,
+    name: r.name,
+    email: r.email || '',
+    type: r.type,
+    roles: [r.role1||'', r.role2||'', r.role3||''],
+    pin: r.pin || ''
+  }));
+  nextId = Math.max(0, ...directory.map(p=>p.id)) + 1;
+  rebuildVcols();
+  populateVolSelect();
+  renderDir();
+}
+
+async function upsertPerson(p) {
+  if (!sb) return;
+  const row = {name:p.name, email:p.email, type:p.type, role1:p.roles[0]||'', role2:p.roles[1]||'', role3:p.roles[2]||'', pin:p.pin||''};
+  let error;
+  if (p.id) {
+    // Modification — update par id
+    ({error} = await sb.from('people').update(row).eq('id', p.id));
+  } else {
+    // Création — insert
+    ({error} = await sb.from('people').insert(row));
+  }
+  if (error) console.error('upsertPerson:', error);
+}
+
+async function deletePerson_db(id) {
+  if (!sb) return;
+  const { error } = await sb.from('people').delete().eq('id', id);
+  if (error) console.error('deletePerson_db:', error);
+}
+
+/* ══════════════════════════════════════════════
+   SUPABASE — AVAILABILITIES
+══════════════════════════════════════════════ */
+async function loadAvail(wk) {
+  if (!sb) return;
+  const { data, error } = await sb.from('availabilities').select('*').eq('week_key', wk);
+  if (error) { console.error('loadAvail:', error); return; }
+  if (!avail[wk]) avail[wk] = {};
+  data.forEach(r => {
+    try {
+      const parsed = JSON.parse(r.slots_json);
+      // Support ancien format (objet plat de slots) et nouveau format {slots, quota}
+      if (parsed && typeof parsed === 'object' && ('slots' in parsed || 'quota' in parsed)) {
+        avail[wk][r.person_name] = parsed;
+      } else {
+        avail[wk][r.person_name] = { slots: parsed };
+      }
+    } catch(e) {}
+  });
+}
+
+async function saveAvail(wk, name, slots, quota) {
+  if (!sb) {
+    setSyncBadge('b-sync-badge','offline','Hors-ligne — non sauvegardé');
+    setTimeout(()=>setSyncBadge('b-sync-badge','offline',''),3000);
+    return;
+  }
+  setSyncBadge('b-sync-badge','saving','Enregistrement…');
+  const payload = { slots };
+  if (quota !== undefined) payload.quota = quota;
+  const { error } = await sb.from('availabilities').upsert(
+    {week_key: wk, person_name: name, slots_json: JSON.stringify(payload), updated_at: new Date().toISOString()},
+    {onConflict:'week_key,person_name'}
+  );
+  if (error) {
+    console.error('saveAvail:', error);
+    setSyncBadge('b-sync-badge','error','Erreur d\'enregistrement');
+  } else {
+    setSyncBadge('b-sync-badge','saved','✓ Enregistré');
+    setTimeout(()=>setSyncBadge('b-sync-badge','saved',''),2500);
+  }
+}
+
+/* ══════════════════════════════════════════════
+   SUPABASE — ASSIGNMENTS
+══════════════════════════════════════════════ */
+async function loadAssignments(wk) {
+  if (!sb) return;
+  const { data, error } = await sb.from('assignments').select('*').eq('week_key', wk);
+  if (error) { console.error('loadAssignments:', error); return; }
+  if (!assigns[wk]) assigns[wk] = {};
+  data.forEach(r => {
+    const k = akey(r.shift_id, r.role);
+    if (r.person_name) {
+      assigns[wk][k] = r.person_name;
+      if (r.start_mins != null && r.end_mins != null) {
+        assigns[wk][k+'__t'] = {s: r.start_mins, e: r.end_mins};
+      }
+      if (r.note) assigns[wk][k+'__n'] = r.note;
+    }
+  });
+}
+
+async function saveAssignment(wk, shiftId, role, name, startMins, endMins, note=null) {
+  if (!sb) return;
+  const row = {
+    week_key: wk,
+    shift_id: shiftId,
+    role: role,
+    person_name: name,
+    start_mins: startMins ?? null,
+    end_mins: endMins ?? null,
+    note: note ?? null,
+    updated_at: new Date().toISOString()
+  };
+  const { error } = await sb.from('assignments').upsert(row, {onConflict:'week_key,shift_id,role'});
+  if (error) {
+    console.error('saveAssignment:', error);
+    setSyncBadge('o-sync-badge','error','Erreur de sauvegarde');
+    setTimeout(()=>setSyncBadge('o-sync-badge','error',''),3000);
+  }
+}
+
+async function deleteAssignment(wk, shiftId, role) {
+  if (!sb) return;
+  await sb.from('assignments')
+    .update({person_name: null, start_mins: null, end_mins: null, note: null, updated_at: new Date().toISOString()})
+    .eq('week_key', wk).eq('shift_id', shiftId).eq('role', role);
+}
+
+/* ══════════════════════════════════════════════
+   REALTIME — organisatrice voit les dispos en temps réel
+══════════════════════════════════════════════ */
+function subscribeRealtime(wk) {
+  if (!sb) return;
+  if (realtimeSub) { sb.removeChannel(realtimeSub); realtimeSub = null; }
+
+  realtimeSub = sb.channel('cafe-realtime')
+    .on('postgres_changes', {event:'*', schema:'public', table:'availabilities', filter:`week_key=eq.${wk}`},
+      payload => {
+        const r = payload.new;
+        if (!r || !r.person_name) return;
+        if (!avail[wk]) avail[wk] = {};
+        try {
+          const parsed = JSON.parse(r.slots_json);
+          avail[wk][r.person_name] = (parsed && ('slots' in parsed || 'quota' in parsed)) ? parsed : {slots: parsed};
+        } catch(e) {}
+        renderO();
+      }
+    )
+    .on('postgres_changes', {event:'*', schema:'public', table:'assignments', filter:`week_key=eq.${wk}`},
+      payload => {
+        const r = payload.new;
+        if (!r) return;
+        const k = akey(r.shift_id, r.role);
+        if (!assigns[wk]) assigns[wk] = {};
+        if (r.person_name) {
+          assigns[wk][k] = r.person_name;
+          if (r.start_mins != null) assigns[wk][k+'__t'] = {s: r.start_mins, e: r.end_mins};
+          if (r.note) assigns[wk][k+'__n'] = r.note; else delete assigns[wk][k+'__n'];
+        } else {
+          delete assigns[wk][k];
+          delete assigns[wk][k+'__t'];
+          delete assigns[wk][k+'__n'];
+        }
+        renderHoraire();
+      }
+    )
+    .subscribe();
+}
+
+/* ══════════════════════════════════════════════
+   BOOT — chargement initial des données
+══════════════════════════════════════════════ */
+async function bootOrgData() {
+  if (!sb) return;
+  const wk = wkey(oMon);
+  await loadPeople();
+  await loadAvail(wk);
+  await loadAssignments(wk);
+  subscribeRealtime(wk);
+  renderO();
+}
+
+async function bootVolData(wk) {
+  if (!sb) return;
+  await loadAvail(wk);
+}
+
+
+/* ══════════════════════════════════════════════
+   PIN — SYSTÈME D'AUTHENTIFICATION
+══════════════════════════════════════════════ */
+
+// ── PIN organisatrice (hashé, jamais en clair dans le JS) ──
+// SHA-256 de "2025" → à changer selon le PIN choisi
+// Pour générer : crypto.subtle.digest('SHA-256', new TextEncoder().encode('VOTRE_PIN'))
+//   .then(b=>console.log([...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')))
+const ORG_PIN_HASH = '3df97cd4a6c63cdd42d2d7e4c3de7a70b218ef1c9429bfd3c39b8fa20c8d7f2b'; // PIN: "2025"
+
+async function hashPin(pin) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin));
+  return [...new Uint8Array(buf)].map(x => x.toString(16).padStart(2,'0')).join('');
+}
+
+// ── État PIN bénévole ──
+let pinVolName = '';      // nom sélectionné en attente de validation PIN
+let pinVolEntry = '';     // chiffres entrés
+let pinVolIsNew = false;  // première connexion = PIN visible
+
+// ── Clavier PIN générique ──
+function buildKeypad(containerId, onDigit, onDel) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = '';
+  [1,2,3,4,5,6,7,8,9,'',0,'⌫'].forEach(k => {
+    const btn = document.createElement('button');
+    btn.className = 'pin-key' + (k === '⌫' ? ' del' : '');
+    btn.textContent = k === '' ? '' : k;
+    if (k === '') { btn.style.visibility = 'hidden'; btn.disabled = true; }
+    else if (k === '⌫') btn.addEventListener('click', onDel);
+    else btn.addEventListener('click', () => onDigit(String(k)));
+    el.appendChild(btn);
+  });
+}
+
+// ── PIN ORGANISATRICE ──
+function openOrgPin(onSuccess) {
+  let entry = '';
+  const overlay = document.getElementById('pin-org-overlay');
+  overlay.classList.add('open');
+
+  buildKeypad('pin-org-keypad',
+    digit => {
+      if (entry.length >= 4) return;
+      entry += digit;
+      updateOrgDots(entry, false);
+      if (entry.length === 4) validateOrgPin(entry, onSuccess, () => {
+        updateOrgDots(entry, true);
+        setTimeout(() => { entry = ''; updateOrgDots('', false); document.getElementById('pin-org-error').textContent = 'PIN incorrect. Réessayez.'; }, 600);
+      });
+    },
+    () => { if (entry.length) { entry = entry.slice(0,-1); updateOrgDots(entry, false); document.getElementById('pin-org-error').textContent = ''; } }
+  );
+
+  // Clavier physique
+  overlay._keyHandler = e => {
+    if (e.key >= '0' && e.key <= '9') { document.querySelector(`#pin-org-keypad .pin-key:not(.del):not([disabled])[textContent="${e.key}"]`); overlay.dispatchEvent; const btns=[...document.querySelectorAll('#pin-org-keypad .pin-key:not(.del):not([style*="hidden"])')]; btns.find(b=>b.textContent===e.key)?.click(); }
+    if (e.key === 'Backspace') document.querySelector('#pin-org-keypad .pin-key.del')?.click();
+  };
+  document.addEventListener('keydown', overlay._keyHandler);
+}
+
+function updateOrgDots(entry, error) {
+  for (let i = 0; i < 4; i++) {
+    const d = document.getElementById('pod' + i);
+    d.className = 'pin-dot' + (error ? ' error' : entry.length > i ? ' filled' : '');
+  }
+}
+
+async function validateOrgPin(pin, onSuccess, onFail) {
+  const h = await hashPin(pin);
+  if (h === ORG_PIN_HASH) {
+    document.getElementById('pin-org-overlay').classList.remove('open');
+    if (document.getElementById('pin-org-overlay')._keyHandler)
+      document.removeEventListener('keydown', document.getElementById('pin-org-overlay')._keyHandler);
+    onSuccess();
+  } else {
+    onFail();
+  }
+}
+
+// ── PIN BÉNÉVOLE ──
+function openVolPin(name, isNew, onSuccess) {
+  pinVolName = name;
+  pinVolEntry = '';
+  pinVolIsNew = isNew;
+
+  const overlay = document.getElementById('pin-vol-overlay');
+  const firstName = name.split(' ')[0];
+  document.getElementById('pin-vol-title').textContent = 'Bonjour, ' + firstName + ' 👋';
+
+  if (isNew) {
+    const p = getPerson(name);
+    const existingPin = p ? p.pin || '' : '';
+    if (existingPin) {
+      // PIN déjà défini par l'organisatrice — le montrer pour que le bénévole le mémorise
+      document.getElementById('pin-vol-sub').textContent = 'Votre PIN est : ' + existingPin + '  — entrez-le ci-dessous.';
+    } else {
+      document.getElementById('pin-vol-sub').textContent = 'Créez votre code PIN à 4 chiffres. Il vous sera demandé à chaque connexion.';
+    }
+    document.getElementById('pin-vol-hint').textContent = isNew && !existingPin ? '💡 Choisissez un code facile à retenir.' : '';
+  } else {
+    document.getElementById('pin-vol-sub').textContent = 'Entrez votre code PIN à 4 chiffres.';
+    document.getElementById('pin-vol-hint').textContent = '';
+  }
+
+  document.getElementById('pin-vol-error').textContent = '';
+  updateVolDots('', false);
+  overlay.classList.add('open');
+
+  buildKeypad('pin-vol-keypad',
+    digit => {
+      if (pinVolEntry.length >= 4) return;
+      pinVolEntry += digit;
+      updateVolDots(pinVolEntry, false, isNew && !getPerson(name)?.pin);
+      if (pinVolEntry.length === 4) {
+        setTimeout(() => processVolPin(onSuccess), 120);
+      }
+    },
+    () => {
+      if (pinVolEntry.length) {
+        pinVolEntry = pinVolEntry.slice(0, -1);
+        updateVolDots(pinVolEntry, false, isNew && !getPerson(name)?.pin);
+        document.getElementById('pin-vol-error').textContent = '';
+      }
+    }
+  );
+
+  // Clavier physique
+  overlay._keyHandler = e => {
+    if (e.key >= '0' && e.key <= '9') document.querySelectorAll('#pin-vol-keypad .pin-key:not(.del)').forEach(b => { if (b.textContent === e.key) b.click(); });
+    if (e.key === 'Backspace') document.querySelector('#pin-vol-keypad .pin-key.del')?.click();
+  };
+  document.addEventListener('keydown', overlay._keyHandler);
+}
+
+function updateVolDots(entry, error, visible = false) {
+  for (let i = 0; i < 4; i++) {
+    const d = document.getElementById('pvd' + i);
+    d.className = 'pin-dot' + (error ? ' error' : entry.length > i ? ' filled' : '');
+    // En mode création visible : afficher le chiffre dans le dot
+    if (visible && entry.length > i) {
+      d.textContent = entry[i];
+      d.style.cssText = 'width:28px;height:28px;border-radius:8px;background:var(--accent-dark);border-color:var(--accent-dark);color:#fff;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center';
+    } else {
+      d.textContent = '';
+      d.style.cssText = '';
+    }
+  }
+}
+
+async function processVolPin(onSuccess) {
+  const p = getPerson(pinVolName);
+  const existingPin = p ? p.pin || '' : '';
+
+  if (!existingPin) {
+    // Première fois — sauvegarder le PIN et continuer
+    if (p) {
+      p.pin = pinVolEntry;
+      await upsertPerson(p);
+    }
+    closeVolPin();
+    onSuccess();
+  } else {
+    // Valider contre le PIN existant
+    if (pinVolEntry === existingPin) {
+      closeVolPin();
+      onSuccess();
+    } else {
+      updateVolDots(pinVolEntry, true);
+      document.getElementById('pin-vol-error').textContent = 'PIN incorrect. Réessayez.';
+      setTimeout(() => { pinVolEntry = ''; updateVolDots('', false); }, 700);
+    }
+  }
+}
+
+function closeVolPin() {
+  const overlay = document.getElementById('pin-vol-overlay');
+  overlay.classList.remove('open');
+  if (overlay._keyHandler) {
+    document.removeEventListener('keydown', overlay._keyHandler);
+    overlay._keyHandler = null;
+  }
+}
+
+/* ══════════════════════════════════════════════
+   SECRET KEY
+══════════════════════════════════════════════ */
+const SECRET_KEY='cafe2025';
+let orgUnlocked=new URLSearchParams(location.search).get('cle')===SECRET_KEY;
+const TEST_MODE=new URLSearchParams(location.search).get('mode')==='test';
+
+/* ══════════════════════════════════════════════
+   TAB SWITCHING
+══════════════════════════════════════════════ */
+function switchMain(id,btn){
+  // En mode org, on affiche toujours le pane organisatrice
+  document.getElementById('pane-benevole').classList.toggle('visible',id==='benevole');
+  document.getElementById('pane-organisatrice').classList.toggle('visible',id==='organisatrice');
+  if(id==='organisatrice'){
+    if(!sb){
+      document.getElementById('setup-banner').style.display='block';
+      document.getElementById('setup-sql').textContent=SETUP_SQL;
+    }
+    if(sb&&!switchMain._orgLoaded){
+      switchMain._orgLoaded=true;
+      const wk=wkey(oMon);
+      Promise.all([loadAvail(wk),loadAssignments(wk)]).then(()=>{
+        subscribeRealtime(wk);renderO();
+      });
+    } else {
+      renderO();
+    }
+  }
+}
+
+function openVolView(){
+  // Ouvre la vue bénévole dans un nouvel onglet (sans le paramètre ?cle=)
+  const url=new URL(location.href);
+  url.searchParams.delete('cle');
+  window.open(url.toString(),'_blank');
+}
+function switchOrg(id,btn){
+  document.querySelectorAll('.header-tab').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  else{
+    const t=document.getElementById('htab-'+id);
+    if(t)t.classList.add('active');
+  }
+  document.getElementById('org-horaire').classList.toggle('visible',id==='horaire');
+  document.getElementById('org-repertoire').classList.toggle('visible',id==='repertoire');
+  if(id==='horaire')renderO();
+  if(id==='repertoire')renderDir();
+}
+
+/* ══════════════════════════════════════════════
+   BÉNÉVOLE — sélection
+══════════════════════════════════════════════ */
+function populateVolSelect(){
+  const sel=document.getElementById('vol-select'),cur=sel.value;
+  sel.innerHTML='<option value="">— Mon nom —</option>';
+  directory.forEach(p=>{
+    const o=document.createElement('option');o.value=p.name;
+    o.textContent=p.name+(p.type==='emp'?' (employé)':'');sel.appendChild(o);
+  });
+  if(cur)sel.value=cur;
+}
+
+const SHIFT_OPTIONS=[
+  {value:0,label:'Aucun'},
+  {value:1,label:'1'},
+  {value:2,label:'2'},
+  {value:3,label:'3'},
+  {value:99,label:'Ça ne me dérange pas'},
+];
+
+function buildShiftChips(){
+  const wrap=document.getElementById('b-shift-chips');wrap.innerHTML='';
+  SHIFT_OPTIONS.forEach(opt=>{
+    const btn=document.createElement('button');
+    const active=bShiftsDesired===opt.value;
+    btn.textContent=opt.label;
+    btn.className='b-shift-chip'+(active?' active':'');
+    btn.onclick=()=>{
+      const name=document.getElementById('vol-select').value;
+      bShiftsDesired=opt.value;
+      if(name)bShiftMemory[name]=opt.value;
+      buildShiftChips();
+      const showWeek=opt.value!==0;
+      document.getElementById('b-week-section').style.display=showWeek?'block':'none';
+      if(showWeek)renderB();
+    };
+    wrap.appendChild(btn);
+  });
+}
+
+async function onVolSelect(){
+  const name=document.getElementById('vol-select').value;
+  if(!name)return;
+  const p=getPerson(name);
+  const isNew=!p||!p.pin;
+
+  // Montrer l'overlay PIN avant d'afficher quoi que ce soit
+  openVolPin(name, isNew, async () => {
+    await _afterVolPinSuccess(name, p);
+  });
+}
+
+async function _afterVolPinSuccess(name, p) {
+  document.getElementById('b-empty-state').style.display='none';
+  document.getElementById('b-name-section').style.display='block';
+  document.getElementById('b-greeting').textContent='Bonjour, '+name.split(' ')[0]+' 👋';
+  document.getElementById('vol-email').value=p?p.email:'';
+  bShiftsDesired=bShiftMemory[name]!==undefined?bShiftMemory[name]:0;
+  document.getElementById('b-wlabel').textContent=wlabel(bMon);
+
+  // Charger les dispos existantes pour cette semaine
+  const wk=wkey(bMon);
+  await bootVolData(wk);
+  restoreWeekState(name, wk);
+  buildShiftChips();
+  const showWeek=bShiftsDesired!==0;
+  document.getElementById('b-week-section').style.display=showWeek?'block':'none';
+  if(showWeek)renderB();
+}
+
+// Restaure bSel et bShiftsDesired pour une semaine donnée.
+// Si la semaine a des données → affiche-les.
+// Si la semaine est vierge → hérite du quota de la semaine la plus récente connue, jours vides.
+function restoreWeekState(name, wk) {
+  if(!bSel[wk])bSel[wk]={};
+
+  if(avail[wk]&&avail[wk][name]){
+    // ── Semaine avec données existantes ──
+    const entry=avail[wk][name];
+    const slots=entry.slots||{};
+    // Reconstruire bSel depuis les slots
+    bSel[wk]={};
+    DAYS.forEach(day=>{
+      const daySlots=Object.keys(slots).filter(k=>k.startsWith(day.id+'_')).map(k=>parseInt(k.split('_')[1]));
+      if(daySlots.length){
+        const mins=daySlots.map(s=>GSH*60+s*30);
+        bSel[wk][day.id]={from:Math.min(...mins),to:Math.max(...mins)+30};
+      }
+    });
+    // Quota depuis l'entrée
+    if(entry.quota!==undefined){
+      bShiftsDesired=entry.quota;
+    } else if(Object.keys(bSel[wk]).length){
+      bShiftsDesired=1;
+    }
+  } else {
+    // ── Nouvelle semaine vierge → hériter du quota de la semaine la plus récente ──
+    bSel[wk]={};
+    const inherited=findLastQuota(name, wk);
+    bShiftsDesired=inherited!==null?inherited:0;
+  }
+}
+
+// Cherche le quota le plus récent soumis par ce bénévole (toutes semaines antérieures)
+function findLastQuota(name, currentWk) {
+  const wkData=avail[name]||{};
+  // Parcourir avail global pour trouver les entrées de ce bénévole
+  let bestWk=null, bestQuota=null;
+  Object.keys(avail).forEach(wk=>{
+    if(wk>=currentWk)return; // seulement les semaines passées
+    if(avail[wk]&&avail[wk][name]!==undefined){
+      if(bestWk===null||wk>bestWk){
+        bestWk=wk;
+        const q=avail[wk][name].quota;
+        bestQuota=q!==undefined?q:null;
+      }
+    }
+  });
+  return bestQuota;
+}
+
+function resetVolSelect(){
+  const prevName=document.getElementById('vol-select').value;
+  // Clear in-memory selections for the previous volunteer so they don't leak to the next person
+  if(prevName){
+    const wk=wkey(bMon);
+    if(bSel[wk])delete bSel[wk][prevName];
+    // Reset the whole week selection object for this person
+    bSel[wkey(bMon)]={};
+    delete bShiftMemory[prevName];
+  }
+  bShiftsDesired=0;
+  document.getElementById('vol-select').value='';
+  document.getElementById('b-empty-state').style.display='block';
+  document.getElementById('b-name-section').style.display='none';
+}
+
+async function onVolEmailBlur(){
+  const name=document.getElementById('vol-select').value;
+  const email=document.getElementById('vol-email').value.trim();
+  if(!name)return;
+  const p=getPerson(name);
+  if(!p)return;
+  if(email===p.email)return; // pas de changement
+  p.email=email;
+  // Persister dans Supabase
+  await upsertPerson(p);
+  // Feedback visuel
+  const badge=document.getElementById('vol-email-saved');
+  if(badge){badge.style.display='inline';setTimeout(()=>badge.style.display='none',2500);}
+}
+
+/* ══════════════════════════════════════════════
+   BÉNÉVOLE — calendrier de disponibilités
+══════════════════════════════════════════════ */
+async function bShift(d){
+  bMon=addWeeks(bMon,d);
+  const wk=wkey(bMon);
+  const name=document.getElementById('vol-select').value;
+  // Toujours mettre à jour le label de semaine, qu'un nom soit sélectionné ou non
+  document.getElementById('b-wlabel').textContent=wlabel(bMon);
+  await bootVolData(wk);
+  if(name){
+    restoreWeekState(name, wk);
+    buildShiftChips();
+    const showWeek=bShiftsDesired!==0;
+    document.getElementById('b-week-section').style.display=showWeek?'block':'none';
+    if(showWeek)renderB();
+  } else {
+    renderB();
+  }
+}
+
+function buildTimeSelect(day,type,savedVal,minMins=null){
+  const sel=document.createElement('select');
+  let startM=day.oH*60+day.oM,endM=day.cH*60+day.cM;
+  if(type==='to')startM+=30;else endM-=30;
+  let m=startM;
+  while(m<=endM){
+    const o=document.createElement('option');o.value=m;o.textContent=mStr(m);
+    if(minMins!==null&&m<=minMins){o.disabled=true;o.style.color='#A8A29E';}
+    if(savedVal!==undefined&&savedVal===m)o.selected=true;
+    else if(savedVal===undefined&&type==='from'&&m===startM)o.selected=true;
+    else if(savedVal===undefined&&type==='to'&&m===endM)o.selected=true;
+    sel.appendChild(o);m+=30;
+  }
+  return sel;
+}
+
+function isWeekReadOnly(wk){
+  // Lecture seule seulement si semaine passée
+  const mon=new Date(wk+'T00:00:00');
+  const now=new Date();now.setHours(0,0,0,0);
+  const weekEnd=new Date(mon);weekEnd.setDate(mon.getDate()+6);
+  return weekEnd<now;
+}
+
+function renderB(){
+  const wk=wkey(bMon);
+  if(!bSel[wk])bSel[wk]={};
+  document.getElementById('b-wlabel').textContent=wlabel(bMon);
+  const readOnly=isWeekReadOnly(wk);
+  const submitBtn=document.querySelector('#pane-benevole .btn-secondary');
+  if(readOnly){
+    if(submitBtn)submitBtn.style.display='none';
+  } else {
+    if(submitBtn)submitBtn.style.display='';
+  }
+  const wrap=document.getElementById('b-days-wrap');wrap.innerHTML='';
+  DAYS.forEach(day=>{
+    const dayData=bSel[wk][day.id]||null;
+    const enabled=!!(dayData);
+    const card=document.createElement('div');card.className='b-day-card'+(enabled?' active':'');
+    const head=document.createElement('div');head.className='b-day-card-head';
+    const title=document.createElement('div');title.className='b-day-card-title';
+    title.innerHTML=day.label+' <span>'+fmt(dayDate(bMon,day.dow))+'</span>';
+    const toggleLabel=document.createElement('label');toggleLabel.className='b-toggle';
+    const chk=document.createElement('input');chk.type='checkbox';chk.checked=enabled;
+    const track=document.createElement('span');track.className='b-toggle-track';
+    const thumb=document.createElement('span');thumb.className='b-toggle-thumb';
+    toggleLabel.appendChild(chk);toggleLabel.appendChild(track);toggleLabel.appendChild(thumb);
+    head.appendChild(title);head.appendChild(toggleLabel);card.appendChild(head);
+    const body=document.createElement('div');body.className='b-day-card-body';body.style.display=enabled?'grid':'none';
+    const fromField=document.createElement('div');fromField.className='b-field';fromField.innerHTML='<label>DE</label>';
+    let fromSel=buildTimeSelect(day,'from',dayData?dayData.from:undefined);fromField.appendChild(fromSel);
+    const toField=document.createElement('div');toField.className='b-field';toField.innerHTML='<label>À</label>';
+    let toSel=buildTimeSelect(day,'to',dayData?dayData.to:undefined,dayData?dayData.from:undefined);toField.appendChild(toSel);
+    body.appendChild(fromField);body.appendChild(toField);card.appendChild(body);
+    function saveDay(){bSel[wk][day.id]={from:parseInt(fromSel.value),to:parseInt(toSel.value)};updateBSummary();}
+    function updateToSelect(){
+      const cf=parseInt(fromSel.value),ct=parseInt(toSel.value);
+      const newToSel=buildTimeSelect(day,'to',ct<=cf?cf+30:ct,cf);
+      toField.replaceChild(newToSel,toSel);toSel=newToSel;
+      toSel.addEventListener('change',saveDay);saveDay();
+    }
+    if(readOnly){
+      chk.disabled=true;fromSel.disabled=true;toSel.disabled=true;
+      card.classList.add('readonly');
+    }
+    chk.addEventListener('change',()=>{
+      const on=chk.checked;card.classList.toggle('active',on);body.style.display=on?'grid':'none';
+      if(on){updateToSelect();}else{delete bSel[wk][day.id];updateBSummary();}
+    });
+    fromSel.addEventListener('change',updateToSelect);toSel.addEventListener('change',saveDay);
+    wrap.appendChild(card);
+  });
+  updateBSummary();
+}
+
+function clearBSel(){bSel[wkey(bMon)]={};renderB();}
+
+function updateBSummary(){
+  const wk=wkey(bMon),sel=bSel[wk]||{};
+  const parts=DAYS.filter(d=>sel[d.id]).map(d=>{const{from,to}=sel[d.id];return d.label+': '+mStr(from)+' – '+mStr(to);});
+  document.getElementById('b-summary').textContent=parts.length?parts.join('  ·  '):'';
+}
+
+async function submitAvail(){
+  const name=document.getElementById('vol-select').value;
+  if(!name){alert('Sélectionnez votre nom.');return}
+  const wk=wkey(bMon),sel=bSel[wk]||{};
+  if(!Object.keys(sel).length){alert('Activez au moins un jour.');return}
+  if(!avail[wk])avail[wk]={};
+  const slots={};
+  DAYS.forEach(day=>{
+    if(!sel[day.id])return;
+    const{from,to}=sel[day.id];
+    for(let m=from;m<to;m+=30){const s=Math.round((m-GSH*60)/30);slots[skey(day.id,s)]=true;}
+  });
+  const quota=bShiftsDesired; // 0=aucun, 1, 2, 3, 99=peu importe
+  avail[wk][name]={slots,quota};
+  await saveAvail(wk,name,slots,quota);
+  const t=document.getElementById('b-toast');t.style.display='block';
+  setTimeout(()=>t.style.display='none',3000);
+}
+
+/* ══════════════════════════════════════════════
+   ORGANISATRICE
+══════════════════════════════════════════════ */
+async function oShift(d){
+  oMon=addWeeks(oMon,d);
+  const wk=wkey(oMon);
+  if(sb){
+    await loadAvail(wk);
+    await loadAssignments(wk);
+    subscribeRealtime(wk);
+  }
+  renderO();
+}
+
+function renderO(){
+  const wk=wkey(oMon),wkData=avail[wk]||{};
+  // Stat : X/Y bénévoles ont répondu
+  const responded=new Set(Object.keys(wkData).filter(n=>!isEmp(n)));
+  const allVols=directory.filter(p=>p.type==='vol');
+  const total=allVols.length;
+  const nbResp=responded.size;
+  const statEl=document.getElementById('o-stat');
+  if(statEl){
+    statEl.textContent=nbResp+'/'+total+' bénévoles ont répondu';
+    statEl.className='o-stat-text'+(nbResp===total?' all-responded':'');
+  }
+  // Tooltip : si < moitié ont répondu → montrer qui a répondu
+  //            si >= moitié ont répondu → montrer qui n'a pas répondu
+  const statWrap=document.querySelector('.stat-wrap');
+  const missingEl=document.getElementById('o-stat-missing');
+  const labelEl=document.getElementById('o-stat-tooltip-label');
+  const showResponded=nbResp>0&&nbResp<total/2;
+  const listNames=showResponded
+    ?allVols.filter(p=>responded.has(p.name)).map(p=>p.name)
+    :allVols.filter(p=>!responded.has(p.name)).map(p=>p.name);
+  const hasInfo=listNames.length>0&&nbResp<total;
+  if(statWrap)statWrap.classList.toggle('has-info',hasInfo);
+  if(labelEl)labelEl.textContent=showResponded?'A répondu :':'En attente de la réponse de :';
+  if(missingEl){missingEl.textContent=listNames.join('\n');missingEl.style.whiteSpace='pre';}
+  buildDayTabs();renderHoraire();
+}
+
+function buildDayTabs(){
+  const wk=wkey(oMon);
+  if(!closedDays[wk])closedDays[wk]=new Set();
+  const el=document.getElementById('o-daytabs');el.innerHTML='';
+  const DAY_LETTERS={jeudi:'J',vendredi:'V',samedi:'S',dimanche:'D'};
+  DAYS.forEach(day=>{
+    const isClosed=closedDays[wk].has(day.id);
+    const d=dayDate(oMon,day.dow);
+    const dateStr=d.toLocaleDateString('fr-CA',{day:'numeric',month:'short'});
+    // "14 avr." → split on space
+    const parts=dateStr.split(' ');
+    const dayNum=parts[0];
+    const monthShort=(parts[1]||'').replace('.','').slice(0,4); // max 4 chars
+    const btn=document.createElement('button');
+    btn.className='day-tab'+(day.id===curDay?' active':'')+(isClosed?' day-tab-closed':'');
+    btn.innerHTML=`<span class="day-letter">${DAY_LETTERS[day.id]||day.id[0].toUpperCase()}</span><span>${dayNum} ${monthShort}</span>`;
+    btn.onclick=()=>{curDay=day.id;buildDayTabs();renderStatusToggle();renderHoraire();};
+    el.appendChild(btn);
+  });
+  renderStatusToggle();
+}
+
+function renderStatusToggle(){
+  const wk=wkey(oMon);
+  if(!closedDays[wk])closedDays[wk]=new Set();
+  const isClosed=closedDays[wk].has(curDay);
+  const btnOpen=document.getElementById('status-btn-open');
+  const btnClosed=document.getElementById('status-btn-closed');
+  if(!btnOpen||!btnClosed)return;
+  // Les deux utilisent filled primary (active-open), seul le bouton actif est coloré
+  btnOpen.className='status-btn'+(isClosed?'':' active-open');
+  btnClosed.className='status-btn'+(isClosed?' active-open':'');
+}
+
+function setDayOpen(open){
+  const wk=wkey(oMon);
+  if(!closedDays[wk])closedDays[wk]=new Set();
+  if(open)closedDays[wk].delete(curDay);
+  else closedDays[wk].add(curDay);
+  buildDayTabs();renderHoraire();
+}
+
+/* ── avail helpers ── */
+function volDayRange(wk,name){
+  const slots=((avail[wk]||{})[name]||{}).slots||{};
+  const day=DAYS.find(d=>d.id===curDay);
+  const openS=Math.round((day.oH*60+day.oM-GSH*60)/30);
+  const closeS=Math.round((day.cH*60+day.cM-GSH*60)/30);
+  let first=null,last=null;
+  for(let s=openS;s<closeS;s++){if(slots[skey(curDay,s)]){if(first===null)first=s;last=s+1;}}
+  if(first===null)return null;
+  return{startMins:GSH*60+first*30,endMins:GSH*60+last*30};
+}
+function volCoversShift(wk,name,shift){
+  if(isEmp(name))return true;
+  const r=volDayRange(wk,name);
+  return r&&r.startMins<shift.toH*60&&r.endMins>shift.fromH*60;
+}
+
+/* ── assign helpers ── */
+function getAssign(wk,sid,role){return((assigns[wk]||{})[akey(sid,role)])||null}
+function getAssignTimes(wk,sid,role){return((assigns[wk]||{})[akey(sid,role)+'__t'])||null}
+function getAssignNote(wk,sid,role){return((assigns[wk]||{})[akey(sid,role)+'__n'])||''}
+function setAssignNote(wk,sid,role,note){
+  if(!assigns[wk])assigns[wk]={};
+  if(note)assigns[wk][akey(sid,role)+'__n']=note;
+  else delete assigns[wk][akey(sid,role)+'__n'];
+}
+
+function setAssign(wk,sid,role,name){
+  if(!assigns[wk])assigns[wk]={};
+  if(name===null){delete assigns[wk][akey(sid,role)];delete assigns[wk][akey(sid,role)+'__t'];}
+  else assigns[wk][akey(sid,role)]=name;
+}
+function setAssignTimes(wk,sid,role,s,e){
+  if(!assigns[wk])assigns[wk]={};
+  assigns[wk][akey(sid,role)+'__t']={s,e};
+}
+
+function highlightDZs(wk,shifts){
+  shifts.forEach(sh=>{
+    const fromRole=draggingFromRole;
+    // alreadyOnShift: true si le bénévole est déjà sur ce shift (mais pas depuis ce rôle-ci)
+    const alreadyOnShift=!isEmp(draggingVol)&&volAssignedToShift(wk,draggingVol,sh)
+      &&!(fromRole&&fromRole.shiftId===sh.id);
+    [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(role=>{
+      const dz=document.getElementById('dz-'+sh.id+'-'+role.replace(/[^a-z0-9]/gi,'_'));
+      if(!dz)return;
+      // La source elle-même n'est jamais une cible valide
+      if(fromRole&&fromRole.shiftId===sh.id&&fromRole.role===role){
+        dz.classList.remove('dv','di','dok');return;
+      }
+      const covers=volCoversShift(wk,draggingVol,sh);
+      if(dz.classList.contains('filled')){
+        // Swap possible seulement si on drag depuis un chip (fromRole) et que le bénévole couvre le shift
+        // et que le bénévole occupant la cible couvre le shift source (si fromRole existe)
+        if(fromRole&&covers&&!alreadyOnShift){
+          const occupant=getAssign(wk,sh.id,role);
+          // Vérifier que l'occupant peut aller dans le rôle source
+          const srcShift=shifts.find(s=>s.id===fromRole.shiftId)||sh;
+          const occupantCoversSource=isEmp(occupant)?true:volCoversShift(wk,occupant,srcShift);
+          if(occupantCoversSource){
+            dz.classList.add('dv');dz.classList.remove('di');
+          } else {
+            dz.classList.add('di');dz.classList.remove('dv');
+          }
+        } else {
+          dz.classList.remove('dv','di');
+        }
+      } else {
+        const v=covers&&!alreadyOnShift;
+        dz.classList.toggle('dv',v);dz.classList.toggle('di',!v);
+      }
+    });
+  });
+}
+function clearDZHighlights(){document.querySelectorAll('.h-dz').forEach(dz=>dz.classList.remove('dv','di','dok'));}
+
+/* ══════════════════════════════════════════════
+   RENDER HORAIRE
+══════════════════════════════════════════════ */
+function renderHoraire(){
+  // Si le conteneur n'est pas encore dimensionné, attendre le prochain frame
+  const hScrollEarly=document.querySelector('.h-scroll');
+  if(hScrollEarly&&hScrollEarly.clientWidth===0){requestAnimationFrame(renderHoraire);return;}
+  const wk=wkey(oMon),wkData=avail[wk]||{};
+  const day=DAYS.find(d=>d.id===curDay);
+  const shifts=SHIFTS[curDay]||[];
+  document.getElementById('h-day-lbl').textContent=day.label;
+  const dSH=day.oH+day.oM/60;
+  const dEH=shifts.length?Math.max(...shifts.map(s=>s.toH)):day.cH+day.cM/60;
+  const numSlots=Math.round((dEH-dSH)*2);
+  const numHours=Math.round(dEH-dSH);
+  const hScroll=document.querySelector('.h-scroll');
+  const roleColW=parseInt(getComputedStyle(document.documentElement).getPropertyValue('--role-col')||'130');
+  // Mesurer la cellule 1fr (parent de h-scroll) — fiable avec display:grid
+  const gridCell=hScroll?hScroll.parentElement:null;
+  const scrollW=gridCell?gridCell.clientWidth:(hScroll?hScroll.clientWidth:800);
+  const availW=Math.max(scrollW-roleColW,numSlots*28);
+  const dynCOL=Math.floor(availW/numSlots);
+  const TW=dynCOL*numSlots;
+  function toPx(h){return Math.round((h-dSH)*2*dynCOL);}
+  const wk_check=wkey(oMon);
+  if(!closedDays[wk_check])closedDays[wk_check]=new Set();
+  const isClosed=closedDays[wk_check].has(curDay);
+  const past=isPastDay();
+  const autoBtn=document.getElementById('auto-btn');
+  const wkPast=DAYS.every(d=>dayDate(oMon,d.dow)<new Date(new Date().setHours(0,0,0,0)));
+  if(autoBtn){autoBtn.disabled=wkPast;autoBtn.style.opacity=wkPast?'0.4':'1';}
+  const grid=document.getElementById('h-grid');grid.innerHTML='';
+
+  const hRow=document.createElement('div');hRow.className='h-head-row';
+  const corn=document.createElement('div');corn.className='h-corner';corn.textContent='Rôle';hRow.appendChild(corn);
+  const times=document.createElement('div');times.className='h-times';times.style.width=times.style.minWidth=TW+'px';
+  for(let i=0;i<numSlots;i++){
+    const totalMins=Math.round(dSH*60)+(i*30);
+    const mm=totalMins%60;
+    const t=document.createElement('div');
+    if(mm===0){
+      const hh=Math.floor(totalMins/60);
+      t.className='h-tick hour';
+      t.style.left=(i*dynCOL)+'px';t.textContent=pad2(hh)+':00';
+    } else {
+      t.className='h-tick half';
+      t.style.left=(i*dynCOL)+'px';
+    }
+    times.appendChild(t);
+  }
+  hRow.appendChild(times);grid.appendChild(hRow);
+
+  let totalReq=0,totalFilled=0;
+  shifts.forEach(shift=>{
+    const spx=toPx(shift.fromH),sw=toPx(shift.toH)-spx;
+    const sr=document.createElement('div');sr.className='h-shift-row';
+    const sl=document.createElement('div');sl.className='h-shift-label';sl.textContent=shift.label;
+    const sb2=document.createElement('div');sb2.className='h-shift-bar';sb2.style.width=TW+'px';
+    const ss=document.createElement('div');ss.className='h-shift-span';ss.style.left=spx+'px';ss.style.width=sw+'px';
+    ss.textContent=mStr(shift.fromH*60)+' – '+mStr(shift.toH*60);
+    sb2.appendChild(ss);sr.appendChild(sl);sr.appendChild(sb2);grid.appendChild(sr);
+
+    const allRoles=[...(shift._slots||shift.roles),...(shift._optSlots||[])];
+    allRoles.forEach(role=>{
+      const isOpt=(shift._optSlots||shift.optional||[]).includes(role);
+      if(!isOpt)totalReq++;
+      const row=document.createElement('div');row.className='h-role-row';
+      row.addEventListener('dragenter',()=>{if(draggingVol&&volCoversShift(wk,draggingVol,shift))row.classList.add('row-hover');});
+      row.addEventListener('dragleave',e=>{if(!row.contains(e.relatedTarget))row.classList.remove('row-hover');});
+      row.addEventListener('drop',()=>row.classList.remove('row-hover'));
+      const nc=document.createElement('div');nc.className='h-role-name'+(isOpt?' opt':'');
+      nc.textContent=roleDisplayLabel(role)+(isOpt?' ★':'');row.appendChild(nc);
+      const tl=document.createElement('div');tl.className='h-timeline';tl.style.width=tl.style.minWidth=TW+'px';
+      const dz=document.createElement('div');dz.className='h-dz';
+      dz.style.left=spx+'px';dz.style.width=sw+'px';
+      dz.id='dz-'+shift.id+'-'+role.replace(/[^a-z0-9]/gi,'_');
+
+      const assigned=getAssign(wk,shift.id,role);
+      const noteVal=getAssignNote(wk,shift.id,role);
+      const rowH=assigned&&noteVal?62:40;
+      row.style.minHeight=rowH+'px';
+      tl.style.height=rowH+'px';
+      if(assigned){
+        if(!isOpt)totalFilled++;
+        const emp=isEmp(assigned);
+        const col=emp?EMP_COL:(vcols[assigned]||VCOLS[0]);
+        // Check if this volunteer is over quota (all days, week-wide)
+        const assignedQuota=emp?null:volQuota(wk,assigned);
+        const assignedUsed=emp?0:volWeekShiftCount(wk,assigned);
+        const isOverQuota=!emp&&assignedQuota!==99&&assignedUsed>assignedQuota;
+        const chipBorderColor=isOverQuota?'#DC2626':(emp?col.fg:(col.fg+'80'));
+        const chipBorderWidth=isOverQuota?'2px':(emp?'2.5px':'1.5px');
+        dz.classList.add('filled');
+        dz.style.background=emp?col.bg:`repeating-linear-gradient(45deg,${col.bg}55,${col.bg}55 6px,${col.bg}22 6px,${col.bg}22 12px)`;
+        dz.style.borderColor=isOverQuota?'#DC262640':(col.fg+'40');
+        const ct=getAssignTimes(wk,shift.id,role);
+        const rng=emp?null:volDayRange(wk,assigned);
+        let aSH,aEH;
+        if(ct){aSH=ct.s/60;aEH=ct.e/60;}
+        else if(emp){aSH=shift.fromH;aEH=shift.toH;}
+        else if(rng){aSH=rng.startMins/60;aEH=rng.endMins/60;}
+        else{aSH=shift.fromH;aEH=shift.toH;}
+        const cL=toPx(aSH)-spx,cW=toPx(aEH)-toPx(aSH);
+        const chip=document.createElement('div');chip.className='avail-chip';
+        chip.style.left=cL+'px';chip.style.width=cW+'px';
+        // When note: chip fills the row height via top/bottom, and shows note inside
+        if(noteVal){
+          chip.style.top='3px';chip.style.bottom='3px';
+          chip.style.paddingTop='4px';chip.style.paddingBottom='4px';
+        }
+        chip.style.background=col.bg;chip.style.border=`${chipBorderWidth} solid ${chipBorderColor}`;
+        const inner=document.createElement('div');inner.className='avail-chip-inner';
+        if(emp){const b=document.createElement('span');b.className='emp-badge';b.style.color=col.fg;b.textContent='EMP';inner.appendChild(b);}
+        const nm=document.createElement('span');nm.className='chip-name';nm.style.color=col.fg;nm.textContent=assigned;inner.appendChild(nm);
+        {
+          const ct2=getAssignTimes(wk,shift.id,role);
+          const rng2=emp?null:volDayRange(wk,assigned);
+          const sm=ct2?ct2.s:(rng2?Math.max(rng2.startMins,shift.fromH*60):shift.fromH*60);
+          const em2=ct2?ct2.e:(rng2?Math.min(rng2.endMins,shift.toH*60):shift.toH*60);
+          const tm=document.createElement('span');tm.className='chip-time';tm.style.color=col.fg;tm.textContent=mStr(sm)+'–'+mStr(em2);inner.appendChild(tm);
+        }
+        // Spacer pousse quota + × à droite
+        const spacer=document.createElement('span');spacer.className='chip-spacer';inner.appendChild(spacer);
+        // Quota fraction (bénévoles seulement, pas ∞)
+        if(!emp){
+          const cq=volQuota(wk,assigned);
+          const cu=volWeekShiftCount(wk,assigned);
+          if(cq!==99&&cq>0){
+            const isChipOver=cu>cq;
+            const qspan=document.createElement('span');
+            qspan.className='chip-quota';
+            qspan.style.color=isChipOver?'#DC2626':col.fg;
+            qspan.textContent=cu+'/'+cq;
+            inner.appendChild(qspan);
+          }
+        }
+        const x=document.createElement('span');x.className='chip-x';x.style.color=col.fg;x.textContent='×';
+        if(!past)x.addEventListener('click',ev=>{
+          ev.stopPropagation();
+          setAssignNote(wk,shift.id,role,null);
+          setAssign(wk,shift.id,role,null);
+          deleteAssignment(wk,shift.id,role);renderHoraire();
+        });
+        else x.style.display='none';
+        inner.appendChild(x);chip.appendChild(inner);
+        // Note on second line inside the chip
+        if(noteVal){
+          const noteLine=document.createElement('div');
+          noteLine.style.cssText=`font-size:10px;font-style:italic;color:${col.fg};opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--mono);line-height:1.4;margin-top:2px`;
+          noteLine.textContent=noteVal;chip.appendChild(noteLine);
+        }
+        if(!past)chip.addEventListener('click',ev=>{if(ev.target===x)return;openTP(ev,assigned,shift.id,role,shift,wk);});
+        // Drag from chip to unassign (drop on vol panel)
+        if(!past){
+          chip.draggable=true;
+          chip.addEventListener('dragstart',ev=>{
+            ev.stopPropagation();
+            draggingVol=assigned;
+            draggingFromRole={shiftId:shift.id,role,name:assigned};
+            ev.dataTransfer.setData('text/plain',assigned);
+            ev.dataTransfer.effectAllowed='move';
+            setTimeout(()=>chip.style.opacity='.35',0);
+            highlightDZs(wk,shifts);
+          });
+          chip.addEventListener('dragend',()=>{
+            chip.style.opacity='';
+            draggingVol=null;draggingFromRole=null;clearDZHighlights();
+          });
+        }
+        dz.appendChild(chip);
+        if(!past){
+          dz.addEventListener('dragover',e=>{
+            if(!draggingVol||!draggingFromRole)return; // swap seulement depuis un chip
+            if(!volCoversShift(wk,draggingVol,shift))return;
+            const occupant=getAssign(wk,shift.id,role);
+            if(occupant===draggingVol)return; // même bénévole
+            const srcShift=shifts.find(s=>s.id===draggingFromRole.shiftId)||shift;
+            const occupantCoversSource=isEmp(occupant)?true:volCoversShift(wk,occupant,srcShift);
+            if(!occupantCoversSource)return;
+            e.preventDefault();e.dataTransfer.dropEffect='move';dz.classList.add('dok');
+          });
+          dz.addEventListener('dragleave',()=>dz.classList.remove('dok'));
+          dz.addEventListener('drop',e=>{
+            dz.classList.remove('dok');
+            const name=e.dataTransfer.getData('text/plain');
+            if(!name||!draggingFromRole)return;
+            if(!volCoversShift(wk,name,shift))return;
+            const occupant=getAssign(wk,shift.id,role);
+            if(!occupant||occupant===name)return;
+            e.preventDefault();
+            if(doSwap(wk,shifts,draggingFromRole.shiftId,draggingFromRole.role,shift.id,role,name,occupant))renderHoraire();
+          });
+        }
+      } else {
+        dz.classList.add('empty');
+        const ph=document.createElement('span');ph.className='dz-ph';
+        ph.textContent=past?'—':'— glissez ici';dz.appendChild(ph);
+        if(!past){
+          dz.addEventListener('dragover',e=>{
+            if(!draggingVol||!volCoversShift(wk,draggingVol,shift)){e.dataTransfer.dropEffect='none';return;}
+            // Depuis le panneau : interdire si déjà sur ce shift
+            const alreadyHere=!isEmp(draggingVol)&&volAssignedToShift(wk,draggingVol,shift)
+              &&!(draggingFromRole&&draggingFromRole.shiftId===shift.id);
+            if(alreadyHere){e.dataTransfer.dropEffect='none';return;}
+            e.preventDefault();e.dataTransfer.dropEffect='move';dz.classList.add('dok');
+          });
+          dz.addEventListener('dragleave',()=>dz.classList.remove('dok'));
+          dz.addEventListener('drop',e=>{
+            dz.classList.remove('dok');const name=e.dataTransfer.getData('text/plain');
+            if(!name||!volCoversShift(wk,name,shift))return;
+            const alreadyHere=!isEmp(name)&&volAssignedToShift(wk,name,shift)
+              &&!(draggingFromRole&&draggingFromRole.shiftId===shift.id);
+            if(alreadyHere)return;
+            e.preventDefault();
+            // Si on vient d'un chip, libérer le slot source avant d'assigner
+            if(draggingFromRole){
+              setAssignNote(wk,draggingFromRole.shiftId,draggingFromRole.role,null);
+              setAssign(wk,draggingFromRole.shiftId,draggingFromRole.role,null);
+              deleteAssignment(wk,draggingFromRole.shiftId,draggingFromRole.role);
+            }
+            if(doAssign(wk,shift,role,name))renderHoraire();
+          });
+        }
+      }
+      tl.appendChild(dz);row.appendChild(tl);grid.appendChild(row);
+    });
+  });
+
+  const pct=totalReq?Math.round(totalFilled/totalReq*100):0;
+  document.getElementById('prog-fill').style.width=pct+'%';
+  document.getElementById('prog-lbl').textContent=`${totalFilled} / ${totalReq} rôles requis assignés (${pct}%)`;
+  // Closed day overlay — remove any previous before adding
+  const scrollDiv=document.querySelector('.h-scroll');
+  if(scrollDiv){
+    scrollDiv.style.position='relative';
+    const oldOverlay=scrollDiv.querySelector('.day-closed-overlay');
+    if(oldOverlay)oldOverlay.remove();
+    if(isClosed){
+      const overlay=document.createElement('div');
+      overlay.className='day-closed-overlay';
+      overlay.style.cssText='position:absolute;inset:0;background:rgba(247,245,242,.82);backdrop-filter:blur(2px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border-radius:var(--radius);z-index:10;pointer-events:all;cursor:default';
+      overlay.innerHTML='<div style="font-size:15px;font-weight:600;color:var(--text-2)">Journée fermée</div><div style="font-size:12px;color:var(--text-3)">Modifiez le statut avec le bouton ci-dessus</div>';
+      // Bloquer tous les événements souris/touch pour empêcher l'interaction avec la grille dessous
+      overlay.addEventListener('mousedown',e=>e.stopPropagation());
+      overlay.addEventListener('click',e=>e.stopPropagation());
+      overlay.addEventListener('dragover',e=>{e.preventDefault();e.stopPropagation();});
+      overlay.addEventListener('drop',e=>{e.preventDefault();e.stopPropagation();});
+      scrollDiv.appendChild(overlay);
+    }
+  }
+  buildCards(wk,shifts);
+}
+
+/* ══════════════════════════════════════════════
+   HOURS ACCOUNTING
+══════════════════════════════════════════════ */
+function volTotalAvailMins(wk,name){
+  const slots=((avail[wk]||{})[name]||{}).slots||{};
+  let count=0;for(const k of Object.keys(slots)){if(k.startsWith(curDay+'_'))count++;}return count*30;
+}
+function volAssignedMins(wk,name){
+  const shifts=SHIFTS[curDay]||[];let total=0;
+  shifts.forEach(sh=>{
+    const allR=[...(sh._slots||sh.roles),...(sh._optSlots||[])];
+    allR.forEach(role=>{
+      if(getAssign(wk,sh.id,role)!==name)return;
+      const ct=getAssignTimes(wk,sh.id,role);
+      if(ct){total+=ct.e-ct.s;}
+      else{const r=volDayRange(wk,name);const s=r?Math.max(r.startMins,sh.fromH*60):sh.fromH*60;const e=r?Math.min(r.endMins,sh.toH*60):sh.toH*60;if(e>s)total+=e-s;}
+    });
+  });return total;
+}
+function volRemainingMins(wk,name){return Math.max(0,volTotalAvailMins(wk,name)-volAssignedMins(wk,name));}
+function volAssignedToShift(wk,name,shift){
+  const allR=[...(shift._slots||shift.roles),...(shift._optSlots||[])];
+  return allR.some(role=>getAssign(wk,shift.id,role)===name);
+}
+function overlapMins(wk,name,shift){
+  const r=volDayRange(wk,name);if(!r)return null;
+  const s=Math.max(r.startMins,shift.fromH*60);const e=Math.min(r.endMins,shift.toH*60);
+  if(e<=s)return null;return{s,e};
+}
+
+function volWeekShiftCount(wk, name) {
+  // Nombre de shifts distincts assignés cette semaine, hors jours fermés
+  const wkClosed=closedDays[wk]||new Set();
+  const seen = new Set();
+  DAYS.forEach(day => {
+    if(wkClosed.has(day.id))return; // ignorer les jours fermés
+    (SHIFTS[day.id]||[]).forEach(sh => {
+      const allR = [...(sh._slots||sh.roles),...(sh._optSlots||[])];
+      if (allR.some(r => getAssign(wk,sh.id,r) === name)) seen.add(sh.id);
+    });
+  });
+  return seen.size;
+}
+
+function buildCards(wk,shifts){
+  const wkData=avail[wk]||{};
+  // Panneau bénévoles = zone de drop pour désassigner
+  const vp=document.getElementById('vol-cards');
+  vp.addEventListener('dragover',e=>{
+    if(draggingFromRole){e.preventDefault();e.dataTransfer.dropEffect='move';vp.style.outline='2px dashed var(--accent)';}
+  },{capture:false});
+  vp.addEventListener('dragleave',()=>{vp.style.outline='';});
+  vp.addEventListener('drop',e=>{
+    vp.style.outline='';
+    if(!draggingFromRole)return;
+    e.preventDefault();
+    const {shiftId,role,name}=draggingFromRole;
+    setAssign(wk,shiftId,role,null);
+    deleteAssignment(wk,shiftId,role);
+    draggingFromRole=null;draggingVol=null;
+    renderHoraire();
+  });
+  vp.innerHTML='';
+  const ep=document.getElementById('emp-cards');
+  ep.addEventListener('dragover',e=>{
+    if(draggingFromRole&&isEmp(draggingFromRole.name)){e.preventDefault();e.dataTransfer.dropEffect='move';ep.style.outline='2px dashed var(--amber)';}
+  });
+  ep.addEventListener('dragleave',()=>{ep.style.outline='';});
+  ep.addEventListener('drop',e=>{
+    ep.style.outline='';
+    if(!draggingFromRole||!isEmp(draggingFromRole.name))return;
+    e.preventDefault();
+    const {shiftId,role}=draggingFromRole;
+    setAssign(wk,shiftId,role,null);
+    deleteAssignment(wk,shiftId,role);
+    draggingFromRole=null;draggingVol=null;
+    renderHoraire();
+  });
+  ep.innerHTML='';
+  function makeCard(name,col,emp){
+    const remaining=emp?null:volRemainingMins(wk,name);
+    if(!emp&&remaining===0)return null;
+    const quota=emp?null:volQuota(wk,name);
+    const usedShifts=emp?0:volWeekShiftCount(wk,name);
+    const quotaFull=!emp&&quota!==99&&usedShifts>=quota;
+    const quotaOver=!emp&&quota!==99&&usedShifts>quota;
+    const card=document.createElement('div');card.className='vol-card'+(emp?' emp-card':'')+(quotaOver?' quota-over':'');
+    const isPast_=isPastDay();card.draggable=!isPast_;if(isPast_)card.style.cursor='default';
+    // Bordure rouge seulement si DÉPASSÉ (strictement > quota), neutre si atteint
+    const borderCol=quotaOver?'#DC2626':(col.fg+(emp?'':'60'));
+    card.style.background=col.bg;card.style.borderColor=borderCol;
+    const nm=document.createElement('div');nm.className='vc-name';nm.style.color=col.fg;
+    if(emp){nm.innerHTML=`<span class="emp-badge" style="color:${col.fg};margin-right:5px">EMP</span>${name}`;}
+    else nm.textContent=name;card.appendChild(nm);
+    const t=document.createElement('div');t.className='vc-time';t.style.color=col.fg;
+    if(emp){t.textContent='Plein shift';}
+    else{
+      const r=volDayRange(wk,name);
+      if(r){
+        const assigned=[];
+        (SHIFTS[curDay]||[]).forEach(sh=>{
+          [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(role=>{
+            if(getAssign(wk,sh.id,role)!==name)return;
+            const ct=getAssignTimes(wk,sh.id,role);
+            if(ct)assigned.push({s:ct.s,e:ct.e});
+            else{const ov=overlapMins(wk,name,sh);if(ov)assigned.push({s:ov.s,e:ov.e});}
+          });
+        });
+        assigned.sort((a,b)=>a.s-b.s);
+        const free=[];let cur=r.startMins;
+        assigned.forEach(({s,e})=>{if(s>cur)free.push({s:cur,e:s});cur=Math.max(cur,e);});
+        if(cur<r.endMins)free.push({s:cur,e:r.endMins});
+        t.innerHTML=free.length?free.map(f=>mStr(f.s)+' – '+mStr(f.e)).join(' &amp; '):(mStr(r.startMins)+' – '+mStr(r.endMins));
+      }
+    }
+    if(t.textContent)card.appendChild(t);
+    // Quota fraction display (bénévoles seulement)
+    if(!emp){
+      const qw=document.createElement('div');qw.className='vc-quota';
+      if(quota===99){
+        const frac=document.createElement('span');
+        frac.style.cssText='font-size:10px;font-family:var(--mono);font-weight:600;opacity:.7;color:'+col.fg;
+        frac.textContent=usedShifts>0?usedShifts+'/\u221e':'\u221e';
+        frac.title='Peu importe le nombre de shifts';
+        qw.appendChild(frac);
+      } else if(quota>0){
+        // Couleur du bénévole si normal ou atteint, rouge seulement si dépassé
+        const fracColor=quotaOver?'#DC2626':col.fg;
+        const frac=document.createElement('span');
+        frac.style.cssText='font-size:10px;font-family:var(--mono);font-weight:700;color:'+fracColor;
+        frac.textContent=usedShifts+'/'+quota;
+        frac.title=usedShifts+' shift'+(usedShifts>1?'s':'')+' assigné'+(usedShifts>1?'s':'')+' sur '+quota+' demandé'+(quota>1?'s':'');
+        qw.appendChild(frac);
+      }
+      if(qw.children.length)card.appendChild(qw);
+    }
+    card.addEventListener('dragstart',e=>{
+      draggingVol=name;e.dataTransfer.setData('text/plain',name);e.dataTransfer.effectAllowed='move';
+      setTimeout(()=>{card.classList.add('dragging');highlightDZs(wk,shifts);},0);
+    });
+    card.addEventListener('dragend',()=>{card.classList.remove('dragging');draggingVol=null;draggingFromRole=null;clearDZHighlights();document.getElementById('vol-cards').style.outline='';document.getElementById('emp-cards').style.outline='';});
+    return card;
+  }
+  const vols=Object.keys(wkData).filter(n=>!isEmp(n)&&Object.keys(wkData[n].slots||{}).some(k=>k.startsWith(curDay+'_')));
+  // Sort: 1) shifts restants + quota non atteint, 2) quota atteint (plein), 3) quota dépassé (rouge), 4) plus d'heures libres
+  function volSortPriority(name){
+    const q=volQuota(wk,name);
+    const used=volWeekShiftCount(wk,name);
+    const rem=volRemainingMins(wk,name);
+    if(rem===0)return 4;           // plus d'heures libres ce jour
+    if(q!==99&&used>q)return 3;   // quota dépassé (rouge)
+    if(q!==99&&used>=q)return 2;  // quota atteint, rien à assigner
+    return 1;                      // shifts restants disponibles
+  }
+  vols.sort((a,b)=>volSortPriority(a)-volSortPriority(b));
+  let anyV=false;
+  let lastPriority=0;
+  vols.forEach(name=>{
+    const card=makeCard(name,vcols[name]||VCOLS[0],false);
+    if(card){
+      const p=volSortPriority(name);
+      // Ajouter un séparateur visuel entre les groupes
+      if(anyV&&p!==lastPriority&&p>=2){
+        const sep=document.createElement('div');
+        sep.style.cssText='height:1px;background:var(--border-light);margin:2px 0;flex-shrink:0';
+        vp.appendChild(sep);
+      }
+      lastPriority=p;anyV=true;vp.appendChild(card);
+    }
+  });
+  if(!anyV)vp.innerHTML='<div class="no-avail" style="color:var(--green)">&#10003; Tous les bénévoles placés</div>';
+  let anyE=false;
+  directory.filter(p=>p.type==='emp').forEach(p=>{
+    const coverable=SHIFTS[curDay]?SHIFTS[curDay].filter(sh=>volCoversShift(wk,p.name,sh)):[];
+    const allPlaced=coverable.length&&coverable.every(sh=>[...(sh._slots||sh.roles),...(sh._optSlots||[])].some(r=>getAssign(wk,sh.id,r)===p.name));
+    if(allPlaced)return;
+    const card=makeCard(p.name,EMP_COL,true);if(card){anyE=true;ep.appendChild(card);}
+  });
+  if(!anyE)ep.innerHTML='<div class="no-avail" style="color:var(--green)">&#10003; Tous les employés placés</div>';
+}
+
+/* ── doSwap — échange deux bénévoles entre deux rôles ── */
+function doSwap(wk, shifts, fromShiftId, fromRole, toShiftId, toRole, incomingName, occupantName){
+  const toShift=shifts.find(s=>s.id===toShiftId);
+  const fromShift=shifts.find(s=>s.id===fromShiftId);
+  if(!toShift||!fromShift)return false;
+
+  // Calculer les temps du bénévole entrant dans le rôle cible
+  const inOv=isEmp(incomingName)?null:overlapMins(wk,incomingName,toShift);
+  const inT=isEmp(incomingName)?null:inOv;
+  // Calculer les temps de l'occupant dans le rôle source
+  const outOv=isEmp(occupantName)?null:overlapMins(wk,occupantName,fromShift);
+  const outT=isEmp(occupantName)?null:outOv;
+
+  // Retirer les deux assignations existantes (notes comprises)
+  setAssignNote(wk,fromShiftId,fromRole,null);
+  setAssignNote(wk,toShiftId,toRole,null);
+  setAssign(wk,fromShiftId,fromRole,null);
+  setAssign(wk,toShiftId,toRole,null);
+
+  // Placer incomingName dans toRole
+  setAssign(wk,toShiftId,toRole,incomingName);
+  if(!isEmp(incomingName)&&inT){setAssignTimes(wk,toShiftId,toRole,inT.s,inT.e);}
+  saveAssignment(wk,toShiftId,toRole,incomingName,isEmp(incomingName)?null:(inT?inT.s:null),isEmp(incomingName)?null:(inT?inT.e:null),null);
+
+  // Placer occupantName dans fromRole
+  setAssign(wk,fromShiftId,fromRole,occupantName);
+  if(!isEmp(occupantName)&&outT){setAssignTimes(wk,fromShiftId,fromRole,outT.s,outT.e);}
+  saveAssignment(wk,fromShiftId,fromRole,occupantName,isEmp(occupantName)?null:(outT?outT.s:null),isEmp(occupantName)?null:(outT?outT.e:null),null);
+
+  return true;
+}
+
+/* ── doAssign — avec persistance ── */
+function doAssign(wk,shift,role,name){
+  // Clear any existing note when reassigning
+  setAssignNote(wk,shift.id,role,null);
+  if(isEmp(name)){
+    setAssign(wk,shift.id,role,name);
+    saveAssignment(wk,shift.id,role,name,null,null,null);
+  } else {
+    if(volAssignedToShift(wk,name,shift)){alert(name+' est déjà assigné(e) à ce shift.');return false;}
+    const ov=overlapMins(wk,name,shift);
+    if(!ov){alert(name+' n\'est pas disponible sur ce shift.');return false;}
+    setAssign(wk,shift.id,role,name);setAssignTimes(wk,shift.id,role,ov.s,ov.e);
+    saveAssignment(wk,shift.id,role,name,ov.s,ov.e,null);
+  }
+  return true;
+}
+
+/* ══════════════════════════════════════════════
+   TIME POPOVER
+══════════════════════════════════════════════ */
+function openTP(e,name,sid,role,shift,wk){
+  tpCtx={name,sid,role,shift,wk};
+  const emp=isEmp(name);
+  document.getElementById('tp-name').textContent=name+(emp?' (employé)':'');
+  document.getElementById('tp-role').textContent=role+' · '+shift.label;
+  const ct=getAssignTimes(wk,sid,role);
+  const rng=emp?null:volDayRange(wk,name);
+  const day=DAYS.find(d=>d.id===curDay);
+  const startVal=ct?ct.s:(rng?Math.max(rng.startMins,shift.fromH*60):shift.fromH*60);
+  const endVal=ct?ct.e:(rng?Math.min(rng.endMins,shift.toH*60):shift.toH*60);
+  const containers=document.querySelectorAll('.tp-fields > div');
+  const refreshEndSelect=(newMin)=>{
+    containers[1].innerHTML='<label>Fin</label>';
+    const currentEnd=parseInt(document.getElementById('tp-end')?.value||endVal);
+    const safeEnd=currentEnd<=newMin?newMin+30:currentEnd;
+    const eSel=buildTimeSelect(day,'to',safeEnd,newMin);eSel.id='tp-end';containers[1].appendChild(eSel);
+  };
+  containers[0].innerHTML='<label>Début</label>';
+  const sSel=buildTimeSelect(day,'from',startVal);sSel.id='tp-start';containers[0].appendChild(sSel);
+  refreshEndSelect(startVal);
+  sSel.addEventListener('change',ev=>refreshEndSelect(parseInt(ev.target.value)));
+  // Load existing note
+  document.getElementById('tp-note').value=getAssignNote(wk,sid,role)||'';
+  const pop=document.getElementById('time-pop');pop.classList.add('open');
+  const popW=268,popH=280;
+  let left=e.clientX+10,top=e.clientY-10;
+  if(left+popW>window.innerWidth-8)left=e.clientX-popW-10;
+  if(top+popH>window.innerHeight-8)top=window.innerHeight-popH-8;
+  pop.style.left=Math.max(8,left)+'px';pop.style.top=Math.max(8,top)+'px';
+}
+function closeTP(){
+  if(!tpCtx){document.getElementById('time-pop').classList.remove('open');return;}
+  // Auto-save à la fermeture
+  const s=parseInt(document.getElementById('tp-start')?.value);
+  const e=parseInt(document.getElementById('tp-end')?.value);
+  if(!isNaN(s)&&!isNaN(e)&&e>s){
+    const note=document.getElementById('tp-note').value.trim()||null;
+    setAssignTimes(tpCtx.wk,tpCtx.sid,tpCtx.role,s,e);
+    setAssignNote(tpCtx.wk,tpCtx.sid,tpCtx.role,note);
+    saveAssignment(tpCtx.wk,tpCtx.sid,tpCtx.role,tpCtx.name,s,e,note);
+    document.getElementById('time-pop').classList.remove('open');
+    tpCtx=null;
+    renderHoraire();
+  } else {
+    document.getElementById('time-pop').classList.remove('open');
+    tpCtx=null;
+  }
+}
+function saveTP(){closeTP();} // garde la compatibilité si appelé ailleurs
+function showTPSaved(){
+  const badge=document.getElementById('tp-saved-badge');
+  if(!badge)return;
+  badge.style.opacity='1';
+  clearTimeout(showTPSaved._t);
+  showTPSaved._t=setTimeout(()=>badge.style.opacity='0',1800);
+}
+function removeAssignTP(){
+  if(!tpCtx)return;
+  setAssign(tpCtx.wk,tpCtx.sid,tpCtx.role,null);
+  deleteAssignment(tpCtx.wk,tpCtx.sid,tpCtx.role);
+  document.getElementById('time-pop').classList.remove('open');
+  tpCtx=null;
+  renderHoraire();
+}
+document.addEventListener('click',e=>{
+  const tp=document.getElementById('time-pop');
+  if(tp.classList.contains('open')&&!tp.contains(e.target)){
+    closeTP();
+  }
+},true);
+
+/* ══════════════════════════════════════════════
+   RÉPERTOIRE
+══════════════════════════════════════════════ */
+function renderDir(){
+  const tbody=document.getElementById('dir-tbody');tbody.innerHTML='';
+  directory.forEach(p=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td><strong>${p.name}</strong></td>
+      <td><a href="mailto:${p.email}" style="color:var(--text);font-size:13px">${p.email||'—'}</a></td>
+      <td><span class="type-badge ${p.type}">${p.type==='vol'?'Bénévole':'Employé'}</span></td>
+      <td><div class="role-tags">${p.roles.filter(Boolean).map(r=>`<span class="role-tag">${roleLabel(r)}</span>`).join('')||'<span style="color:var(--text-3);font-size:12px">—</span>'}</div></td>
+      <td style="white-space:nowrap;text-align:right">
+        <button class="btn btn-outlined btn-icon" title="Modifier" onclick="openPersonModal(${p.id})"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M7.3335 2.66665H2.66683C2.31321 2.66665 1.97407 2.80713 1.72402 3.05718C1.47397 3.30723 1.3335 3.64637 1.3335 3.99999V13.3333C1.3335 13.6869 1.47397 14.0261 1.72402 14.2761C1.97407 14.5262 2.31321 14.6667 2.66683 14.6667H12.0002C12.3538 14.6667 12.6929 14.5262 12.943 14.2761C13.193 14.0261 13.3335 13.6869 13.3335 13.3333V8.66666M12.3335 1.66665C12.5987 1.40144 12.9584 1.25244 13.3335 1.25244C13.7086 1.25244 14.0683 1.40144 14.3335 1.66665C14.5987 1.93187 14.7477 2.29158 14.7477 2.66665C14.7477 3.04173 14.5987 3.40144 14.3335 3.66665L8.00016 9.99999L5.3335 10.6667L6.00016 7.99999L12.3335 1.66665Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('dir-count').textContent=directory.length+' personne'+(directory.length!==1?'s':'');
+}
+
+function fillRoleSelects(vals){
+  const ids=['pm-r1','pm-r2','pm-r3'];
+  // Options = noms uniques d'affichage (sans suffixe #)
+  const uniqueRoles=[...new Set(ALL_ROLES.map(roleDisplayLabel))];
+  ids.forEach((id,i)=>{
+    const sel=document.getElementById(id);
+    const myVal=vals?vals[i]||'':'';
+    const otherVals=ids.filter((_,j)=>j!==i).map((_,k)=>vals?vals[[0,1,2].filter(x=>x!==i)[k]]||'':'').filter(Boolean);
+    while(sel.options.length>1)sel.remove(1);
+    uniqueRoles.forEach(role=>{
+      const o=document.createElement('option');
+      o.value=role;o.textContent=role;
+      if(otherVals.includes(role)){o.disabled=true;o.style.color='#A8A29E';}
+      sel.appendChild(o);
+    });
+    sel.value=myVal;
+  });
+}
+function initRoleSelectListeners(){
+  const ids=['pm-r1','pm-r2','pm-r3'];
+  ids.forEach(id=>{document.getElementById(id).addEventListener('change',()=>{const cur=ids.map(i=>document.getElementById(i).value);fillRoleSelects(cur);});});
+}
+async function openPersonModal(id){
+  // Recharger depuis Supabase pour avoir les ids à jour
+  await loadPeople();
+  pmCtx=id||null;
+  const p=id?directory.find(x=>x.id===id):null;
+  document.getElementById('pm-title').textContent=p?'Modifier — '+p.name:'Ajouter une personne';
+  document.getElementById('pm-name').value=p?p.name:'';
+  document.getElementById('pm-email').value=p?p.email:'';
+  document.getElementById('pm-type').value=p?p.type:'vol';
+  document.getElementById('pm-pin').value=p?p.pin||'':'';
+  // Cacher le PIN pour les employés (pas pertinent)
+  document.getElementById('pm-pin-field').style.display=(p&&p.type==='emp')?'none':'block';
+  document.getElementById('pm-type').onchange=function(){document.getElementById('pm-pin-field').style.display=this.value==='emp'?'none':'block';};
+  const vals=[(p&&p.roles[0])||'',(p&&p.roles[1])||'',(p&&p.roles[2])||''];
+  ['pm-r1','pm-r2','pm-r3'].forEach(id=>{document.getElementById(id).innerHTML='<option value="">— Aucun —</option>';});
+  fillRoleSelects(vals);initRoleSelectListeners();
+  document.getElementById('pm-delete').style.display=p?'inline-flex':'none';
+  document.getElementById('person-overlay').classList.add('open');
+}
+function closePersonModal(){document.getElementById('person-overlay').classList.remove('open');pmCtx=null;}
+async function deletePersonFromModal(){
+  if(!pmCtx)return;if(!confirm('Supprimer cette personne ?'))return;
+  await deletePerson_db(pmCtx);
+  directory=directory.filter(p=>p.id!==pmCtx);
+  rebuildVcols();populateVolSelect();renderDir();closePersonModal();
+}
+async function savePerson(){
+  const name=document.getElementById('pm-name').value.trim();
+  if(!name){alert('Le nom est requis.');return}
+  const email=document.getElementById('pm-email').value.trim();
+  const type=document.getElementById('pm-type').value;
+  const roles=[document.getElementById('pm-r1').value,document.getElementById('pm-r2').value,document.getElementById('pm-r3').value];
+  const pinVal=document.getElementById('pm-pin').value.trim();
+  if(type==='vol'&&pinVal&&!/^[0-9]{4}$/.test(pinVal)){alert('Le PIN doit contenir exactement 4 chiffres.');return;}
+  const personData={id:pmCtx||null,name,email,type,roles,pin:type==='vol'?pinVal:''};
+  if(pmCtx){
+    // Modification — mettre à jour localement immédiatement
+    const p=directory.find(x=>x.id===pmCtx);
+    if(p){p.name=name;p.email=email;p.type=type;p.roles=roles;p.pin=personData.pin;}
+  } else {
+    // Création — ajouter localement
+    directory.push(personData);
+  }
+  rebuildVcols();populateVolSelect();renderDir();
+  closePersonModal();
+  // Persister avec l'id correct, puis resync
+  await upsertPerson(personData);
+  await loadPeople();
+}
+
+/* ══════════════════════════════════════════════
+   GMAIL NOTIFICATION
+══════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════
+   FINALISER MODAL
+══════════════════════════════════════════════ */
+function buildScheduleSummary(wk){
+  // Returns {byPerson, lines} for email body and preview
+  const byPerson={};
+  const savedDay=curDay;
+  DAYS.forEach(day=>{
+    if((closedDays[wk]||new Set()).has(day.id))return;
+    curDay=day.id;
+    (SHIFTS[day.id]||[]).forEach(shift=>{
+      [...(shift._slots||shift.roles),...(shift._optSlots||[])].forEach(role=>{
+        const name=getAssign(wk,shift.id,role);if(!name)return;
+        if(!byPerson[name])byPerson[name]=[];
+        const ct=getAssignTimes(wk,shift.id,role);
+        const rng=isEmp(name)?null:volDayRange(wk,name);
+        const sm=ct?ct.s:(rng?Math.max(rng.startMins,shift.fromH*60):shift.fromH*60);
+        const em=ct?ct.e:(rng?Math.min(rng.endMins,shift.toH*60):shift.toH*60);
+        const note=getAssignNote(wk,shift.id,role);
+        byPerson[name].push({day:day.label,role:roleLabel(role),sm,em,note});
+      });
+    });
+  });
+  curDay=savedDay;
+  return byPerson;
+}
+
+function openFinaliser(){
+  const wk=wkey(oMon);
+  document.getElementById('fin-week-lbl').textContent='— '+wlabel(oMon);
+  renderFinPreview(wk);
+  renderFinEmail(wk);
+  document.getElementById('finaliser-overlay').classList.add('open');
+}
+function closeFinaliser(){document.getElementById('finaliser-overlay').classList.remove('open');}
+
+function renderFinPreview(wk){
+  const el=document.getElementById('fin-preview');el.innerHTML='';
+  const wkClosed=closedDays[wk]||new Set();
+  DAYS.forEach(day=>{
+    const dayDiv=document.createElement('div');dayDiv.style.marginBottom='14px';
+    const title=document.createElement('div');
+    title.style.cssText='font-weight:700;font-size:13px;color:var(--accent);margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--border)';
+    if(wkClosed.has(day.id)){
+      title.textContent='☔ '+day.label+' — FERMÉ';title.style.color='#DC2626';
+      dayDiv.appendChild(title);el.appendChild(dayDiv);return;
+    }
+    title.textContent=day.label+' '+fmt(dayDate(oMon,day.dow));
+    dayDiv.appendChild(title);
+    const savedDay=curDay;curDay=day.id;
+    (SHIFTS[day.id]||[]).forEach(shift=>{
+      const shiftLbl=document.createElement('div');
+      shiftLbl.style.cssText='font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin:6px 0 3px';
+      shiftLbl.textContent=shift.label+' — '+mStr(shift.fromH*60)+' – '+mStr(shift.toH*60);
+      dayDiv.appendChild(shiftLbl);
+      [...(shift._slots||shift.roles),...(shift._optSlots||[])].forEach(role=>{
+        const name=getAssign(wk,shift.id,role);
+        const note=name?getAssignNote(wk,shift.id,role):'';
+        const r=document.createElement('div');r.style.cssText='display:flex;gap:6px;padding:2px 0;font-size:11px';
+        const rLabel=document.createElement('span');rLabel.style.cssText='color:var(--text-3);min-width:130px;flex-shrink:0';rLabel.textContent=roleLabel(role);
+        const rName=document.createElement('span');rName.style.color=name?(isEmp(name)?'#9A3412':'var(--text)'):'var(--text-3)';
+        rName.textContent=name||'—';
+        r.appendChild(rLabel);r.appendChild(rName);
+        if(note){const rNote=document.createElement('span');rNote.style.cssText='color:var(--text-3);font-style:italic';rNote.textContent='↳ '+note;r.appendChild(rNote);}
+        dayDiv.appendChild(r);
+      });
+    });
+    curDay=savedDay;
+    el.appendChild(dayDiv);
+  });
+}
+
+function renderFinEmail(wk){
+  const byPerson=buildScheduleSummary(wk);
+  const names=Object.keys(byPerson);
+  const allEmails=[...new Set(names.map(n=>{const p=getPerson(n);return p&&p.email?p.email:null;}).filter(Boolean))];
+  document.getElementById('fin-email-to').textContent=allEmails.length
+    ?`BCC : ${allEmails.join(', ')}`
+    :'Aucun courriel enregistré dans le répertoire';
+  // Message générique — l'horaire est en pièce jointe PDF
+  const wkClosed=closedDays[wk]||new Set();
+  const closedList=DAYS.filter(d=>wkClosed.has(d.id)).map(d=>d.label);
+  let body=`Bonjour à tous,
+
+Vous trouverez en pièce jointe l'horaire des bénévoles pour la semaine du ${wlabel(oMon)}.`;
+  if(closedList.length){
+    body+=`\n\nNote : le café sera fermé le${closedList.length>1?'s':''} ${closedList.join(' et ')}.`;
+  }
+  body+=`
+
+Merci pour votre implication !
+Bonne semaine,
+L'équipe organisatrice`;
+  document.getElementById('fin-email-body').value=body;
+}
+
+function sendOutlook(){
+  const wk=wkey(oMon);
+  const byPerson=buildScheduleSummary(wk);
+  const names=Object.keys(byPerson);
+  const allEmails=[...new Set(names.map(n=>{const p=getPerson(n);return p&&p.email?p.email:null;}).filter(Boolean))];
+  const subject=encodeURIComponent(`Horaire bénévoles — ${wlabel(oMon)}`);
+  const body=encodeURIComponent(document.getElementById('fin-email-body').value);
+  const gmailUrl=`https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}&bcc=${encodeURIComponent(allEmails.join(','))}`;
+  // Ouvrir Gmail en premier (dans le gestionnaire de clic direct) pour éviter le bloqueur Safari
+  window.open(gmailUrl,'_blank');
+  // Puis télécharger le PDF
+  exportPdfTable();
+}
+
+/* ══════════════════════════════════════════════
+   AUTO-ASSIGN
+══════════════════════════════════════════════ */
+function volDayRangeFor(wk,name,dayId){
+  const slots=((avail[wk]||{})[name]||{}).slots||{};
+  const day=DAYS.find(d=>d.id===dayId);if(!day)return null;
+  const openS=Math.round((day.oH*60+day.oM-GSH*60)/30);
+  const closeS=Math.round((day.cH*60+day.cM-GSH*60)/30);
+  let first=null,last=null;
+  for(let s=openS;s<closeS;s++){if(slots[skey(dayId,s)]){if(first===null)first=s;last=s+1;}}
+  if(first===null)return null;
+  return{startMins:GSH*60+first*30,endMins:GSH*60+last*30};
+}
+function overlapFor(wk,name,shift,dayId){
+  const r=volDayRangeFor(wk,name,dayId);if(!r)return null;
+  const s=Math.max(r.startMins,shift.fromH*60);const e=Math.min(r.endMins,shift.toH*60);
+  if(e<=s)return null;return{s,e};
+}
+function volCoversShiftFor(wk,name,shift,dayId){
+  if(isEmp(name))return true;
+  const r=volDayRangeFor(wk,name,dayId);
+  return r&&r.startMins<shift.toH*60&&r.endMins>shift.fromH*60;
+}
+
+/* ── Helpers quota ── */
+function volQuota(wk, name) {
+  // 99 = peu importe (traité comme Infinity), 0 = aucun
+  const entry = (avail[wk]||{})[name];
+  if (!entry) return 99;
+  return entry.quota !== undefined ? entry.quota : 99;
+}
+function volShiftsAssignedThisWeek(wk, name) {
+  // Compte le nombre de shifts distincts où le bénévole est assigné cette semaine
+  const shiftIds = new Set();
+  DAYS.forEach(day => {
+    (SHIFTS[day.id]||[]).forEach(sh => {
+      const allR = [...(sh._slots||sh.roles),...(sh._optSlots||[])];
+      if (allR.some(r => getAssign(wk,sh.id,r) === name)) shiftIds.add(sh.id);
+    });
+  });
+  return shiftIds.size;
+}
+function volQuotaReached(wk, name, tempShiftCounts) {
+  const q = volQuota(wk, name);
+  if (q === 99) return false; // peu importe
+  const already = (tempShiftCounts[name] || 0);
+  return already >= q;
+}
+
+async function openAutoAssign(){
+  const wk=wkey(oMon);
+  if(sb){await loadPeople();await loadAssignments(wk);}
+
+  const wkData=avail[wk]||{};
+  const today=new Date();today.setHours(0,0,0,0);
+
+  // ── Comptage shifts déjà assignés cette semaine (hors jours fermés) ──
+  const weekShiftCounts={};
+  const weekShiftSeen=new Set();
+  // name -> Set<shiftId> par jour
+  const assignedShifts={}; // name+'|'+dayId -> Set<shiftId>
+  DAYS.forEach(day=>{
+    if((closedDays[wk]||new Set()).has(day.id))return; // ignorer les jours fermés
+    (SHIFTS[day.id]||[]).forEach(sh=>{
+      [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(role=>{
+        const ex=getAssign(wk,sh.id,role);
+        if(ex&&!isEmp(ex)){
+          const wkey_=ex+'|'+sh.id;
+          if(!weekShiftSeen.has(wkey_)){weekShiftSeen.add(wkey_);weekShiftCounts[ex]=(weekShiftCounts[ex]||0)+1;}
+          const dk=ex+'|'+day.id;
+          if(!assignedShifts[dk])assignedShifts[dk]=new Set();
+          assignedShifts[dk].add(sh.id);
+        }
+      });
+    });
+  });
+
+  function quotaReached(name){
+    const q=volQuota(wk,name);
+    return q!==99&&(weekShiftCounts[name]||0)>=q;
+  }
+  function alreadyOnShift(name,dayId,shiftId){
+    const dk=name+'|'+dayId;
+    return !!(assignedShifts[dk]&&assignedShifts[dk].has(shiftId));
+  }
+  function markAssigned(name,dayId,shiftId){
+    const dk=name+'|'+dayId;
+    if(!assignedShifts[dk])assignedShifts[dk]=new Set();
+    assignedShifts[dk].add(shiftId);
+    const wk_=name+'|'+shiftId;
+    if(!weekShiftSeen.has(wk_)){weekShiftSeen.add(wk_);weekShiftCounts[name]=(weekShiftCounts[name]||0)+1;}
+  }
+
+  // ── Helpers de score ──
+  function prefScore(name,role){
+    const p=getPerson(name);if(!p||!p.roles)return 0;
+    const dr=roleDisplayLabel(role);
+    const idx=p.roles.findIndex(r=>r&&(r===role||r===dr||roleDisplayLabel(r)===dr));
+    if(idx===0)return 3;if(idx===1)return 2;if(idx===2)return 1;return 0;
+  }
+  function versatility(name){const p=getPerson(name);return p?p.roles.filter(Boolean).length:0;}
+  function coverRatio(name,sh,dayId){
+    const ov=overlapFor(wk,name,sh,dayId);if(!ov)return 0;
+    return(ov.e-ov.s)/((sh.toH-sh.fromH)*60);
+  }
+  function compare(a,b,role,sh,dayId){
+    const pa=prefScore(a,role),pb=prefScore(b,role);if(pa!==pb)return pa-pb;
+    const va=versatility(a),vb=versatility(b);if(va!==vb)return vb-va;
+    return coverRatio(a,sh,dayId)-coverRatio(b,sh,dayId);
+  }
+
+  // ── Construire la queue de tous les rôles vides pour toute la semaine ──
+  const rolesQueue=[];
+  DAYS.forEach(day=>{
+    const dayDate_=dayDate(oMon,day.dow);
+    if(dayDate_<today)return; // ignorer les jours passés
+    const closed=(closedDays[wk]||new Set()).has(day.id);
+    if(closed)return;
+    (SHIFTS[day.id]||[]).forEach(sh=>{
+      [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(role=>{
+        if(!getAssign(wk,sh.id,role))
+          rolesQueue.push({sh,role,dayId:day.id,isOpt:(sh._optSlots||sh.optional||[]).includes(role)});
+      });
+    });
+  });
+
+  // Requis avant optionnels
+  rolesQueue.sort((a,b)=>a.isOpt===b.isOpt?0:a.isOpt?1:-1);
+
+  const toSave=[];
+
+  rolesQueue.forEach(({sh,role,dayId,isOpt})=>{
+    if(getAssign(wk,sh.id,role))return;
+
+    // Bénévoles disponibles ce jour, quota non atteint, pas déjà dans ce shift
+    const candidates=Object.keys(wkData).filter(n=>
+      !isEmp(n)&&
+      !quotaReached(n)&&
+      !alreadyOnShift(n,dayId,sh.id)&&
+      volCoversShiftFor(wk,n,sh,dayId)
+    );
+    if(!candidates.length)return;
+
+    const best=candidates.reduce((b,c)=>compare(c,b,role,sh,dayId)>0?c:b);
+    if(prefScore(best,role)===0)return; // règle 5 : pas d'assignation sans préférence
+
+    const ov=overlapFor(wk,best,sh,dayId);if(!ov)return;
+    setAssign(wk,sh.id,role,best);
+    setAssignTimes(wk,sh.id,role,ov.s,ov.e);
+    setAssignNote(wk,sh.id,role,null);
+    markAssigned(best,dayId,sh.id);
+    toSave.push({wk,shiftId:sh.id,role,name:best,s:ov.s,e:ov.e});
+  });
+
+  for(const a of toSave)await saveAssignment(a.wk,a.shiftId,a.role,a.name,a.s,a.e);
+  renderHoraire();
+
+  // Feedback
+  const n=toSave.length;
+  if(n>0){
+    setSyncBadge('o-sync-badge','saved',`✓ ${n} assignation${n>1?'s':''} ajoutée${n>1?'s':''}`);
+    setTimeout(()=>setSyncBadge('o-sync-badge','saved',''),3500);
+  } else {
+    setSyncBadge('o-sync-badge','saved','✓ Horaire déjà optimisé');
+    setTimeout(()=>setSyncBadge('o-sync-badge','saved',''),3500);
+  }
+}
+
+/* ══════════════════════════════════════════════
+   EXPORT PDF — TABLEAU SIMPLE
+══════════════════════════════════════════════ */
+// openPdfModal replaced by openFinaliser
+
+function exportPdfTable(){
+  const wk = wkey(oMon);
+  const wkClosed = closedDays[wk] || new Set();
+  const { jsPDF } = window.jspdf;
+  // Paysage lettre
+  const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'letter' });
+  const pageW = 279.4, pageH = 215.9;
+  const margin = 14;
+  // Couleur primaire de l'app
+  const C = {
+    accent:'#6FA39A',   // --accent-dark
+    accentDark:'#4E877E',
+    accentLight:'#EEF5F4',
+    text:'#1C1917', text2:'#57534E', text3:'#A8A29E',
+    bg:'#F7F5F2', surface:'#FFFFFF', border:'#E2DDD8',
+    green:'#16A34A', greenLight:'#F0FDF4',
+    red:'#DC2626', redLight:'#FEF2F2',
+    amber:'#92400E', amberLight:'#FFF7ED',
+    headerBg:'#EEF5F4'
+  };
+  function hexToRgb(hex){ const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return[r,g,b]; }
+  function setFill(hex){ doc.setFillColor(...hexToRgb(hex)); }
+  function setDraw(hex){ doc.setDrawColor(...hexToRgb(hex)); }
+  function setTextColor(hex){ doc.setTextColor(...hexToRgb(hex)); }
+
+  // Largeurs colonnes (paysage: ~251mm utilisable)
+  const usable = pageW - margin*2;
+  const cRole = 44, cName = 60, cTime = 32;
+  const cNote = usable - cRole - cName - cTime; // reste pour la note (~115mm)
+
+  let y = margin;
+
+  // ── En-tête de page (bandeau coloré) ──
+  function drawPageHeader(){
+    setFill(C.accent); doc.rect(0,0,pageW,11,'F');
+    doc.setFont('helvetica','bold'); doc.setFontSize(12);
+    setTextColor('#FFFFFF');
+    doc.text('Terrasse Café — Horaire des bénévoles', margin, 7.5);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9);
+    doc.text(wlabel(oMon), pageW - margin, 7.5, {align:'right'});
+  }
+  drawPageHeader();
+  y = 20;
+
+  // ── En-têtes de colonnes du tableau ──
+  function drawColHeaders(){
+    setFill(C.accentLight); setDraw(C.accent);
+    doc.rect(margin, y, usable, 6, 'FD');
+    doc.setFont('helvetica','bold'); doc.setFontSize(7);
+    setTextColor(C.accent);
+    doc.text('RÔLE',              margin+3,           y+4.2);
+    doc.text('BÉNÉVOLE / EMPLOYÉ',margin+cRole+3,     y+4.2);
+    doc.text('HEURES',            margin+cRole+cName+3, y+4.2);
+    doc.text('NOTE',              margin+cRole+cName+cTime+3, y+4.2);
+    y += 6;
+  }
+
+  const usedDays = DAYS;
+  usedDays.forEach((day, di) => {
+    const shifts = SHIFTS[day.id] || [];
+    const isClosed = wkClosed.has(day.id);
+
+    // Collecter les lignes de ce jour
+    const rows = [];
+    shifts.forEach(shift => {
+      const allRoles = [...(shift._slots||shift.roles), ...(shift._optSlots||[])];
+      allRoles.forEach(role => {
+        const isOpt = (shift._optSlots||shift.optional||[]).includes(role);
+        const name = getAssign(wk, shift.id, role);
+        const ct = name ? getAssignTimes(wk, shift.id, role) : null;
+        const rng = (name && !isEmp(name)) ? (()=>{
+          const savedDay=curDay; curDay=day.id;
+          const r=volDayRange(wk,name); curDay=savedDay; return r;
+        })() : null;
+        let timeStr = '';
+        if(name){
+          if(isEmp(name)){ timeStr=mStr(shift.fromH*60)+' – '+mStr(shift.toH*60); }
+          else if(ct){ timeStr=mStr(ct.s)+' – '+mStr(ct.e); }
+          else if(rng){ timeStr=mStr(Math.max(rng.startMins,shift.fromH*60))+' – '+mStr(Math.min(rng.endMins,shift.toH*60)); }
+        }
+        const noteVal = name ? (getAssignNote(wk, shift.id, role)||'') : '';
+        rows.push({shift, role, name:name||'', timeStr, isOpt, note:noteVal});
+      });
+    });
+
+    const dayHeaderH = 9;
+    const shiftBandH = 5;
+    const colHeaderH = 6;
+    // Estimation hauteur bloc jour (utilise rowH min pour l'estimation)
+    const estRowH = 6.5;
+    const estH = dayHeaderH + colHeaderH + rows.length * estRowH + shifts.length * shiftBandH + 6;
+    if(y + estH > pageH - margin - 8 && di > 0){
+      doc.addPage(); drawPageHeader(); y = 20;
+    }
+
+    // ── Bandeau jour ──
+    const dayBg = isClosed ? C.redLight : C.headerBg;
+    const dayBorder = isClosed ? C.red : C.accent;
+    const dayTextCol = isClosed ? C.red : C.accentDark;
+    setFill(dayBg); setDraw(dayBorder);
+    doc.roundedRect(margin, y, usable, dayHeaderH, 2, 2, 'FD');
+    doc.setFont('helvetica','bold'); doc.setFontSize(10);
+    setTextColor(dayTextCol);
+    doc.text((isClosed?'☔ ':'')+day.label.toUpperCase()+(isClosed?' — FERMÉ':''), margin+4, y+6);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8);
+    setTextColor(C.text3);
+    doc.text(fmt(dayDate(oMon,day.dow)), pageW-margin-3, y+6, {align:'right'});
+    y += dayHeaderH + 2;
+
+    if(isClosed){ y += 4; return; }
+
+    // En-têtes colonnes
+    drawColHeaders();
+
+    let lastShiftId = null;
+    rows.forEach((row, ri) => {
+      // ── Sous-bandeau shift ──
+      if(row.shift.id !== lastShiftId){
+        lastShiftId = row.shift.id;
+        if(ri > 0) y += 1;
+        if(y + shiftBandH + 6.5 > pageH - margin - 8){ doc.addPage(); drawPageHeader(); y=20; drawColHeaders(); }
+        setFill('#ECEAE7'); setDraw(C.border);
+        doc.rect(margin, y, usable, shiftBandH, 'FD');
+        doc.setFont('helvetica','bold'); doc.setFontSize(7);
+        setTextColor(C.text2);
+        doc.text(
+          row.shift.label.toUpperCase()+' — '+mStr(row.shift.fromH*60)+' – '+mStr(row.shift.toH*60),
+          margin+3, y+3.6
+        );
+        y += shiftBandH;
+      }
+
+      // Calculer la hauteur de la ligne selon le contenu de la note
+      const noteLines = row.note
+        ? doc.splitTextToSize(row.note, cNote - 7)
+        : [];
+      const lineH = 4.2; // hauteur d'une ligne de note
+      const minRowH = 6.5;
+      const dynRowH = Math.max(minRowH, noteLines.length * lineH + 2.5);
+
+      if(y + dynRowH > pageH - margin - 8){ doc.addPage(); drawPageHeader(); y=20; drawColHeaders(); }
+
+      // Fond de ligne alternée
+      setFill(ri%2===0?'#FAFAF9':C.surface); setDraw(C.border);
+      doc.rect(margin, y, usable, dynRowH, 'FD');
+
+      // Séparateurs verticaux de colonnes
+      setDraw(C.border);
+      [cRole, cRole+cName, cRole+cName+cTime].forEach(cx=>{
+        doc.line(margin+cx, y, margin+cx, y+dynRowH);
+      });
+
+      // Centre vertical des cellules courtes
+      const midY = y + dynRowH/2 + 1.5;
+
+      // Col 1 : Rôle
+      doc.setFont('helvetica', row.isOpt?'italic':'normal');
+      doc.setFontSize(7.5);
+      setTextColor(row.isOpt?C.text3:C.text2);
+      const roleText=(row.isOpt?'★ ':'')+roleLabel(row.role);
+      doc.text(doc.splitTextToSize(roleText, cRole-5)[0], margin+3, midY);
+
+      if(row.name){
+        const emp=isEmp(row.name);
+
+        // Col 2 : Nom
+        setTextColor(emp?C.amber:C.text);
+        doc.setFont('helvetica', emp?'bold':'normal');
+        doc.setFontSize(8);
+        doc.text(emp?'▪ '+row.name:row.name, margin+cRole+3, midY);
+
+        // Col 3 : Heures
+        doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
+        setTextColor(C.text3);
+        doc.text(row.timeStr, margin+cRole+cName+3, midY);
+
+        // Col 4 : Note avec wrapping
+        if(noteLines.length){
+          doc.setFont('helvetica','italic'); doc.setFontSize(7);
+          setTextColor(C.text2);
+          // Centrer verticalement le bloc de lignes dans la cellule
+          const blockH = noteLines.length * lineH;
+          const noteStartY = y + (dynRowH - blockH)/2 + lineH - 1;
+          noteLines.forEach((line, li)=>{
+            doc.text(line, margin+cRole+cName+cTime+3, noteStartY + li*lineH);
+          });
+        }
+      } else {
+        // Non assigné
+        doc.setFont('helvetica','italic'); doc.setFontSize(7.5);
+        setTextColor(C.text3);
+        doc.text('— non assigné', margin+cRole+3, midY);
+      }
+      y += dynRowH;
+    });
+    y += 9;
+  });
+
+  // ── Pied de page sur chaque page ──
+  const totalPages = doc.getNumberOfPages();
+  for(let p=1; p<=totalPages; p++){
+    doc.setPage(p);
+    setFill(C.border); doc.rect(0, pageH-9, pageW, 9, 'F');
+    doc.setFont('helvetica','normal'); doc.setFontSize(7);
+    setTextColor(C.text3);
+    doc.text('Terrasse Café • Généré le '+new Date().toLocaleDateString('fr-CA'), margin, pageH-3.5);
+    doc.text('Page '+p+' / '+totalPages, pageW-margin, pageH-3.5, {align:'right'});
+  }
+
+  const filename='horaire-cafe-'+wkey(oMon)+'.pdf';
+  doc.save(filename);
+  closeFinaliser();
+}
+
+/* ══════════════════════════════════════════════
+   CONFIRMER L'HORAIRE
+══════════════════════════════════════════════ */
+
+
+/* ══════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════
+   DONNÉES FICTIVES — MODE TEST (?mode=test)
+══════════════════════════════════════════════ */
+function loadTestData() {
+  // ── Répertoire ──
+  directory = [
+    {id:1, name:'Alice Tremblay',   email:'alice@exemple.com',  type:'vol', roles:['Caissier','Barista',''],           pin:'1234'},
+    {id:2, name:'Bruno Gagnon',     email:'bruno@exemple.com',  type:'vol', roles:['Pizzaiolo','Cuisinier',''],          pin:'2222'},
+    {id:3, name:'Camille Leblanc',  email:'camille@exemple.com',type:'vol', roles:['Barista','Mise en place',''],        pin:'3333'},
+    {id:4, name:'David Côté',       email:'david@exemple.com',  type:'vol', roles:['Busboy / Busgirl','Préposé vaisselle',''], pin:''},
+    {id:5, name:'Émilie Fortin',    email:'emilie@exemple.com', type:'vol', roles:['Préposé au service','Préposé remplissage',''], pin:'5678'},
+    {id:6, name:'François Roy',     email:'francois@exemple.com',type:'vol',roles:['Caissier','Préposé à la passe',''], pin:'1111'},
+    {id:7, name:'Gabrielle Simard', email:'gab@exemple.com',    type:'vol', roles:['Barista','Caissier bar',''],        pin:'9999'},
+    {id:8, name:'Hugo Lavoie',      email:'hugo@exemple.com',   type:'vol', roles:['Cuisinier','Pizzaiolo',''],         pin:''},
+    {id:9, name:'Isabelle Morin',   email:'isa@exemple.com',    type:'vol', roles:['Préposé à la pâte','Cuisinier',''], pin:'4321'},
+    {id:10,name:'Julien Bergeron',  email:'julien@exemple.com', type:'vol', roles:['Préposé vaisselle','Busboy / Busgirl',''], pin:'0000'},
+    {id:11,name:'Marie-Ève Dupuis', email:'marieve@exemple.com',type:'emp', roles:['Caissier','Barista',''],            pin:''},
+    {id:12,name:'Patrick Nadeau',   email:'patrick@exemple.com',type:'emp', roles:['Pizzaiolo','Cuisinier',''],         pin:''},
+  ];
+  nextId = 13;
+  rebuildVcols();
+  populateVolSelect();
+
+  // ── Disponibilités (semaine courante de l'orga) ──
+  const wk = wkey(oMon);
+  avail[wk] = {};
+
+  // Helpers
+  function makeSlots(dayId, fromH, toH) {
+    const slots = {};
+    for (let m = fromH*60; m < toH*60; m += 30) {
+      const s = Math.round((m - GSH*60) / 30);
+      slots[dayId + '_' + s] = true;
+    }
+    return slots;
+  }
+
+  // Alice — jeu soir + ven soir
+  avail[wk]['Alice Tremblay']   = {quota:2, slots:{...makeSlots('jeudi',15,21),...makeSlots('vendredi',17,21.5)}};
+  // Bruno — sam soir + dim
+  avail[wk]['Bruno Gagnon']     = {quota:2, slots:{...makeSlots('samedi',17,21.5),...makeSlots('dimanche',11,17)}};
+  // Camille — ven jour + sam jour
+  avail[wk]['Camille Leblanc']  = {quota:2, slots:{...makeSlots('vendredi',11,17),...makeSlots('samedi',11,17)}};
+  // David — ven soir seulement
+  avail[wk]['David Côté']       = {quota:1, slots:{...makeSlots('vendredi',17,21.5)}};
+  // Émilie — sam soir + dim
+  avail[wk]['Émilie Fortin']    = {quota:99,slots:{...makeSlots('samedi',17,21.5),...makeSlots('dimanche',11,17)}};
+  // François — jeudi + ven jour
+  avail[wk]['François Roy']     = {quota:2, slots:{...makeSlots('jeudi',15,21),...makeSlots('vendredi',11,17)}};
+  // Gabrielle — ven soir + sam soir
+  avail[wk]['Gabrielle Simard'] = {quota:2, slots:{...makeSlots('vendredi',17,21),...makeSlots('samedi',17,21.5)}};
+  // Hugo — sam complet
+  avail[wk]['Hugo Lavoie']      = {quota:1, slots:{...makeSlots('samedi',11,21.5)}};
+  // Isabelle — dim seulement
+  avail[wk]['Isabelle Morin']   = {quota:1, slots:{...makeSlots('dimanche',11,17)}};
+  // Julien — ven soir + sam soir
+  avail[wk]['Julien Bergeron']  = {quota:2, slots:{...makeSlots('vendredi',17,21.5),...makeSlots('samedi',17,21.5)}};
+
+  // ── Quelques assignations pré-remplies (vendredi soir) ──
+  if (!assigns[wk]) assigns[wk] = {};
+  function assign(shiftId, role, name, s, e) {
+    assigns[wk][shiftId+'||'+role] = name;
+    if (s != null) assigns[wk][shiftId+'||'+role+'__t'] = {s, e};
+  }
+  assign('v_s', 'Caissier',           'Alice Tremblay',   17*60, 21.5*60);
+  assign('v_s', 'Barista',            'Gabrielle Simard', 17*60, 21*60);
+  assign('v_s', 'Préposé vaisselle',  'David Côté',       17*60, 21.5*60);
+  assign('v_s', 'Busboy / Busgirl',   'Julien Bergeron',  17*60, 21.5*60);
+  assign('v_s', 'Pizzaiolo',          'Patrick Nadeau',   null,  null);
+}
+
+(async function init(){
+  if (TEST_MODE) {
+    // ── Mode test : données fictives, pas de Supabase ──
+    loadTestData();
+    setConnDot('ok');
+    renderB();
+    // Toujours montrer la vue organisatrice en mode test
+    const headerTabs=document.getElementById('header-tabs');
+    if(headerTabs)headerTabs.style.display='flex';
+    const vueBtn=document.getElementById('btn-vue-benevole');
+    if(vueBtn)vueBtn.style.display='';
+    switchMain._orgLoaded=true;
+    switchMain('organisatrice',null);
+    window.addEventListener('resize',()=>{
+      if(document.getElementById('pane-organisatrice').classList.contains('visible'))renderHoraire();
+    });
+    return;
+  }
+
+  const cfg=getSavedConfig();
+  if(cfg.url&&cfg.key){
+    if(initSupabase(cfg.url,cfg.key)){
+      // Charger le répertoire pour tous (bénévoles et organisatrice)
+      await loadPeople();
+      if(orgUnlocked){
+        const wk=wkey(oMon);
+        await loadAvail(wk);
+        await loadAssignments(wk);
+        subscribeRealtime(wk);
+      }
+    }
+  } else {
+    setConnDot('');
+  }
+
+  // Côté bénévole : rendre le formulaire même sans Supabase
+  // (mais les données ne seront pas persistées)
+  if(!sb){
+    // Mode démo : charger des données fictives pour que l'interface soit utilisable
+    document.getElementById('b-loading').style.display='none';
+  }
+
+  renderB();
+
+  // Afficher l'interface organisatrice seulement si la clé est dans l'URL
+  if(orgUnlocked){
+    openOrgPin(() => {
+      // Montrer les onglets header et le bouton Vue bénévole
+      const headerTabs=document.getElementById('header-tabs');
+      if(headerTabs)headerTabs.style.display='flex';
+      const vueBtn=document.getElementById('btn-vue-benevole');
+      if(vueBtn)vueBtn.style.display='';
+      // Afficher directement le pane organisatrice (pas de toggle benevole/org)
+      switchMain._orgLoaded=true;
+      switchMain('organisatrice',null);
+      if(!sb){
+        document.getElementById('setup-banner').style.display='block';
+        document.getElementById('setup-sql').textContent=SETUP_SQL;
+      }
+    });
+  }
+
+  window.addEventListener('resize',()=>{
+    if(document.getElementById('pane-organisatrice').classList.contains('visible'))renderHoraire();
+  });
+})();
+</script>
+</body>
+</html>
