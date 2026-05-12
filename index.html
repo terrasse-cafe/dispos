@@ -311,22 +311,6 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 </style>
 </head>
 <body>
-<!-- PIN ORGANISATRICE -->
-<div id="pin-org-overlay" class="pin-overlay">
-  <div class="pin-box">
-    <img class="pin-logo" src="https://raw.githubusercontent.com/terrasse-cafe/dispos/main/photos/logo-terrasse-cafe.jpg" alt="Terrasse Café"/>
-    <div class="pin-title">Accès organisatrice</div>
-    <div class="pin-sub">Entrez le code PIN pour accéder à l'interface de gestion.</div>
-    <div class="pin-dots" id="pin-org-dots">
-      <div class="pin-dot" id="pod0"></div>
-      <div class="pin-dot" id="pod1"></div>
-      <div class="pin-dot" id="pod2"></div>
-      <div class="pin-dot" id="pod3"></div>
-    </div>
-    <div class="pin-error-msg" id="pin-org-error"></div>
-    <div class="pin-keypad" id="pin-org-keypad"></div>
-  </div>
-</div>
 
 <div class="shell">
 <header>
@@ -1062,19 +1046,8 @@ async function bootVolData(wk) {
 
 
 /* ══════════════════════════════════════════════
-   PIN — SYSTÈME D'AUTHENTIFICATION
+   PIN — AUTHENTIFICATION BÉNÉVOLE
 ══════════════════════════════════════════════ */
-
-// ── PIN organisatrice (hashé, jamais en clair dans le JS) ──
-// SHA-256 de "2025" → à changer selon le PIN choisi
-// Pour générer : crypto.subtle.digest('SHA-256', new TextEncoder().encode('VOTRE_PIN'))
-//   .then(b=>console.log([...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')))
-const ORG_PIN_HASH = '3df97cd4a6c63cdd42d2d7e4c3de7a70b218ef1c9429bfd3c39b8fa20c8d7f2b'; // PIN: "2025"
-
-async function hashPin(pin) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin));
-  return [...new Uint8Array(buf)].map(x => x.toString(16).padStart(2,'0')).join('');
-}
 
 // ── État PIN bénévole ──
 let pinVolName = '';      // nom sélectionné en attente de validation PIN
@@ -1095,52 +1068,6 @@ function buildKeypad(containerId, onDigit, onDel) {
     else btn.addEventListener('click', () => onDigit(String(k)));
     el.appendChild(btn);
   });
-}
-
-// ── PIN ORGANISATRICE ──
-function openOrgPin(onSuccess) {
-  let entry = '';
-  const overlay = document.getElementById('pin-org-overlay');
-  overlay.classList.add('open');
-
-  buildKeypad('pin-org-keypad',
-    digit => {
-      if (entry.length >= 4) return;
-      entry += digit;
-      updateOrgDots(entry, false);
-      if (entry.length === 4) validateOrgPin(entry, onSuccess, () => {
-        updateOrgDots(entry, true);
-        setTimeout(() => { entry = ''; updateOrgDots('', false); document.getElementById('pin-org-error').textContent = 'PIN incorrect. Réessayez.'; }, 600);
-      });
-    },
-    () => { if (entry.length) { entry = entry.slice(0,-1); updateOrgDots(entry, false); document.getElementById('pin-org-error').textContent = ''; } }
-  );
-
-  // Clavier physique
-  overlay._keyHandler = e => {
-    if (e.key >= '0' && e.key <= '9') { document.querySelector(`#pin-org-keypad .pin-key:not(.del):not([disabled])[textContent="${e.key}"]`); overlay.dispatchEvent; const btns=[...document.querySelectorAll('#pin-org-keypad .pin-key:not(.del):not([style*="hidden"])')]; btns.find(b=>b.textContent===e.key)?.click(); }
-    if (e.key === 'Backspace') document.querySelector('#pin-org-keypad .pin-key.del')?.click();
-  };
-  document.addEventListener('keydown', overlay._keyHandler);
-}
-
-function updateOrgDots(entry, error) {
-  for (let i = 0; i < 4; i++) {
-    const d = document.getElementById('pod' + i);
-    d.className = 'pin-dot' + (error ? ' error' : entry.length > i ? ' filled' : '');
-  }
-}
-
-async function validateOrgPin(pin, onSuccess, onFail) {
-  const h = await hashPin(pin);
-  if (h === ORG_PIN_HASH) {
-    document.getElementById('pin-org-overlay').classList.remove('open');
-    if (document.getElementById('pin-org-overlay')._keyHandler)
-      document.removeEventListener('keydown', document.getElementById('pin-org-overlay')._keyHandler);
-    onSuccess();
-  } else {
-    onFail();
-  }
 }
 
 // ── PIN BÉNÉVOLE ──
@@ -2997,20 +2924,16 @@ function loadTestData() {
 
   // Afficher l'interface organisatrice seulement si la clé est dans l'URL
   if(orgUnlocked){
-    openOrgPin(() => {
-      // Montrer les onglets header et le bouton Vue bénévole
-      const headerTabs=document.getElementById('header-tabs');
-      if(headerTabs)headerTabs.style.display='flex';
-      const vueBtn=document.getElementById('btn-vue-benevole');
-      if(vueBtn)vueBtn.style.display='';
-      // Afficher directement le pane organisatrice (pas de toggle benevole/org)
-      switchMain._orgLoaded=true;
-      switchMain('organisatrice',null);
-      if(!sb){
-        document.getElementById('setup-banner').style.display='block';
-        document.getElementById('setup-sql').textContent=SETUP_SQL;
-      }
-    });
+    const headerTabs=document.getElementById('header-tabs');
+    if(headerTabs)headerTabs.style.display='flex';
+    const vueBtn=document.getElementById('btn-vue-benevole');
+    if(vueBtn)vueBtn.style.display='';
+    switchMain._orgLoaded=true;
+    switchMain('organisatrice',null);
+    if(!sb){
+      document.getElementById('setup-banner').style.display='block';
+      document.getElementById('setup-sql').textContent=SETUP_SQL;
+    }
   }
 
   window.addEventListener('resize',()=>{
