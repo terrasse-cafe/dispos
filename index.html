@@ -11,12 +11,12 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
 :root{
   --bg:#F7F5F2;--surface:#fff;--border:#E2DDD8;--border-light:#EDE9E4;
-  --text:#1C1917;--text-2:#57534E;--text-3:#A8A29E;
+  --text:#1C1917;--text-2:#57534E;--text-3:#706A65;
   --accent:#A6C5BD;--accent-dark:#6FA39A;--accent-text:#1C1917;
   --accent-light:#EEF5F4;
   --brand-secondary:#FAAF5C;
-  --green:#16A34A;--green-light:#F0FDF4;
-  --amber:#D97706;--amber-light:#FFFBEB;
+  --green:#15803D;--green-light:#F0FDF4;
+  --amber:#92400E;--amber-light:#FFFBEB;
   --blue:#1D4ED8;--blue-light:#EFF6FF;
   --radius:8px;--radius-sm:5px;
   --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.05);
@@ -61,7 +61,7 @@ main{flex:1;padding:1rem 1.25rem;width:100%;overflow-x:hidden}
 .sync-badge{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500;display:inline-flex;align-items:center;gap:4px}
 .sync-badge.saving{background:var(--amber-light);color:var(--amber)}
 .sync-badge.saved{background:var(--green-light);color:var(--green)}
-.sync-badge.error{background:#FEF2F2;color:#DC2626}
+.sync-badge.error{background:#FEF2F2;color:#B91C1C}
 .sync-badge.offline{background:var(--bg);color:var(--text-3)}
 @keyframes spin{to{transform:rotate(360deg)}}
 .spin{display:inline-block;animation:spin .8s linear infinite}
@@ -1488,7 +1488,7 @@ function buildTimeSelect(day,type,savedVal,minMins=null){
   let m=startM;
   while(m<=endM){
     const o=document.createElement('option');o.value=m;o.textContent=mStr(m);
-    if(minMins!==null&&m<=minMins){o.disabled=true;o.style.color='#A8A29E';}
+    if(minMins!==null&&m<=minMins){o.disabled=true;o.style.color='#706A65';}
     if(savedVal!==undefined&&savedVal===m)o.selected=true;
     else if(savedVal===undefined&&type==='from'&&m===startM)o.selected=true;
     else if(savedVal===undefined&&type==='to'&&m===endM)o.selected=true;
@@ -1896,7 +1896,7 @@ function renderHoraire(){
             const cq=volQuota(wk,assignedName);const cu=volWeekShiftCount(wk,assignedName);
             if(cq!==99&&cq>0){
               const qspan=document.createElement('span');qspan.className='chip-quota';
-              qspan.style.color=isOverQuota?'#DC2626':col.fg;qspan.textContent=cu+'/'+cq;inner.appendChild(qspan);
+              qspan.style.color=isOverQuota?'#B91C1C':col.fg;qspan.textContent=cu+'/'+cq;inner.appendChild(qspan);
             }
           }
           const x=document.createElement('span');x.className='chip-x';x.style.color=col.fg;x.textContent='×';
@@ -2121,7 +2121,7 @@ function buildCards(wk,shifts){
         qw.appendChild(frac);
       } else if(quota>0){
         // Couleur du bénévole si normal ou atteint, rouge seulement si dépassé
-        const fracColor=quotaOver?'#DC2626':col.fg;
+        const fracColor=quotaOver?'#B91C1C':col.fg;
         const frac=document.createElement('span');
         frac.style.cssText='font-size:10px;font-family:var(--mono);font-weight:700;color:'+fracColor;
         frac.textContent=usedShifts+'/'+quota;
@@ -2298,7 +2298,7 @@ function fillRoleSelects(vals){
     uniqueRoles.forEach(role=>{
       const o=document.createElement('option');
       o.value=role;o.textContent=role;
-      if(otherVals.includes(role)){o.disabled=true;o.style.color='#A8A29E';}
+      if(otherVals.includes(role)){o.disabled=true;o.style.color='#706A65';}
       sel.appendChild(o);
     });
     sel.value=myVal;
@@ -2406,7 +2406,7 @@ function renderFinPreview(wk){
     const title=document.createElement('div');
     title.style.cssText='font-weight:700;font-size:13px;color:var(--accent);margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--border)';
     if(wkClosed.has(day.id)){
-      title.textContent='☔ '+day.label+' — FERMÉ';title.style.color='#DC2626';
+      title.textContent='☔ '+day.label+' — FERMÉ';title.style.color='#B91C1C';
       dayDiv.appendChild(title);el.appendChild(dayDiv);return;
     }
     title.textContent=day.label+' '+fmt(dayDate(oMon,day.dow));
