@@ -255,6 +255,10 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .vc-inf{font-size:12px;line-height:1;opacity:.55}
 .vol-card.quota-full{border-width:2px !important;opacity:.75}
 .hint-box{margin-top:6px;font-size:10px;color:var(--text-3);line-height:1.5}
+.b-profile-card{background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:14px 18px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:110px;max-width:140px;transition:border-color .15s,box-shadow .15s;font-family:var(--font)}
+.b-profile-card:hover{border-color:var(--accent-dark);box-shadow:var(--shadow-md)}
+.b-profile-avatar{width:44px;height:44px;border-radius:50%;background:var(--accent-light);color:var(--accent-dark);font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.b-profile-name{font-size:12px;font-weight:500;color:var(--text);text-align:center;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* ── RÉPERTOIRE ── */
 .dir-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:1rem}
@@ -349,9 +353,23 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:6px">Entrez vos disponibilités</div>
       <div style="font-size:13px;color:var(--text-2);margin-bottom:1.5rem;line-height:1.6;max-width:340px;margin-left:auto;margin-right:auto">Sélectionnez votre nom pour indiquer vos disponibilités pour la semaine.</div>
       <div id="b-loading" style="font-size:13px;color:var(--text-3);margin-bottom:1rem;display:none">Chargement de la liste…</div>
+
+      <!-- Profils récents -->
+      <div id="b-recent-profiles" style="display:none;margin-bottom:1.25rem">
+        <div id="b-recent-cards" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:1rem"></div>
+        <div style="font-size:12px;color:var(--text-3);margin-bottom:.5rem">— ou —</div>
+        <div style="font-size:12px;font-weight:500;color:var(--text-2);margin-bottom:6px">Se connecter avec un autre compte</div>
+      </div>
+
       <select id="vol-select" style="width:260px;font-size:14px;padding:10px 36px 10px 14px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface)" onchange="onVolSelect()">
         <option value="">&#8212; Mon nom &#8212;</option>
       </select>
+
+      <!-- Gérer les comptes -->
+      <div id="b-manage-wrap" style="display:none;margin-top:12px">
+        <button id="b-manage-btn" onclick="toggleManageAccounts()" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--text-3);font-family:var(--font);padding:4px 0;text-decoration:underline;text-underline-offset:2px">Gérer les comptes</button>
+        <div id="b-manage-list" style="display:none;margin-top:8px;text-align:left;border:1px solid var(--border-light);border-radius:8px;padding:4px 12px;background:var(--bg)"></div>
+      </div>
     </div>
 
 
@@ -1246,6 +1264,86 @@ function switchOrg(id,btn){
 }
 
 /* ══════════════════════════════════════════════
+   BÉNÉVOLE — profils récents (localStorage)
+══════════════════════════════════════════════ */
+const RP_KEY='tc_recent_profiles';
+const RP_MAX=3;
+
+function getRecentProfiles(){
+  try{return JSON.parse(localStorage.getItem(RP_KEY)||'[]');}catch{return [];}
+}
+function saveRecentProfile(name){
+  let p=getRecentProfiles().filter(n=>n!==name);
+  p.unshift(name);
+  if(p.length>RP_MAX)p=p.slice(0,RP_MAX);
+  localStorage.setItem(RP_KEY,JSON.stringify(p));
+}
+function removeRecentProfile(name){
+  localStorage.setItem(RP_KEY,JSON.stringify(getRecentProfiles().filter(n=>n!==name)));
+}
+
+function renderRecentProfiles(){
+  const profiles=getRecentProfiles().filter(n=>getPerson(n));
+  const section=document.getElementById('b-recent-profiles');
+  const cards=document.getElementById('b-recent-cards');
+  const manageWrap=document.getElementById('b-manage-wrap');
+  if(!section)return;
+  if(!profiles.length){
+    section.style.display='none';
+    manageWrap.style.display='none';
+    return;
+  }
+  section.style.display='block';
+  manageWrap.style.display='block';
+  cards.innerHTML='';
+  profiles.forEach(name=>{
+    const initials=name.trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+    const card=document.createElement('button');
+    card.className='b-profile-card';
+    card.innerHTML='<div class="b-profile-avatar">'+initials+'</div><div class="b-profile-name">'+name+'</div>';
+    card.onclick=()=>connectAsRecentProfile(name);
+    cards.appendChild(card);
+  });
+  renderManageList();
+}
+
+function renderManageList(){
+  const list=document.getElementById('b-manage-list');
+  if(!list)return;
+  list.innerHTML='';
+  getRecentProfiles().forEach((name,i,arr)=>{
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:7px 0;'+(i<arr.length-1?'border-bottom:1px solid var(--border-light)':'');
+    const nm=document.createElement('span');
+    nm.style.cssText='font-size:13px;color:var(--text)';
+    nm.textContent=name;
+    const btn=document.createElement('button');
+    btn.textContent='Retirer';
+    btn.style.cssText='font-size:11px;color:var(--text-3);background:none;border:none;cursor:pointer;padding:2px 8px;border-radius:4px;font-family:var(--font);transition:color .1s';
+    btn.onmouseover=()=>btn.style.color='#DC2626';
+    btn.onmouseout=()=>btn.style.color='var(--text-3)';
+    btn.onclick=()=>{removeRecentProfile(name);renderRecentProfiles();};
+    row.appendChild(nm);row.appendChild(btn);
+    list.appendChild(row);
+  });
+}
+
+function toggleManageAccounts(){
+  const list=document.getElementById('b-manage-list');
+  const btn=document.getElementById('b-manage-btn');
+  const open=list.style.display==='none';
+  list.style.display=open?'block':'none';
+  btn.textContent=open?'Masquer ↑':'Gérer les comptes';
+}
+
+async function connectAsRecentProfile(name){
+  const p=getPerson(name);
+  if(!p){renderRecentProfiles();return;}
+  document.getElementById('vol-select').value=name;
+  await _afterVolPinSuccess(name,p);
+}
+
+/* ══════════════════════════════════════════════
    BÉNÉVOLE — sélection
 ══════════════════════════════════════════════ */
 function populateVolSelect(){
@@ -1256,6 +1354,7 @@ function populateVolSelect(){
     o.textContent=p.name;sel.appendChild(o);
   });
   if(cur)sel.value=cur;
+  renderRecentProfiles();
 }
 
 const SHIFT_OPTIONS=[
@@ -1299,6 +1398,7 @@ async function onVolSelect(){
 }
 
 async function _afterVolPinSuccess(name, p) {
+  saveRecentProfile(name);
   document.getElementById('b-empty-state').style.display='none';
   document.getElementById('b-name-section').style.display='block';
   document.getElementById('b-greeting').textContent='Bonjour, '+name.split(' ')[0]+' 👋';
@@ -1381,6 +1481,7 @@ function resetVolSelect(){
   document.getElementById('vol-select').value='';
   document.getElementById('b-empty-state').style.display='block';
   document.getElementById('b-name-section').style.display='none';
+  renderRecentProfiles();
 }
 
 async function onVolEmailBlur(){
