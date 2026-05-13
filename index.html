@@ -2869,27 +2869,29 @@ function exportPdfTable(){
     const shifts = SHIFTS[day.id] || [];
     const isClosed = wkClosed.has(day.id);
 
-    // Collecter les lignes de ce jour
+    // Collecter les lignes de ce jour (une entries[] par rôle, une entrée par bénévole)
     const rows = [];
     shifts.forEach(shift => {
       const allRoles = [...(shift._slots||shift.roles), ...(shift._optSlots||[])];
       allRoles.forEach(role => {
         const isOpt = (shift._optSlots||shift.optional||[]).includes(role);
         const names2 = getAssigns(wk, shift.id, role);
-        const name = names2.length ? names2[0] : null;
-        const ct = name ? getAssignTimes(wk, shift.id, role) : null;
-        const rng = (name && !isEmp(name)) ? (()=>{
-          const savedDay=curDay; curDay=day.id;
-          const r=volDayRange(wk,name); curDay=savedDay; return r;
-        })() : null;
-        let timeStr = '';
-        if(name){
-          if(isEmp(name)){ timeStr=mStr(shift.fromH*60)+' – '+mStr(shift.toH*60); }
-          else if(ct){ timeStr=mStr(ct.s)+' – '+mStr(ct.e); }
-          else if(rng){ timeStr=mStr(Math.max(rng.startMins,shift.fromH*60))+' – '+mStr(Math.min(rng.endMins,shift.toH*60)); }
+        let entries;
+        if(!names2.length){
+          entries = [{name:'', timeStr:'', note:''}];
+        } else {
+          entries = names2.map(name => {
+            const ct = getAssignTimes(wk, shift.id, role, name);
+            const savedDay=curDay; curDay=day.id;
+            const rng = isEmp(name)?null:volDayRange(wk,name); curDay=savedDay;
+            let timeStr='';
+            if(isEmp(name)){ timeStr=mStr(shift.fromH*60)+' – '+mStr(shift.toH*60); }
+            else if(ct){ timeStr=mStr(ct.s)+' – '+mStr(ct.e); }
+            else if(rng){ timeStr=mStr(Math.max(rng.startMins,shift.fromH*60))+' – '+mStr(Math.min(rng.endMins,shift.toH*60)); }
+            return {name, timeStr, note:getAssignNote(wk,shift.id,role,name)||''};
+          });
         }
-        const noteVal = name ? (getAssignNote(wk, shift.id, role)||'') : '';
-        rows.push({shift, role, name:name||'', timeStr, isOpt, note:noteVal});
+        rows.push({shift, role, isOpt, entries});
       });
     });
 
@@ -2898,7 +2900,7 @@ function exportPdfTable(){
     const colHeaderH = 6;
     // Estimation hauteur bloc jour (utilise rowH min pour l'estimation)
     const estRowH = 6.5;
-    const estH = dayHeaderH + colHeaderH + rows.length * estRowH + shifts.length * shiftBandH + 6;
+    const estH = dayHeaderH + colHeaderH + rows.reduce((s,r)=>s+r.entries.length,0)*estRowH + shifts.length*shiftBandH + 6;
     if(y + estH > pageH - margin - 8 && di > 0){
       doc.addPage(); drawPageHeader(); y = 20;
     }
@@ -2940,68 +2942,62 @@ function exportPdfTable(){
         y += shiftBandH;
       }
 
-      // Calculer la hauteur de la ligne selon le contenu de la note
-      const noteLines = row.note
-        ? doc.splitTextToSize(row.note, cNote - 7)
-        : [];
-      const lineH = 4.2; // hauteur d'une ligne de note
-      const minRowH = 6.5;
-      const dynRowH = Math.max(minRowH, noteLines.length * lineH + 2.5);
+      // Hauteur de chaque sous-entrée (une par bénévole assigné)
+      const lineH = 4.2;
+      const minEntryH = 6.5;
+      const entryData = row.entries.map(entry => {
+        const noteLines = entry.note ? doc.splitTextToSize(entry.note, cNote-7) : [];
+        return {entry, noteLines, h: Math.max(minEntryH, noteLines.length*lineH+2.5)};
+      });
+      const totalRowH = entryData.reduce((s,e)=>s+e.h, 0);
 
-      if(y + dynRowH > pageH - margin - 8){ doc.addPage(); drawPageHeader(); y=20; drawColHeaders(); }
+      if(y + totalRowH > pageH - margin - 8){ doc.addPage(); drawPageHeader(); y=20; drawColHeaders(); }
 
-      // Fond de ligne alternée
+      // Fond de ligne alternée (toute la hauteur)
       setFill(ri%2===0?'#FAFAF9':C.surface); setDraw(C.border);
-      doc.rect(margin, y, usable, dynRowH, 'FD');
+      doc.rect(margin, y, usable, totalRowH, 'FD');
 
       // Séparateurs verticaux de colonnes
       setDraw(C.border);
       [cRole, cRole+cName, cRole+cName+cTime].forEach(cx=>{
-        doc.line(margin+cx, y, margin+cx, y+dynRowH);
+        doc.line(margin+cx, y, margin+cx, y+totalRowH);
       });
 
-      // Centre vertical des cellules courtes
-      const midY = y + dynRowH/2 + 1.5;
-
-      // Col 1 : Rôle
+      // Col 1 : Rôle — centré verticalement sur toute la hauteur de la ligne
       doc.setFont('helvetica', row.isOpt?'italic':'normal');
       doc.setFontSize(7.5);
       setTextColor(row.isOpt?C.text3:C.text2);
       const roleText=(row.isOpt?'★ ':'')+roleLabel(row.role);
-      doc.text(doc.splitTextToSize(roleText, cRole-5)[0], margin+3, midY);
+      doc.text(doc.splitTextToSize(roleText, cRole-5)[0], margin+3, y+totalRowH/2+1.5);
 
-      if(row.name){
-        const emp=isEmp(row.name);
-
-        // Col 2 : Nom
-        setTextColor(emp?C.amber:C.text);
-        doc.setFont('helvetica', emp?'bold':'normal');
-        doc.setFontSize(8);
-        doc.text(emp?'▪ '+row.name:row.name, margin+cRole+3, midY);
-
-        // Col 3 : Heures
-        doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
-        setTextColor(C.text3);
-        doc.text(row.timeStr, margin+cRole+cName+3, midY);
-
-        // Col 4 : Note avec wrapping
-        if(noteLines.length){
-          doc.setFont('helvetica','italic'); doc.setFontSize(7);
-          setTextColor(C.text2);
-          // Centrer verticalement le bloc de lignes dans la cellule
-          const blockH = noteLines.length * lineH;
-          const noteStartY = y + (dynRowH - blockH)/2 + lineH - 1;
-          noteLines.forEach((line, li)=>{
-            doc.text(line, margin+cRole+cName+cTime+3, noteStartY + li*lineH);
-          });
+      // Cols 2-4 : une sous-ligne par bénévole
+      let subY = y;
+      entryData.forEach(({entry, noteLines, h}, ei) => {
+        if(ei > 0){ setDraw(C.border); doc.line(margin+cRole, subY, margin+usable, subY); }
+        const midY = subY + h/2 + 1.5;
+        if(entry.name){
+          const emp = isEmp(entry.name);
+          setTextColor(emp?C.amber:C.text);
+          doc.setFont('helvetica', emp?'bold':'normal'); doc.setFontSize(8);
+          doc.text(emp?'▪ '+entry.name:entry.name, margin+cRole+3, midY);
+          doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
+          setTextColor(C.text3);
+          doc.text(entry.timeStr, margin+cRole+cName+3, midY);
+          if(noteLines.length){
+            doc.setFont('helvetica','italic'); doc.setFontSize(7);
+            setTextColor(C.text2);
+            const blockH = noteLines.length*lineH;
+            const noteStartY = subY + (h-blockH)/2 + lineH - 1;
+            noteLines.forEach((line,li)=>{ doc.text(line, margin+cRole+cName+cTime+3, noteStartY+li*lineH); });
+          }
+        } else {
+          doc.setFont('helvetica','italic'); doc.setFontSize(7.5);
+          setTextColor(C.text3);
+          doc.text('— non assigné', margin+cRole+3, midY);
         }
-      } else {
-        // Non assigné
-        doc.setFont('helvetica','italic'); doc.setFontSize(7.5);
-        setTextColor(C.text3);
-        doc.text('— non assigné', margin+cRole+3, midY);
-      }
-      y += dynRowH;
+        subY += h;
+      });
+      y += totalRowH;
     });
     y += 9;
   });
