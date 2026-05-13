@@ -1900,10 +1900,12 @@ function renderHoraire(){
       if(!past){
         dz.addEventListener('dragover',e=>{
           if(!draggingVol)return;
-          // Depuis chip du même slot → ignorer (on drop sur le panneau pour retirer)
+          // Depuis chip du même rôle → ignorer
           if(draggingFromRole&&draggingFromRole.shiftId===shift.id&&draggingFromRole.role===role)return;
           if(!volCoversShift(wk,draggingVol,shift)){e.dataTransfer.dropEffect='none';return;}
-          if(!isEmp(draggingVol)&&volAssignedToShift(wk,draggingVol,shift)){e.dataTransfer.dropEffect='none';return;}
+          // Réassignation depuis un chip du même shift → autoriser même si déjà sur ce shift
+          const isReassign=!!(draggingFromRole&&draggingFromRole.shiftId===shift.id);
+          if(!isEmp(draggingVol)&&!isReassign&&volAssignedToShift(wk,draggingVol,shift)){e.dataTransfer.dropEffect='none';return;}
           e.preventDefault();e.dataTransfer.dropEffect='move';dz.classList.add('dok');
         });
         dz.addEventListener('dragleave',e=>{if(!dz.contains(e.relatedTarget))dz.classList.remove('dok');});
@@ -1911,8 +1913,10 @@ function renderHoraire(){
           dz.classList.remove('dok');
           const name=e.dataTransfer.getData('text/plain');
           if(!name||!volCoversShift(wk,name,shift))return;
-          if(!isEmp(name)&&volAssignedToShift(wk,name,shift))return;
           if(draggingFromRole&&draggingFromRole.shiftId===shift.id&&draggingFromRole.role===role)return;
+          // Réassignation depuis un chip du même shift → autoriser même si déjà sur ce shift
+          const isReassign=!!(draggingFromRole&&draggingFromRole.shiftId===shift.id);
+          if(!isEmp(name)&&!isReassign&&volAssignedToShift(wk,name,shift))return;
           e.preventDefault();
           // Si drag depuis un chip d'un autre rôle → retirer de l'ancien rôle
           if(draggingFromRole&&!(draggingFromRole.shiftId===shift.id&&draggingFromRole.role===role)){
