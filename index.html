@@ -1275,6 +1275,19 @@ function switchOrg(id,btn){
 /* ══════════════════════════════════════════════
    BÉNÉVOLE — profils récents (localStorage)
 ══════════════════════════════════════════════ */
+function saveBVolWeek(name){
+  if(!name)return;
+  try{localStorage.setItem('cafe_week_'+name,wkey(bMon));}catch{}
+}
+function restoreBVolWeek(name){
+  try{
+    const saved=localStorage.getItem('cafe_week_'+name);
+    if(!saved)return null;
+    if(saved<wkey(getMonday(new Date())))return null; // semaine passée
+    return getMonday(new Date(saved+'T12:00:00'));
+  }catch{return null;}
+}
+
 const RP_KEY='tc_recent_profiles';
 const RP_MAX=3;
 
@@ -1408,6 +1421,7 @@ async function onVolSelect(){
 
 async function _afterVolPinSuccess(name, p) {
   saveRecentProfile(name);
+  bMon=restoreBVolWeek(name)||getSmartBMon();
   document.getElementById('b-empty-state').style.display='none';
   document.getElementById('b-name-section').style.display='block';
   document.getElementById('b-greeting').textContent='Bonjour, '+name.split(' ')[0]+' 👋';
@@ -1513,8 +1527,9 @@ async function onVolEmailBlur(){
 ══════════════════════════════════════════════ */
 async function bShift(d){
   bMon=addWeeks(bMon,d);
-  const wk=wkey(bMon);
   const name=document.getElementById('vol-select').value;
+  saveBVolWeek(name);
+  const wk=wkey(bMon);
   // Toujours mettre à jour le label de semaine, qu'un nom soit sélectionné ou non
   document.getElementById('b-wlabel').textContent=wlabel(bMon);
   await bootVolData(wk);
