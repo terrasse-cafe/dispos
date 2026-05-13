@@ -200,22 +200,25 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .h-role-name.opt{color:var(--text-3);font-style:italic}
 .h-timeline{flex:1;position:relative;background:var(--bg);overflow:visible}
 .h-dz{position:absolute;top:5px;bottom:5px;border:2px dashed var(--border);border-radius:var(--radius-sm);display:flex;align-items:center;padding:0 10px;transition:border-color .1s,background .1s;cursor:default;overflow:visible}
-.h-dz.empty{background:var(--surface);overflow:hidden}.h-dz.filled{border-style:solid;top:3px;bottom:3px}
+.h-dz.empty{background:var(--surface);overflow:hidden}.h-dz.filled{border-style:solid;top:3px;bottom:3px;isolation:isolate}
+.h-dz.filled::after{content:'';position:absolute;inset:0;border-radius:var(--radius-sm);box-shadow:inset 0 0 0 2px var(--border);pointer-events:none;z-index:5}
+.h-dz.filled.dv::after,.h-dz.filled.dok::after{box-shadow:inset 0 0 0 2px var(--amber)}
 .dz-ph{font-size:11px;color:var(--text-3)}
 .h-dz.dv{border-color:var(--green);background:var(--green-light);border-style:solid;box-shadow:0 0 0 2px #86EFAC50}
 .h-dz.filled.dv{border-color:var(--amber);box-shadow:0 0 0 2px #FCD34D50;filter:brightness(.96)}
 .h-dz.di{opacity:.38;cursor:not-allowed}
 .h-dz.dok{border-color:var(--green);background:#DCFCE7;border-style:solid}
 .h-dz.filled.dok{border-color:var(--amber);background:transparent;filter:brightness(.92)}
-.avail-chip{position:absolute;top:-1px;bottom:-1px;border-radius:5px;display:flex;flex-direction:column;justify-content:center;padding:2px 7px;cursor:pointer;z-index:2;transition:filter .1s}
+.avail-chip{position:absolute;overflow:hidden;border-radius:5px;display:flex;flex-direction:column;justify-content:center;padding:2px 7px;cursor:pointer;z-index:2;transition:filter .1s}
 .avail-chip:hover{filter:brightness(.9)}
 .avail-chip-inner{display:flex;align-items:center;gap:5px;width:100%;overflow:hidden;flex:0 0 auto}
 .chip-name{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0}
 .chip-time{font-size:10px;font-family:var(--mono);opacity:.6;white-space:nowrap;flex-shrink:0}
 .chip-spacer{flex:1;min-width:4px}
 .chip-quota{font-size:9px;font-family:var(--mono);font-weight:700;white-space:nowrap;flex-shrink:0;opacity:.8}
-.chip-x{cursor:pointer;font-size:16px;opacity:.3;line-height:1;flex-shrink:0;transition:opacity .1s;padding:0 1px}
+.chip-x{cursor:pointer;font-size:16px;opacity:.3;line-height:1;transition:opacity .1s;padding:0 1px;position:absolute;right:3px;top:50%;transform:translateY(-50%)}
 .chip-x:hover{opacity:1}
+.chip-note{font-size:10px;font-style:italic;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;margin-top:1px;padding-right:18px}
 .emp-badge{font-size:9px;font-weight:700;letter-spacing:.05em;padding:1px 4px;border-radius:3px;flex-shrink:0;border:1px solid currentColor;opacity:.75}
 .prog-wrap{margin-top:10px}
 .prog-track{height:4px;background:var(--border-light);border-radius:2px;overflow:hidden}
@@ -1772,21 +1775,16 @@ function renderHoraire(){
       const assignedList=getAssigns(wk,shift.id,role);
       const hasAny=assignedList.length>0;
 
-      // Hauteur dynamique : 1 rangée de chips par bénévole, min 40px
-      const CHIP_ROW_H=34; // px par bénévole
-      const rowH=Math.max(40, assignedList.length*CHIP_ROW_H);
-      row.style.minHeight=rowH+'px';
-      tl.style.height=rowH+'px';
-      dz.style.top='3px';dz.style.bottom='3px';
-
       if(hasAny){
         if(!isOpt)totalFilled++;
         dz.classList.add('filled');
         dz.style.background='transparent';
         dz.style.borderColor='var(--border)';
 
-        // Rendre un chip par bénévole assigné
-        assignedList.forEach((assignedName,chipIdx)=>{
+        const CHIP_H_BASE=30,CHIP_H_NOTE=46,CHIP_LANE_PAD=4;
+
+        // Collecter les données de chaque chip
+        const chipData=assignedList.map(assignedName=>{
           const emp=isEmp(assignedName);
           const col=emp?EMP_COL:(vcols[assignedName]||VCOLS[0]);
           const ct=getAssignTimes(wk,shift.id,role,assignedName);
@@ -1796,27 +1794,60 @@ function renderHoraire(){
           else if(emp){aSH=shift.fromH;aEH=shift.toH;}
           else if(rng){aSH=rng.startMins/60;aEH=rng.endMins/60;}
           else{aSH=shift.fromH;aEH=shift.toH;}
-          const cL=toPx(aSH)-spx,cW=toPx(aEH)-toPx(aSH);
+          const noteVal=getAssignNote(wk,shift.id,role,assignedName);
+          const chipH=noteVal?CHIP_H_NOTE:CHIP_H_BASE;
           const assignedQuota=emp?null:volQuota(wk,assignedName);
           const assignedUsed=emp?0:volWeekShiftCount(wk,assignedName);
           const isOverQuota=!emp&&assignedQuota!==99&&assignedUsed>assignedQuota;
+          const sm=ct?ct.s:(rng?Math.max(rng.startMins,shift.fromH*60):shift.fromH*60);
+          const em2=ct?ct.e:(rng?Math.min(rng.endMins,shift.toH*60):shift.toH*60);
+          return {assignedName,emp,col,aSH,aEH,noteVal,chipH,isOverQuota,sm,em2};
+        });
+
+        // Trier par heure de début
+        chipData.sort((a,b)=>a.aSH-b.aSH);
+
+        // Affectation de couloirs par intervalle glouton
+        const laneEnds=[];
+        const lanes=chipData.map(cd=>{
+          let lane=laneEnds.findIndex(end=>end<=cd.aSH);
+          if(lane===-1){lane=laneEnds.length;laneEnds.push(cd.aEH);}
+          else{laneEnds[lane]=cd.aEH;}
+          return lane;
+        });
+        const numLanes=laneEnds.length||0;
+
+        // Hauteur max par couloir et positions Y cumulées
+        const laneH=Array(numLanes).fill(0);
+        chipData.forEach((cd,i)=>{laneH[lanes[i]]=Math.max(laneH[lanes[i]],cd.chipH);});
+        const laneY=Array(numLanes).fill(0);
+        for(let i=1;i<numLanes;i++)laneY[i]=laneY[i-1]+laneH[i-1]+CHIP_LANE_PAD;
+        const totalH=numLanes>0?(laneY[numLanes-1]+laneH[numLanes-1]):0;
+        const rowH=Math.max(36,totalH+12);
+
+        row.style.minHeight=rowH+'px';
+        tl.style.height=rowH+'px';
+        dz.style.top='3px';dz.style.bottom='3px';
+
+        chipData.forEach((cd,chipIdx)=>{
+          const {assignedName,emp,col,aSH,aEH,noteVal,chipH,isOverQuota,sm,em2}=cd;
+          const cL=toPx(aSH)-spx,cW=toPx(aEH)-toPx(aSH);
           const chipBorderColor=isOverQuota?'#DC2626':(emp?col.fg:(col.fg+'80'));
           const chipBorderWidth=isOverQuota?'2px':(emp?'2.5px':'1.5px');
-          const noteVal=getAssignNote(wk,shift.id,role,assignedName);
+          const lane=lanes[chipIdx];
 
           const chip=document.createElement('div');chip.className='avail-chip';
-          // Position verticale stackée
-          chip.style.top=(chipIdx*CHIP_ROW_H+2)+'px';
-          chip.style.height=(CHIP_ROW_H-4)+'px';
+          chip.style.top=(laneY[lane]+3)+'px';
+          chip.style.height=chipH+'px';
+          chip.style.bottom='auto';
           chip.style.left=cL+'px';chip.style.width=cW+'px';
           chip.style.background=col.bg;
           chip.style.border=`${chipBorderWidth} solid ${chipBorderColor}`;
 
           const inner=document.createElement('div');inner.className='avail-chip-inner';
+          inner.style.paddingRight='18px';
           if(emp){const b=document.createElement('span');b.className='emp-badge';b.style.color=col.fg;b.textContent='EMP';inner.appendChild(b);}
           const nm=document.createElement('span');nm.className='chip-name';nm.style.color=col.fg;nm.textContent=assignedName;inner.appendChild(nm);
-          const sm=ct?ct.s:(rng?Math.max(rng.startMins,shift.fromH*60):shift.fromH*60);
-          const em2=ct?ct.e:(rng?Math.min(rng.endMins,shift.toH*60):shift.toH*60);
           const tm=document.createElement('span');tm.className='chip-time';tm.style.color=col.fg;tm.textContent=mStr(sm)+'–'+mStr(em2);inner.appendChild(tm);
           const spacer=document.createElement('span');spacer.className='chip-spacer';inner.appendChild(spacer);
           if(!emp){
@@ -1826,6 +1857,7 @@ function renderHoraire(){
               qspan.style.color=isOverQuota?'#B91C1C':col.fg;qspan.textContent=cu+'/'+cq;inner.appendChild(qspan);
             }
           }
+          chip.appendChild(inner);
           const x=document.createElement('span');x.className='chip-x';x.style.color=col.fg;x.textContent='×';
           if(!past)x.addEventListener('click',ev=>{
             ev.stopPropagation();
@@ -1834,14 +1866,12 @@ function renderHoraire(){
             renderHoraire();
           });
           else x.style.display='none';
-          inner.appendChild(x);chip.appendChild(inner);
+          chip.appendChild(x);
           if(noteVal){
-            const noteLine=document.createElement('div');
-            noteLine.style.cssText=`font-size:10px;font-style:italic;color:${col.fg};opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--mono);line-height:1.4;margin-top:1px`;
-            noteLine.textContent=noteVal;chip.appendChild(noteLine);
+            const noteLine=document.createElement('div');noteLine.className='chip-note';
+            noteLine.style.color=col.fg;noteLine.textContent=noteVal;chip.appendChild(noteLine);
           }
           if(!past)chip.addEventListener('click',ev=>{if(ev.target===x)return;openTP(ev,assignedName,shift.id,role,shift,wk);});
-          // Drag depuis chip → panneau seulement (pour retirer)
           if(!past){
             chip.draggable=true;
             chip.addEventListener('dragstart',ev=>{
@@ -1861,6 +1891,8 @@ function renderHoraire(){
           dz.appendChild(chip);
         });
       } else {
+        row.style.minHeight='36px';
+        tl.style.height='36px';
         dz.classList.add('empty');
         const ph=document.createElement('span');ph.className='dz-ph';
         ph.textContent=past?'—':'— glissez ici';dz.appendChild(ph);
