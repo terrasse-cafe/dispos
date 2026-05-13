@@ -332,6 +332,15 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 /* champ PIN dans le répertoire modal */
 .pin-field-wrap{display:flex;align-items:center;gap:8px}
 .pin-input-admin{width:100px;letter-spacing:.2em;font-family:var(--mono);font-size:14px;text-align:center}
+@media(max-width:639px){
+  .pin-box{padding:1.25rem 1.5rem 1rem}
+  .pin-logo{width:56px;height:56px;margin-bottom:.5rem}
+  .pin-sub{margin-bottom:.75rem}
+  .pin-dots{margin-bottom:.75rem}
+  .pin-error-msg{margin-bottom:.25rem}
+  .pin-keypad{gap:6px;max-width:200px;margin-bottom:.5rem}
+  .pin-key{height:46px;font-size:18px}
+}
 </style>
 </head>
 <body>
