@@ -43,7 +43,7 @@ header{background:var(--surface);border-bottom:1px solid var(--border);padding:0
 /* inline SVG icon helper */
 .ic{width:15px;height:15px;display:inline-block;flex-shrink:0}
 .ic svg,.ic svg path{stroke:currentColor}
-main{flex:1;padding:1rem 1.25rem;width:100%;overflow-x:hidden}
+main{flex:1;padding:1rem 1.25rem;width:100%;overflow-x:clip}
 .pane{display:none}.pane.visible{display:block}
 
 /* ── SETUP BANNER ── */
@@ -3118,6 +3118,8 @@ function loadTestData() {
     window.addEventListener('resize',()=>{
       if(document.getElementById('pane-organisatrice').classList.contains('visible'))renderHoraire();
     });
+    // sticky panel also needed in test mode
+    setTimeout(()=>window.dispatchEvent(new Event('scroll')), 200);
     return;
   }
 
@@ -3163,6 +3165,57 @@ function loadTestData() {
   window.addEventListener('resize',()=>{
     if(document.getElementById('pane-organisatrice').classList.contains('visible'))renderHoraire();
   });
+
+  // ── Panneau bénévoles : sticky garanti via JS ──
+  (function initStickyPanel(){
+    const HEADER_H = 52;
+    const GAP = 8;
+
+    function updatePanelPos(){
+      const colRight = document.querySelector('.h-layout > div:last-child');
+      if(!colRight) return;
+      const panel = colRight.querySelector('.vol-panel');
+      if(!panel) return;
+      const colRect = colRight.getBoundingClientRect();
+      const targetTop = HEADER_H + GAP;
+      if(colRect.top >= targetTop){
+        panel.style.transform = '';
+        return;
+      }
+      const shift = targetTop - colRect.top;
+      const maxShift = Math.max(0, colRect.height - panel.offsetHeight);
+      panel.style.transform = 'translateY(' + Math.min(shift, maxShift) + 'px)';
+    }
+
+    function attachListeners(){
+      window.addEventListener('scroll', updatePanelPos, {passive:true});
+      document.addEventListener('scroll', updatePanelPos, {passive:true});
+      const panel = document.querySelector('.vol-panel');
+      if(!panel) return;
+      let el = panel.parentElement;
+      while(el && el !== document.body){
+        const ov = getComputedStyle(el).overflow + getComputedStyle(el).overflowY;
+        if(/auto|scroll/.test(ov)) el.addEventListener('scroll', updatePanelPos, {passive:true});
+        el = el.parentElement;
+      }
+    }
+
+    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', attachListeners);
+    else attachListeners();
+    window.addEventListener('resize', updatePanelPos, {passive:true});
+
+    // Patch renderHoraire pour recalculer après chaque rendu
+    document.addEventListener('DOMContentLoaded', function(){
+      if(typeof renderHoraire === 'function'){
+        const orig = renderHoraire;
+        window.renderHoraire = function(){
+          const r = orig.apply(this, arguments);
+          setTimeout(updatePanelPos, 50);
+          return r;
+        };
+      }
+    });
+  })();
 })();
 </script>
 </body>
