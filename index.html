@@ -179,7 +179,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .toast{margin-top:12px;padding:9px 14px;border-radius:var(--radius-sm);background:var(--green-light);border:1px solid #86EFAC;color:var(--green);font-size:13px;display:none}
 
 /* ── HORAIRE ── */
-.h-layout{display:grid;grid-template-columns:1fr 240px;gap:14px;align-items:start}
+.h-layout{display:grid;grid-template-columns:1fr 240px;gap:14px;align-items:stretch;min-height:calc(100vh - 120px)}
 .h-layout > div:last-child{align-self:stretch;position:sticky;top:52px}
 .h-scroll{overflow-x:auto}
 .h-grid{display:inline-block;min-width:100%;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);box-shadow:none}
@@ -781,14 +781,14 @@ const SHIFTS={
       roles:['Caissier','Barista','Mise en place']},
     {id:'v_s',label:'Soir',fromH:17,toH:21.5,
       roles:['Caissier','Barista','Préposé remplissage','Préposé vaisselle','Busboy / Busgirl','Préposé au service','Pizzaiolo','Pizzaiolo','Préposé à la pâte','Cuisinier','Cuisinier','Préposé à la passe','Préposé à la passe'],
-      optional:['Caissier bar','Barmaid']}
+      optional:['Caissier bar','Barmaid'],slotFromH:{'Pizzaiolo':16}}
   ],
   samedi:[
     {id:'s_j',label:'Jour',fromH:11,toH:17,
       roles:['Caissier','Barista','Mise en place']},
     {id:'s_s',label:'Soir',fromH:17,toH:21.5,
       roles:['Caissier','Barista','Préposé remplissage','Préposé vaisselle','Busboy / Busgirl','Préposé au service','Pizzaiolo','Pizzaiolo','Cuisinier','Cuisinier','Préposé à la passe','Préposé à la passe'],
-      optional:['Caissier bar','Barmaid']}
+      optional:['Caissier bar','Barmaid'],slotFromH:{'Pizzaiolo':16}}
   ],
   dimanche:[{id:'d_j',label:'Jour',fromH:11,toH:17,
     roles:['Caissier','Barista','Préposé remplissage']}],
@@ -1930,7 +1930,8 @@ function renderHoraire(){
       nc.textContent=roleDisplayLabel(role)+(isOpt?' ★':'');row.appendChild(nc);
       const tl=document.createElement('div');tl.className='h-timeline';tl.style.width=tl.style.minWidth=TW+'px';
       const dz=document.createElement('div');dz.className='h-dz';
-      dz.style.left=spx+'px';dz.style.width=sw+'px';
+      const dzFromH=(shift.slotFromH&&shift.slotFromH[roleDisplayLabel(role)]!=null)?shift.slotFromH[roleDisplayLabel(role)]:shift.fromH;
+      dz.style.left=toPx(dzFromH)+'px';dz.style.width=(toPx(shift.toH)-toPx(dzFromH))+'px';
       dz.id='dz-'+shift.id+'-'+role.replace(/[^a-z0-9]/gi,'_');
 
       // ── Multi-bénévoles : tableau des assignés pour ce rôle ──
@@ -1953,15 +1954,15 @@ function renderHoraire(){
           const rng=emp?null:volDayRange(wk,assignedName);
           let aSH,aEH;
           if(ct){aSH=ct.s/60;aEH=ct.e/60;}
-          else if(emp){aSH=shift.fromH;aEH=shift.toH;}
+          else if(emp){aSH=dzFromH;aEH=shift.toH;}
           else if(rng){aSH=rng.startMins/60;aEH=rng.endMins/60;}
-          else{aSH=shift.fromH;aEH=shift.toH;}
+          else{aSH=dzFromH;aEH=shift.toH;}
           const noteVal=getAssignNote(wk,shift.id,role,assignedName);
           const chipH=noteVal?CHIP_H_NOTE:CHIP_H_BASE;
           const assignedQuota=emp?null:volQuota(wk,assignedName);
           const assignedUsed=emp?0:volWeekShiftCount(wk,assignedName);
           const isOverQuota=!emp&&assignedQuota!==99&&assignedUsed>assignedQuota;
-          const sm=ct?ct.s:(rng?Math.max(rng.startMins,shift.fromH*60):shift.fromH*60);
+          const sm=ct?ct.s:(rng?Math.max(rng.startMins,dzFromH*60):dzFromH*60);
           const em2=ct?ct.e:(rng?Math.min(rng.endMins,shift.toH*60):shift.toH*60);
           return {assignedName,emp,col,aSH,aEH,noteVal,chipH,isOverQuota,sm,em2};
         });
