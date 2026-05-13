@@ -259,6 +259,15 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .b-profile-card:hover{border-color:var(--accent-dark);box-shadow:var(--shadow-md)}
 .b-profile-avatar{width:44px;height:44px;border-radius:50%;background:var(--accent-light);color:var(--accent-dark);font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .b-profile-name{font-size:12px;font-weight:500;color:var(--text);text-align:center;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:639px){
+  #b-empty-state{margin-top:1rem!important;padding:1rem 0!important;border:none!important;background:transparent!important;box-shadow:none!important;border-radius:0!important}
+  #b-empty-state>img{width:72px!important;height:72px!important;margin-bottom:.75rem!important}
+  #b-recent-cards{flex-wrap:nowrap!important;gap:8px!important}
+  .b-profile-card{padding:10px 8px!important;min-width:0!important;flex:1!important;max-width:none!important}
+  .b-profile-avatar{width:34px!important;height:34px!important;font-size:12px!important}
+  .b-profile-name{font-size:11px!important}
+  #vol-select{width:100%!important;box-sizing:border-box!important}
+}
 
 /* ── RÉPERTOIRE ── */
 .dir-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:1rem}
