@@ -124,6 +124,10 @@ main{flex:1;padding:1rem 1.25rem;width:100%;overflow-x:clip}
 /* Sélectionné fermé : bg #FDA2A2, pas de diagonale */
 .day-tab-closed.active{background:#FDA2A2;color:var(--text);border-color:#FDA2A2}
 .day-tab-closed.active::after{display:none}
+.day-badge{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;border-radius:8px;font-size:9px;font-weight:700;padding:0 3px;margin-left:2px;line-height:1}
+.day-badge.empty{display:none}
+.day-badge.red{background:#DC2626;color:#fff}
+.day-badge.green{background:#15803D;color:#fff}
 .org-tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:1.25rem}
 .org-tab{padding:7px 18px;border-radius:var(--radius-sm) var(--radius-sm) 0 0;border:1px solid transparent;border-bottom:none;background:transparent;font-size:13px;cursor:pointer;color:var(--text-2);transition:all .12s;margin-bottom:-1px}
 .org-tab.active{background:var(--surface);border-color:var(--border);border-bottom-color:var(--surface);color:var(--text);font-weight:500}
@@ -492,6 +496,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <div style="flex:1"></div>
       <span id="o-sync-badge" class="sync-badge offline" style="display:none"></span>
       <button class="btn btn-subtle" id="auto-btn" onclick="openAutoAssign()"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8.667 1.333 2 9.333h6l-.667 5.334L14 6.667H8l.667-5.334Z" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/></svg> Assignation auto</button>
+      <button class="btn btn-subtle" id="undo-btn" onclick="undoLast()" disabled>↩ Annuler</button>
       <button class="btn btn-secondary" id="finaliser-btn" onclick="openFinaliser()"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M13.333 4 6 11.333 2.667 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Finaliser l'horaire</button>
     </div>
     <div class="day-status-bar" id="day-status-bar">
@@ -849,6 +854,7 @@ let bSel={},avail={},assigns={},vcols={};
 let curDay='vendredi';
 let draggingVol=null;
 let draggingFromRole=null; // {shiftId, role, name} quand on drag depuis un bloc assigné
+let undoStack=[]; // max 20 entrées — chaque entrée est un tableau d'actions inverses
 let tpCtx=null,pmCtx=null;
 let directory=[],nextId=1;
 let emailList=[],emailIdx=0;
@@ -1661,6 +1667,7 @@ async function submitAvail(){
 ══════════════════════════════════════════════ */
 async function oShift(d){
   oMon=addWeeks(oMon,d);
+  undoStack=[];updateUndoBtn();
   const wk=wkey(oMon);
   if(sb){
     await loadAvail(wk);
@@ -1698,6 +1705,56 @@ function renderO(){
   buildDayTabs();renderHoraire();
 }
 
+/* ── Undo ── */
+function pushUndo(entries){
+  undoStack.push(entries);
+  if(undoStack.length>20)undoStack.shift();
+  updateUndoBtn();
+}
+function updateUndoBtn(){
+  const btn=document.getElementById('undo-btn');
+  if(btn){btn.disabled=undoStack.length===0;btn.style.opacity=undoStack.length?'1':'0.4';}
+}
+async function undoLast(){
+  if(!undoStack.length)return;
+  const actions=undoStack.pop();
+  updateUndoBtn();
+  for(const a of actions){
+    if(a.type==='remove'){
+      removeAssign(a.wk,a.sid,a.role,a.name);
+      await deleteAssignment(a.wk,a.sid,a.role,a.name);
+    } else {
+      addAssign(a.wk,a.sid,a.role,a.name);
+      if(a.times){setAssignTimes(a.wk,a.sid,a.role,a.times.s,a.times.e,a.name);}
+      if(a.note){setAssignNote(a.wk,a.sid,a.role,a.note,a.name);}
+      await saveAssignment(a.wk,a.sid,a.role,a.name,a.times?.s??null,a.times?.e??null,a.note??null);
+    }
+  }
+  renderHoraire();
+}
+
+/* ── Badges de jours ── */
+function updateDayBadges(){
+  const wk=wkey(oMon);
+  DAYS.forEach(day=>{
+    const badge=document.getElementById('day-badge-'+day.id);
+    if(!badge)return;
+    const isClosed=(closedDays[wk]||new Set()).has(day.id);
+    if(isClosed){badge.className='day-badge empty';badge.textContent='';return;}
+    const shifts_=SHIFTS[day.id]||[];
+    let total=0,filled=0;
+    shifts_.forEach(sh=>{
+      (sh._slots||sh.roles).forEach(role=>{
+        total++;
+        if(getAssigns(wk,sh.id,role).length>0)filled++;
+      });
+    });
+    if(total===0){badge.className='day-badge empty';badge.textContent='';return;}
+    if(filled>=total){badge.className='day-badge green';badge.textContent='✓';}
+    else{badge.className='day-badge red';badge.textContent=String(total-filled);}
+  });
+}
+
 function buildDayTabs(){
   const wk=wkey(oMon);
   if(!closedDays[wk])closedDays[wk]=new Set();
@@ -1713,7 +1770,7 @@ function buildDayTabs(){
     const monthShort=(parts[1]||'').replace('.','').slice(0,4); // max 4 chars
     const btn=document.createElement('button');
     btn.className='day-tab'+(day.id===curDay?' active':'')+(isClosed?' day-tab-closed':'');
-    btn.innerHTML=`<span class="day-letter">${DAY_LETTERS[day.id]||day.id[0].toUpperCase()}</span><span>${dayNum} ${monthShort}</span>`;
+    btn.innerHTML=`<span class="day-letter">${DAY_LETTERS[day.id]||day.id[0].toUpperCase()}</span><span>${dayNum} ${monthShort}</span><span class="day-badge empty" id="day-badge-${day.id}"></span>`;
     btn.onclick=()=>{curDay=day.id;buildDayTabs();renderStatusToggle();renderHoraire();};
     el.appendChild(btn);
   });
@@ -2024,6 +2081,9 @@ function renderHoraire(){
           const x=document.createElement('span');x.className='chip-x';x.textContent='×';
           if(!past)x.addEventListener('click',ev=>{
             ev.stopPropagation();
+            const _ot=getAssignTimes(wk,shift.id,role,assignedName);
+            const _on=getAssignNote(wk,shift.id,role,assignedName);
+            pushUndo([{type:'add',wk,sid:shift.id,role,name:assignedName,times:_ot,note:_on}]);
             removeAssign(wk,shift.id,role,assignedName);
             deleteAssignment(wk,shift.id,role,assignedName);
             renderHoraire();
@@ -2084,11 +2144,19 @@ function renderHoraire(){
           if(!isEmp(name)&&!isReassign&&volAssignedToShift(wk,name,shift))return;
           e.preventDefault();
           // Si drag depuis un chip d'un autre rôle → retirer de l'ancien rôle
+          const _ue=[];
           if(draggingFromRole&&!(draggingFromRole.shiftId===shift.id&&draggingFromRole.role===role)){
+            const _ot=getAssignTimes(wk,draggingFromRole.shiftId,draggingFromRole.role,name);
+            const _on=getAssignNote(wk,draggingFromRole.shiftId,draggingFromRole.role,name);
+            _ue.push({type:'add',wk,sid:draggingFromRole.shiftId,role:draggingFromRole.role,name,times:_ot,note:_on});
             removeAssign(wk,draggingFromRole.shiftId,draggingFromRole.role,name);
             deleteAssignment(wk,draggingFromRole.shiftId,draggingFromRole.role,name);
           }
-          if(doAssign(wk,shift,role,name))renderHoraire();
+          if(doAssign(wk,shift,role,name)){
+            _ue.unshift({type:'remove',wk,sid:shift.id,role,name});
+            pushUndo(_ue);
+            renderHoraire();
+          }
         });
       }
       tl.appendChild(dz);row.appendChild(tl);grid.appendChild(row);
@@ -2118,6 +2186,8 @@ function renderHoraire(){
     }
   }
   buildCards(wk,shifts);
+  updateDayBadges();
+  updateUndoBtn();
 }
 
 /* ══════════════════════════════════════════════
@@ -2177,6 +2247,9 @@ function buildCards(wk,shifts){
     if(!draggingFromRole)return;
     e.preventDefault();
     const {shiftId,role,name}=draggingFromRole;
+    const _ot=getAssignTimes(wk,shiftId,role,name);
+    const _on=getAssignNote(wk,shiftId,role,name);
+    pushUndo([{type:'add',wk,sid:shiftId,role,name,times:_ot,note:_on}]);
     removeAssign(wk,shiftId,role,name);
     deleteAssignment(wk,shiftId,role,name);
     draggingFromRole=null;draggingVol=null;
@@ -2193,6 +2266,9 @@ function buildCards(wk,shifts){
     if(!draggingFromRole||!isEmp(draggingFromRole.name))return;
     e.preventDefault();
     const {shiftId,role,name}=draggingFromRole;
+    const _ot=getAssignTimes(wk,shiftId,role,name);
+    const _on=getAssignNote(wk,shiftId,role,name);
+    pushUndo([{type:'add',wk,sid:shiftId,role,name,times:_ot,note:_on}]);
     removeAssign(wk,shiftId,role,name);
     deleteAssignment(wk,shiftId,role,name);
     draggingFromRole=null;draggingVol=null;
@@ -2387,6 +2463,9 @@ function showTPSaved(){
 }
 function removeAssignTP(){
   if(!tpCtx)return;
+  const _ot=getAssignTimes(tpCtx.wk,tpCtx.sid,tpCtx.role,tpCtx.name);
+  const _on=getAssignNote(tpCtx.wk,tpCtx.sid,tpCtx.role,tpCtx.name);
+  pushUndo([{type:'add',wk:tpCtx.wk,sid:tpCtx.sid,role:tpCtx.role,name:tpCtx.name,times:_ot,note:_on}]);
   removeAssign(tpCtx.wk,tpCtx.sid,tpCtx.role,tpCtx.name);
   deleteAssignment(tpCtx.wk,tpCtx.sid,tpCtx.role,tpCtx.name);
   document.getElementById('time-pop').classList.remove('open');
@@ -2789,6 +2868,7 @@ async function openAutoAssign(){
     toSave.push({wk,shiftId:sh.id,role,name:best,s:ov.s,e:ov.e});
   });
 
+  if(toSave.length)pushUndo(toSave.map(a=>({type:'remove',wk:a.wk,sid:a.shiftId,role:a.role,name:a.name})));
   for(const a of toSave)await saveAssignment(a.wk,a.shiftId,a.role,a.name,a.s,a.e);
   renderHoraire();
 
