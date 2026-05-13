@@ -2548,6 +2548,17 @@ async function openAutoAssign(){
     const va=versatility(a),vb=versatility(b);if(va!==vb)return vb-va;
     return coverRatio(a,sh,dayId)-coverRatio(b,sh,dayId);
   }
+  // Retourne true si [s,e] est entièrement couvert par l'union des intervalles donnés
+  function isCovered(s,e,intervals){
+    const sorted=intervals.slice().sort((a,b)=>a.s-b.s);
+    let reach=s;
+    for(const iv of sorted){
+      if(iv.s>reach)return false;
+      reach=Math.max(reach,iv.e);
+      if(reach>=e)return true;
+    }
+    return false;
+  }
 
   // ── Construire la queue de tous les rôles vides pour toute la semaine ──
   const rolesQueue=[];
@@ -2584,6 +2595,16 @@ async function openAutoAssign(){
     if(prefScore(best,role)===0)return; // règle 5 : pas d'assignation sans préférence
 
     const ov=overlapFor(wk,best,sh,dayId);if(!ov)return;
+
+    // Vérifier si la plage du candidat est déjà entièrement couverte
+    const existingIvs=getAssigns(wk,sh.id,role).filter(n=>n!==best).map(n=>{
+      const ct=getAssignTimes(wk,sh.id,role,n);
+      if(ct)return{s:ct.s,e:ct.e};
+      const r=volDayRangeFor(wk,n,dayId);
+      return r?{s:Math.max(r.startMins,sh.fromH*60),e:Math.min(r.endMins,sh.toH*60)}:{s:sh.fromH*60,e:sh.toH*60};
+    }).filter(iv=>iv.e>iv.s);
+    if(isCovered(ov.s,ov.e,existingIvs))return;
+
     addAssign(wk,sh.id,role,best);
     setAssignTimes(wk,sh.id,role,ov.s,ov.e,best);
     setAssignNote(wk,sh.id,role,null,best);
