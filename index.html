@@ -1251,9 +1251,9 @@ function switchOrg(id,btn){
 function populateVolSelect(){
   const sel=document.getElementById('vol-select'),cur=sel.value;
   sel.innerHTML='<option value="">— Mon nom —</option>';
-  directory.forEach(p=>{
+  directory.filter(p=>p.type==='vol').forEach(p=>{
     const o=document.createElement('option');o.value=p.name;
-    o.textContent=p.name+(p.type==='emp'?' (employé)':'');sel.appendChild(o);
+    o.textContent=p.name;sel.appendChild(o);
   });
   if(cur)sel.value=cur;
 }
@@ -1860,7 +1860,7 @@ function renderHoraire(){
         chipData.forEach((cd,chipIdx)=>{
           const {assignedName,emp,col,aSH,aEH,noteVal,chipH,isOverQuota,sm,em2}=cd;
           const cL=toPx(aSH)-spx,cW=toPx(aEH)-toPx(aSH);
-          const chipBorderColor=isOverQuota?'#DC2626':(emp?col.fg:(col.fg+'80'));
+          const chipBorderColor=isOverQuota?'#DC2626':'var(--border)';
           const chipBorderWidth=isOverQuota?'2px':(emp?'2.5px':'1.5px');
           const lane=lanes[chipIdx];
 
@@ -1869,24 +1869,24 @@ function renderHoraire(){
           chip.style.height=chipH+'px';
           chip.style.bottom='auto';
           chip.style.left=cL+'px';chip.style.width=cW+'px';
-          chip.style.background=col.bg;
+          chip.style.background='var(--surface)';
           chip.style.border=`${chipBorderWidth} solid ${chipBorderColor}`;
 
           const inner=document.createElement('div');inner.className='avail-chip-inner';
           inner.style.paddingRight='18px';
-          if(emp){const b=document.createElement('span');b.className='emp-badge';b.style.color=col.fg;b.textContent='EMP';inner.appendChild(b);}
-          const nm=document.createElement('span');nm.className='chip-name';nm.style.color=col.fg;nm.textContent=assignedName;inner.appendChild(nm);
-          const tm=document.createElement('span');tm.className='chip-time';tm.style.color=col.fg;tm.textContent=mStr(sm)+'–'+mStr(em2);inner.appendChild(tm);
+          if(emp){const b=document.createElement('span');b.className='emp-badge';b.textContent='EMP';inner.appendChild(b);}
+          const nm=document.createElement('span');nm.className='chip-name';nm.textContent=assignedName;inner.appendChild(nm);
+          const tm=document.createElement('span');tm.className='chip-time';tm.textContent=mStr(sm)+'–'+mStr(em2);inner.appendChild(tm);
           const spacer=document.createElement('span');spacer.className='chip-spacer';inner.appendChild(spacer);
           if(!emp){
             const cq=volQuota(wk,assignedName);const cu=volWeekShiftCount(wk,assignedName);
             if(cq!==99&&cq>0){
               const qspan=document.createElement('span');qspan.className='chip-quota';
-              qspan.style.color=isOverQuota?'#B91C1C':col.fg;qspan.textContent=cu+'/'+cq;inner.appendChild(qspan);
+              qspan.style.color=isOverQuota?'#B91C1C':'var(--text-2)';qspan.textContent=cu+'/'+cq;inner.appendChild(qspan);
             }
           }
           chip.appendChild(inner);
-          const x=document.createElement('span');x.className='chip-x';x.style.color=col.fg;x.textContent='×';
+          const x=document.createElement('span');x.className='chip-x';x.textContent='×';
           if(!past)x.addEventListener('click',ev=>{
             ev.stopPropagation();
             removeAssign(wk,shift.id,role,assignedName);
@@ -1897,7 +1897,7 @@ function renderHoraire(){
           chip.appendChild(x);
           if(noteVal){
             const noteLine=document.createElement('div');noteLine.className='chip-note';
-            noteLine.style.color=col.fg;noteLine.textContent=noteVal;chip.appendChild(noteLine);
+            noteLine.textContent=noteVal;chip.appendChild(noteLine);
           }
           if(!past)chip.addEventListener('click',ev=>{if(ev.target===x)return;openTP(ev,assignedName,shift.id,role,shift,wk);});
           if(!past){
