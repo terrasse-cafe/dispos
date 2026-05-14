@@ -220,16 +220,17 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .h-dz.filled.dv:hover,.h-dz.filled.hv:hover,.h-dz.filled.dv.dok,.h-dz.filled.hv.dok{background:transparent;border-color:var(--accent-dark)}
 .h-dz.da:hover,.h-dz.ha:hover,.h-dz.da.dok,.h-dz.ha.dok{background:#D97706;border-color:#D97706}
 .h-dz.filled.da:hover,.h-dz.filled.ha:hover,.h-dz.filled.da.dok,.h-dz.filled.ha.dok{background:transparent;border-color:#D97706}
-.avail-chip{position:absolute;overflow:hidden;border-radius:5px;display:flex;flex-direction:column;justify-content:center;padding:2px 7px;cursor:pointer;z-index:2;transition:filter .1s}
+.avail-chip{position:absolute;overflow:hidden;border-radius:5px;cursor:pointer;z-index:2;transition:filter .1s}
 .avail-chip:hover{filter:brightness(.9)}
+.chip-covered-content{position:absolute;top:0;bottom:0;overflow:hidden;display:flex;flex-direction:column;justify-content:center;padding:2px}
 .avail-chip-inner{display:flex;align-items:center;gap:5px;width:100%;overflow:hidden;flex:0 0 auto}
 .chip-name{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0}
 .chip-time{font-size:10px;font-family:var(--mono);opacity:.6;white-space:nowrap;flex-shrink:0}
 .chip-spacer{flex:1;min-width:4px}
 .chip-quota{font-size:9px;font-family:var(--mono);font-weight:700;white-space:nowrap;flex-shrink:0;opacity:.8}
-.chip-x{cursor:pointer;font-size:16px;opacity:.3;line-height:1;transition:opacity .1s;padding:0 1px;position:absolute;right:3px;top:50%;transform:translateY(-50%)}
+.chip-x{cursor:pointer;font-size:16px;opacity:.3;line-height:1;transition:opacity .1s;position:absolute;right:0;top:50%;transform:translateY(-50%);padding:14px 8px}
 .chip-x:hover{opacity:1}
-.chip-note{font-size:10px;font-style:italic;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;margin-top:1px;padding-right:18px}
+.chip-note{font-size:10px;font-style:italic;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;margin-top:1px;padding-right:28px}
 .emp-badge{font-size:9px;font-weight:700;letter-spacing:.05em;padding:1px 4px;border-radius:3px;flex-shrink:0;border:1px solid currentColor;opacity:.75}
 .prog-wrap{margin-top:10px}
 .prog-track{height:4px;background:var(--border-light);border-radius:2px;overflow:hidden}
@@ -2109,21 +2110,35 @@ function renderHoraire(){
 
         chipData.forEach((cd,chipIdx)=>{
           const {assignedName,emp,col,aSH,aEH,noteVal,chipH,isOverQuota,sm,em2}=cd;
-          const cL=toPx(aSH)-spx,cW=toPx(aEH)-toPx(aSH);
+          const cW=toPx(aEH)-toPx(aSH);
           const chipBorderColor=isOverQuota?'#DC2626':'var(--border)';
           const chipBorderWidth=isOverQuota?'2px':(emp?'2.5px':'1.5px');
           const lane=lanes[chipIdx];
+
+          // Chip spans full role (dzFromH → shift.toH); covered portion shown solid, rest hatched
+          const fullLeft=toPx(dzFromH)-spx;
+          const fullWidth=toPx(shift.toH)-toPx(dzFromH);
+          const covStart=Math.round(toPx(aSH)-toPx(dzFromH));
+          const covEnd=Math.round(toPx(aEH)-toPx(dzFromH));
+          const sp=(fullWidth>0?(covStart/fullWidth*100).toFixed(2):'0');
+          const ep=(fullWidth>0?(covEnd/fullWidth*100).toFixed(2):'100');
+          const hatchBg=`repeating-linear-gradient(-45deg,var(--border) 0px,var(--border) 1px,var(--bg) 1px,var(--bg) 7px)`;
+          const solidBg=`linear-gradient(to right,transparent ${sp}%,var(--surface) ${sp}% ${ep}%,transparent ${ep}% 100%)`;
 
           const chip=document.createElement('div');chip.className='avail-chip';
           chip.style.top=(laneY[lane]+3)+'px';
           chip.style.height=chipH+'px';
           chip.style.bottom='auto';
-          chip.style.left=cL+'px';chip.style.width=cW+'px';
-          chip.style.background='var(--surface)';
+          chip.style.left=fullLeft+'px';chip.style.width=fullWidth+'px';
+          chip.style.background=`${solidBg},${hatchBg}`;
           chip.style.border=`${chipBorderWidth} solid ${chipBorderColor}`;
 
+          // Content wrapper — positioned at the covered portion
+          const covWrap=document.createElement('div');covWrap.className='chip-covered-content';
+          covWrap.style.left=covStart+'px';covWrap.style.width=cW+'px';
+
           const inner=document.createElement('div');inner.className='avail-chip-inner';
-          inner.style.paddingRight='18px';
+          inner.style.paddingRight='28px';
           if(emp){const b=document.createElement('span');b.className='emp-badge';b.textContent='EMP';inner.appendChild(b);}
           const nm=document.createElement('span');nm.className='chip-name';nm.textContent=assignedName;inner.appendChild(nm);
           const tm=document.createElement('span');tm.className='chip-time';tm.textContent=mStr(sm)+'–'+mStr(em2);inner.appendChild(tm);
@@ -2135,7 +2150,7 @@ function renderHoraire(){
               qspan.style.color=isOverQuota?'#B91C1C':'var(--text-2)';qspan.textContent=cu+'/'+cq;inner.appendChild(qspan);
             }
           }
-          chip.appendChild(inner);
+          covWrap.appendChild(inner);
           const x=document.createElement('span');x.className='chip-x';x.textContent='×';
           if(!past)x.addEventListener('click',ev=>{
             ev.stopPropagation();
@@ -2147,11 +2162,12 @@ function renderHoraire(){
             renderHoraire();
           });
           else x.style.display='none';
-          chip.appendChild(x);
+          covWrap.appendChild(x);
           if(noteVal){
             const noteLine=document.createElement('div');noteLine.className='chip-note';
-            noteLine.textContent=noteVal;chip.appendChild(noteLine);
+            noteLine.textContent=noteVal;covWrap.appendChild(noteLine);
           }
+          chip.appendChild(covWrap);
           if(!past)chip.addEventListener('click',ev=>{if(ev.target===x)return;openTP(ev,assignedName,shift.id,role,shift,wk);});
           if(!past){
             chip.draggable=true;
