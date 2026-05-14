@@ -703,8 +703,8 @@ create table if not exists assignments (
 );
 
 -- Migration : changer la contrainte unique pour supporter plusieurs bénévoles par rôle
--- alter table assignments drop constraint if exists assignments_week_key_shift_id_role_key;
--- alter table assignments add constraint assignments_wk_shift_role_person unique(week_key, shift_id, role, person_name);
+alter table assignments drop constraint if exists assignments_week_key_shift_id_role_key;
+alter table assignments add constraint if not exists assignments_unique unique(week_key, shift_id, role, person_name);
 
 -- Migration : ajouter la colonne note si elle n'existe pas
 alter table assignments add column if not exists note text;
