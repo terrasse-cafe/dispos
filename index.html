@@ -499,8 +499,9 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       </div>
       <div style="flex:1"></div>
       <span id="o-sync-badge" class="sync-badge offline" style="display:none"></span>
+      <button class="btn btn-subtle btn-icon" id="undo-btn" onclick="undoLast()" disabled title="Annuler"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6.00033 2.66663L2.66699 5.99996L6.00033 9.33329M2.66699 5.99996H10.667C11.3742 5.99996 12.0525 6.28091 12.5526 6.78101C13.0527 7.2811 13.3337 7.95938 13.3337 8.66663V13.3333" stroke="currentColor" stroke-width="1.33333" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button class="btn btn-subtle btn-icon" id="redo-btn" onclick="redoLast()" disabled title="Rétablir"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10.0003 2.66663L13.3337 5.99996L10.0003 9.33329M13.3337 5.99996H5.33366C4.62641 5.99996 3.94814 6.28091 3.44804 6.78101C2.94794 7.2811 2.66699 7.95938 2.66699 8.66663V13.3333" stroke="currentColor" stroke-width="1.33333" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       <button class="btn btn-subtle" id="auto-btn" onclick="openAutoAssign()"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8.667 1.333 2 9.333h6l-.667 5.334L14 6.667H8l.667-5.334Z" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/></svg> Assignation auto</button>
-      <button class="btn btn-subtle" id="undo-btn" onclick="undoLast()" disabled>↩ Annuler</button>
       <button class="btn btn-secondary" id="finaliser-btn" onclick="openFinaliser()"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M13.333 4 6 11.333 2.667 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Finaliser l'horaire</button>
     </div>
     <div id="past-week-banner">Semaine passée — lecture seule</div>
@@ -860,6 +861,7 @@ let curDay='vendredi';
 let draggingVol=null;
 let draggingFromRole=null; // {shiftId, role, name} quand on drag depuis un bloc assigné
 let undoStack=[]; // max 20 entrées — chaque entrée est un tableau d'actions inverses
+let redoStack=[];
 let tpCtx=null,pmCtx=null;
 let directory=[],nextId=1;
 let emailList=[],emailIdx=0;
@@ -1673,7 +1675,7 @@ async function submitAvail(){
 ══════════════════════════════════════════════ */
 async function oShift(d){
   oMon=addWeeks(oMon,d);
-  undoStack=[];updateUndoBtn();
+  undoStack=[];redoStack=[];updateUndoBtn();updateRedoBtn();
   const wk=wkey(oMon);
   if(sb){
     await loadAvail(wk);
@@ -1711,31 +1713,66 @@ function renderO(){
   buildDayTabs();renderHoraire();
 }
 
-/* ── Undo ── */
+/* ── Undo / Redo ── */
 function pushUndo(entries){
   undoStack.push(entries);
   if(undoStack.length>20)undoStack.shift();
+  redoStack=[];
   updateUndoBtn();
+  updateRedoBtn();
 }
 function updateUndoBtn(){
   const btn=document.getElementById('undo-btn');
   if(btn){const off=undoStack.length===0||isPastWeek();btn.disabled=off;btn.style.opacity=off?'0.4':'1';}
 }
+function updateRedoBtn(){
+  const btn=document.getElementById('redo-btn');
+  if(btn){const off=redoStack.length===0||isPastWeek();btn.disabled=off;btn.style.opacity=off?'0.4':'1';}
+}
 async function undoLast(){
   if(!undoStack.length)return;
   const actions=undoStack.pop();
   updateUndoBtn();
+  const redoEntry=[];
   for(const a of actions){
     if(a.type==='remove'){
+      redoEntry.push({type:'add',wk:a.wk,sid:a.sid,role:a.role,name:a.name,times:a.times,note:a.note});
       removeAssign(a.wk,a.sid,a.role,a.name);
       await deleteAssignment(a.wk,a.sid,a.role,a.name);
     } else {
+      redoEntry.push({type:'remove',wk:a.wk,sid:a.sid,role:a.role,name:a.name,times:a.times,note:a.note});
       addAssign(a.wk,a.sid,a.role,a.name);
       if(a.times){setAssignTimes(a.wk,a.sid,a.role,a.times.s,a.times.e,a.name);}
       if(a.note){setAssignNote(a.wk,a.sid,a.role,a.note,a.name);}
       await saveAssignment(a.wk,a.sid,a.role,a.name,a.times?.s??null,a.times?.e??null,a.note??null);
     }
   }
+  redoStack.push(redoEntry);
+  updateRedoBtn();
+  renderHoraire();
+}
+async function redoLast(){
+  if(!redoStack.length)return;
+  const actions=redoStack.pop();
+  updateRedoBtn();
+  const undoEntry=[];
+  for(const a of actions){
+    if(a.type==='remove'){
+      const _ot=getAssignTimes(a.wk,a.sid,a.role,a.name);
+      const _on=getAssignNote(a.wk,a.sid,a.role,a.name);
+      undoEntry.push({type:'add',wk:a.wk,sid:a.sid,role:a.role,name:a.name,times:_ot??a.times,note:_on??a.note});
+      removeAssign(a.wk,a.sid,a.role,a.name);
+      await deleteAssignment(a.wk,a.sid,a.role,a.name);
+    } else {
+      undoEntry.push({type:'remove',wk:a.wk,sid:a.sid,role:a.role,name:a.name});
+      addAssign(a.wk,a.sid,a.role,a.name);
+      if(a.times){setAssignTimes(a.wk,a.sid,a.role,a.times.s,a.times.e,a.name);}
+      if(a.note){setAssignNote(a.wk,a.sid,a.role,a.note,a.name);}
+      await saveAssignment(a.wk,a.sid,a.role,a.name,a.times?.s??null,a.times?.e??null,a.note??null);
+    }
+  }
+  undoStack.push(undoEntry);
+  updateUndoBtn();
   renderHoraire();
 }
 
@@ -2198,6 +2235,7 @@ function renderHoraire(){
   buildCards(wk,shifts);
   updateDayBadges();
   updateUndoBtn();
+  updateRedoBtn();
 }
 
 /* ══════════════════════════════════════════════
