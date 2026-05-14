@@ -220,7 +220,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .h-dz.filled.dv:hover,.h-dz.filled.hv:hover,.h-dz.filled.dv.dok,.h-dz.filled.hv.dok{border-color:var(--accent-dark);box-shadow:0 0 0 2px #DBE8E5,inset 0 0 0 9999px rgba(111,163,154,0.07)}
 .h-dz.da:hover,.h-dz.ha:hover,.h-dz.da.dok,.h-dz.ha.dok{background:#F8CEAA;border-color:#D97706}
 .h-dz.filled.da:hover,.h-dz.filled.ha:hover,.h-dz.filled.da.dok,.h-dz.filled.ha.dok{border-color:#D97706;box-shadow:0 0 0 2px #FDDFBE,inset 0 0 0 9999px rgba(217,119,6,0.07)}
-.avail-chip{position:absolute;overflow:hidden;border-radius:5px;cursor:pointer;z-index:2;transition:filter .1s}
+.avail-chip{position:absolute;overflow:hidden;border-radius:2px;cursor:pointer;z-index:2;transition:filter .1s}
 .avail-chip:hover{filter:brightness(.9)}
 .chip-covered-content{position:absolute;top:0;bottom:0;overflow:hidden;display:flex;flex-direction:column;justify-content:center;padding:2px}
 .avail-chip-inner{display:flex;align-items:center;gap:5px;width:100%;overflow:hidden;flex:0 0 auto}
@@ -228,7 +228,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .chip-time{font-size:10px;font-family:var(--mono);opacity:.6;white-space:nowrap;flex-shrink:0}
 .chip-spacer{flex:1;min-width:4px}
 .chip-quota{font-size:9px;font-family:var(--mono);font-weight:700;white-space:nowrap;flex-shrink:0;opacity:.8}
-.chip-x{cursor:pointer;font-size:16px;opacity:.3;line-height:1;transition:opacity .1s;position:absolute;right:0;top:50%;transform:translateY(-50%);padding:14px 8px}
+.chip-x{cursor:pointer;opacity:.3;transition:opacity .1s;position:absolute;right:0;top:0;bottom:0;width:44px;display:flex;align-items:center;justify-content:center;font-size:16px}
 .chip-x:hover{opacity:1}
 .chip-note{font-size:10px;font-style:italic;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;margin-top:1px;padding-right:28px}
 .emp-badge{font-size:9px;font-weight:700;letter-spacing:.05em;padding:1px 4px;border-radius:3px;flex-shrink:0;border:1px solid currentColor;opacity:.75}
@@ -2120,7 +2120,7 @@ function renderHoraire(){
         const laneY=Array(numLanes).fill(0);
         for(let i=1;i<numLanes;i++)laneY[i]=laneY[i-1]+laneH[i-1]+CHIP_LANE_PAD;
         const totalH=numLanes>0?(laneY[numLanes-1]+laneH[numLanes-1]):0;
-        const rowH=Math.max(36,totalH+16);
+        const rowH=Math.max(36,totalH+12);
 
         row.style.minHeight=rowH+'px';
         tl.style.height=rowH+'px';
@@ -2147,7 +2147,7 @@ function renderHoraire(){
         chipData.forEach((cd,chipIdx)=>{
           const {assignedName,emp,col,aSH,aEH,noteVal,chipH,isOverQuota,sm,em2}=cd;
           const cW=toPx(aEH)-toPx(aSH);
-          const chipBorderColor=isOverQuota?'#DC2626':'var(--border)';
+          const chipBorderColor=isOverQuota?'#DC2626':'#CEC9C4';
           const chipBorderWidth=isOverQuota?'2px':(emp?'2.5px':'1.5px');
           const lane=lanes[chipIdx];
 
@@ -2165,7 +2165,7 @@ function renderHoraire(){
           covWrap.style.left='0';covWrap.style.width=cW+'px';
 
           const inner=document.createElement('div');inner.className='avail-chip-inner';
-          inner.style.paddingRight='28px';
+          inner.style.paddingRight='44px';
           if(emp){const b=document.createElement('span');b.className='emp-badge';b.textContent='EMP';inner.appendChild(b);}
           const nm=document.createElement('span');nm.className='chip-name';nm.textContent=assignedName;inner.appendChild(nm);
           const tm=document.createElement('span');tm.className='chip-time';tm.textContent=mStr(sm)+'–'+mStr(em2);inner.appendChild(tm);
