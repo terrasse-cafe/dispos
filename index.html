@@ -2134,7 +2134,7 @@ function renderHoraire(){
           const lane=lanes[chipIdx];
 
           // Chip spans full role (dzFromH → shift.toH); covered portion shown solid, rest hatched
-          const fullLeft=toPx(dzFromH)-spx;
+          const fullLeft=0;
           const fullWidth=toPx(shift.toH)-toPx(dzFromH);
           const covStart=Math.round(toPx(aSH)-toPx(dzFromH));
           const covEnd=Math.round(toPx(aEH)-toPx(dzFromH));
