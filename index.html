@@ -273,6 +273,10 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   #vol-select{width:100%!important;box-sizing:border-box!important}
 }
 
+/* ── SEMAINE PASSÉE ── */
+#past-week-banner{display:none;font-size:12px;font-style:italic;color:var(--text-3);text-align:center;padding:3px 0 6px;letter-spacing:.02em}
+.vol-panel.wk-past .vol-card{opacity:0.42;cursor:default!important;pointer-events:none}
+
 /* ── RÉPERTOIRE ── */
 .dir-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:1rem}
 .dir-wrap{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;background:var(--surface);box-shadow:none}
@@ -499,6 +503,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <button class="btn btn-subtle" id="undo-btn" onclick="undoLast()" disabled>↩ Annuler</button>
       <button class="btn btn-secondary" id="finaliser-btn" onclick="openFinaliser()"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M13.333 4 6 11.333 2.667 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Finaliser l'horaire</button>
     </div>
+    <div id="past-week-banner">Semaine passée — lecture seule</div>
     <div class="day-status-bar" id="day-status-bar">
       <div class="status-toggle">
         <button class="status-btn" id="status-btn-open" onclick="setDayOpen(true)">
@@ -893,6 +898,7 @@ function getPerson(name){
 function isEmp(name){const p=getPerson(name);return!!(p&&p.type==='emp')}
 function curDayDate(){const day=DAYS.find(d=>d.id===curDay);return dayDate(oMon,day.dow)}
 function isPastDay(){const d=curDayDate();const today=new Date();today.setHours(0,0,0,0);return d<today;}
+function isPastWeek(){const mon=getMonday(new Date());mon.setHours(0,0,0,0);return oMon<mon;}
 
 function rebuildVcols(){
   const vols=directory.filter(p=>p.type==='vol');
@@ -1713,7 +1719,7 @@ function pushUndo(entries){
 }
 function updateUndoBtn(){
   const btn=document.getElementById('undo-btn');
-  if(btn){btn.disabled=undoStack.length===0;btn.style.opacity=undoStack.length?'1':'0.4';}
+  if(btn){const off=undoStack.length===0||isPastWeek();btn.disabled=off;btn.style.opacity=off?'0.4':'1';}
 }
 async function undoLast(){
   if(!undoStack.length)return;
@@ -1939,9 +1945,13 @@ function renderHoraire(){
   if(!closedDays[wk_check])closedDays[wk_check]=new Set();
   const isClosed=closedDays[wk_check].has(curDay);
   const past=isPastDay();
+  const wkPast=isPastWeek();
   const autoBtn=document.getElementById('auto-btn');
-  const wkPast=DAYS.every(d=>dayDate(oMon,d.dow)<new Date(new Date().setHours(0,0,0,0)));
   if(autoBtn){autoBtn.disabled=wkPast;autoBtn.style.opacity=wkPast?'0.4':'1';}
+  const banner=document.getElementById('past-week-banner');
+  if(banner)banner.style.display=wkPast?'block':'none';
+  const volPanel=document.querySelector('.vol-panel');
+  if(volPanel){if(wkPast)volPanel.classList.add('wk-past');else volPanel.classList.remove('wk-past');}
   const grid=document.getElementById('h-grid');grid.innerHTML='';
 
   const hRow=document.createElement('div');hRow.className='h-head-row';
