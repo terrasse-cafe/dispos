@@ -874,6 +874,7 @@ let bSel={},avail={},assigns={},vcols={};
 let curDay='vendredi';
 let draggingVol=null;
 let draggingFromRole=null; // {shiftId, role, name} quand on drag depuis un bloc assigné
+let draggingVolFreeIvs=null; // plages libres résiduelles au moment du drag depuis une vol-card
 let undoStack=[]; // max 20 entrées — chaque entrée est un tableau d'actions inverses
 let redoStack=[];
 let _finBlobUrl=null;
@@ -1952,7 +1953,9 @@ function volPrefersRole(name,role){
 function highlightDZs(wk,shifts){
   shifts.forEach(sh=>{
     const fromRole=draggingFromRole;
-    const covers=volCoversShift(wk,draggingVol,sh);
+    const covers=draggingVolFreeIvs
+      ?draggingVolFreeIvs.some(iv=>iv.s<sh.toH*60&&iv.e>sh.fromH*60)
+      :volCoversShift(wk,draggingVol,sh);
     const alreadyOnShift=!isEmp(draggingVol)&&volAssignedToShift(wk,draggingVol,sh)
       &&!(fromRole&&fromRole.shiftId===sh.id&&fromRole.role!==null);
     [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(role=>{
@@ -1963,7 +1966,7 @@ function highlightDZs(wk,shifts){
       }
       const v=covers&&!alreadyOnShift;
       if(!v){dz.classList.add('di');dz.classList.remove('dv','da');return;}
-      const pref=isEmp(draggingVol)||volPrefersRole(draggingVol,role);
+      const pref=volPrefersRole(draggingVol,role);
       dz.classList.toggle('dv',pref);
       dz.classList.toggle('da',!pref);
       dz.classList.remove('di');
@@ -1971,13 +1974,16 @@ function highlightDZs(wk,shifts){
   });
 }
 function clearDZHighlights(){document.querySelectorAll('.h-dz').forEach(dz=>dz.classList.remove('dv','di','dok','da','hv','ha'));}
-function hoverHighlightDZs(wk,shifts,name){
+function hoverHighlightDZs(wk,shifts,name,freeIvs){
   shifts.forEach(sh=>{
-    if(!volCoversShift(wk,name,sh))return;
+    const covers=freeIvs
+      ?freeIvs.some(iv=>iv.s<sh.toH*60&&iv.e>sh.fromH*60)
+      :volCoversShift(wk,name,sh);
+    if(!covers)return;
     [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(role=>{
       const dz=document.getElementById('dz-'+sh.id+'-'+role.replace(/[^a-z0-9]/gi,'_'));
       if(!dz)return;
-      const pref=isEmp(name)||volPrefersRole(name,role);
+      const pref=volPrefersRole(name,role);
       dz.classList.toggle('hv',pref);
       dz.classList.toggle('ha',!pref);
     });
@@ -2203,6 +2209,7 @@ function renderHoraire(){
               ev.stopPropagation();
               draggingVol=assignedName;
               draggingFromRole={shiftId:shift.id,role,name:assignedName};
+              draggingVolFreeIvs=null;
               ev.dataTransfer.setData('text/plain',assignedName);
               ev.dataTransfer.effectAllowed='move';
               setTimeout(()=>chip.style.opacity='.35',0);
@@ -2210,7 +2217,7 @@ function renderHoraire(){
             });
             chip.addEventListener('dragend',()=>{
               chip.style.opacity='';
-              draggingVol=null;draggingFromRole=null;clearDZHighlights();
+              draggingVol=null;draggingFromRole=null;draggingVolFreeIvs=null;clearDZHighlights();
             });
           }
           dz.appendChild(chip);
@@ -2357,7 +2364,7 @@ function buildCards(wk,shifts){
     pushUndo([{type:'add',wk,sid:shiftId,role,name,times:_ot,note:_on,locked:_ol}]);
     removeAssign(wk,shiftId,role,name);
     deleteAssignment(wk,shiftId,role,name);
-    draggingFromRole=null;draggingVol=null;
+    draggingFromRole=null;draggingVol=null;draggingVolFreeIvs=null;
     renderHoraire();
   });
   vp.innerHTML='';
@@ -2377,7 +2384,7 @@ function buildCards(wk,shifts){
     pushUndo([{type:'add',wk,sid:shiftId,role,name,times:_ot,note:_on,locked:_ol}]);
     removeAssign(wk,shiftId,role,name);
     deleteAssignment(wk,shiftId,role,name);
-    draggingFromRole=null;draggingVol=null;
+    draggingFromRole=null;draggingVol=null;draggingVolFreeIvs=null;
     renderHoraire();
   });
   ep.innerHTML='';
@@ -2399,6 +2406,7 @@ function buildCards(wk,shifts){
     if(emp){nm.innerHTML='<span class="emp-badge" style="margin-right:5px">EMP</span>'+name;}
     else nm.textContent=name;
     row1.appendChild(nm);
+    let freeIvs=null;
     const t=document.createElement('div');t.className='vc-time';
     if(emp){t.textContent='Plein shift';}
     else{
@@ -2417,6 +2425,7 @@ function buildCards(wk,shifts){
         const free=[];let cur=r.startMins;
         assigned.forEach(({s,e})=>{if(s>cur)free.push({s:cur,e:s});cur=Math.max(cur,e);});
         if(cur<r.endMins)free.push({s:cur,e:r.endMins});
+        freeIvs=free;
         t.innerHTML=free.length?free.map(f=>mStr(f.s)+' – '+mStr(f.e)).join(' &amp; '):(mStr(r.startMins)+' – '+mStr(r.endMins));
       }
     }
@@ -2442,15 +2451,15 @@ function buildCards(wk,shifts){
       if(qw.children.length)row1.appendChild(qw);
     }
     if(!isPast_){
-      card.addEventListener('mouseenter',()=>hoverHighlightDZs(wk,shifts,name));
+      card.addEventListener('mouseenter',()=>hoverHighlightDZs(wk,shifts,name,freeIvs));
       card.addEventListener('mouseleave',()=>clearDZHighlights());
     }
     card.addEventListener('dragstart',e=>{
       clearDZHighlights();
-      draggingVol=name;e.dataTransfer.setData('text/plain',name);e.dataTransfer.effectAllowed='move';
+      draggingVol=name;draggingVolFreeIvs=freeIvs;e.dataTransfer.setData('text/plain',name);e.dataTransfer.effectAllowed='move';
       setTimeout(()=>{card.classList.add('dragging');highlightDZs(wk,shifts);},0);
     });
-    card.addEventListener('dragend',()=>{card.classList.remove('dragging');draggingVol=null;draggingFromRole=null;clearDZHighlights();document.getElementById('vol-cards').style.outline='';document.getElementById('emp-cards').style.outline='';});
+    card.addEventListener('dragend',()=>{card.classList.remove('dragging');draggingVol=null;draggingFromRole=null;draggingVolFreeIvs=null;clearDZHighlights();document.getElementById('vol-cards').style.outline='';document.getElementById('emp-cards').style.outline='';});
     return card;
   }
   const vols=Object.keys(wkData).filter(n=>!isEmp(n)&&Object.keys(wkData[n].slots||{}).some(k=>k.startsWith(curDay+'_')));
