@@ -2139,7 +2139,7 @@ function renderHoraire(){
         chipData.forEach((cd)=>{
           const {assignedName,emp,col,aSH,aEH,noteVal,chipH,isOverQuota,sm,em2}=cd;
           const chipBorderColor=isOverQuota?'#DC2626':'#CEC9C4';
-          const chipBorderWidth=isOverQuota?'2px':(emp?'2.5px':'1.5px');
+          const chipBorderWidth=isOverQuota?'2px':'1.5px';
 
           const shiftDur=shift.toH-dzFromH;
           const leftPct=((aSH-dzFromH)/shiftDur*100).toFixed(3);
@@ -2162,11 +2162,13 @@ function renderHoraire(){
 
           const inner=document.createElement('div');inner.className='avail-chip-inner';
           inner.style.paddingRight='28px';
-          if(emp){const b=document.createElement('span');b.className='emp-badge';b.textContent='EMP';inner.appendChild(b);}
           const nm=document.createElement('span');nm.className='chip-name';nm.textContent=assignedName;inner.appendChild(nm);
           const tm=document.createElement('span');tm.className='chip-time';tm.textContent=mStr(sm)+'–'+mStr(em2);inner.appendChild(tm);
           const spacer=document.createElement('span');spacer.className='chip-spacer';inner.appendChild(spacer);
-          if(!emp){
+          if(emp){
+            const espan=document.createElement('span');espan.className='chip-quota';
+            espan.style.color='var(--text-2)';espan.textContent='EMP';inner.appendChild(espan);
+          } else {
             const cq=volQuota(wk,assignedName);const cu=volWeekShiftCount(wk,assignedName);
             if(cq!==99&&cq>0){
               const qspan=document.createElement('span');qspan.className='chip-quota';
