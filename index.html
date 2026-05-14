@@ -204,8 +204,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .h-role-name{width:var(--role-col);min-width:var(--role-col);flex-shrink:0;border-right:1px solid var(--border);padding:0 8px;display:flex;align-items:center;font-size:11px;color:var(--text-2);background:var(--surface);line-height:1.3;transition:font-weight .1s,color .1s}
 .h-role-name.opt{color:var(--text-3);font-style:italic}
 .h-timeline{flex:1;position:relative;background:var(--bg);overflow:visible}
-.h-dz{position:absolute;top:5px;bottom:5px;border:2px dashed var(--border);border-radius:var(--radius-sm);display:flex;align-items:center;padding:0 10px;transition:border-color .1s,background .1s;cursor:default;overflow:visible}
-.h-dz.empty{background:transparent;overflow:hidden}.h-dz.filled{border-style:solid;top:3px;bottom:3px}
+.h-dz{position:absolute;top:3px;bottom:3px;border:2px dashed var(--border);border-radius:6px;display:flex;align-items:center;padding:0 10px;transition:border-color .1s,background .1s;cursor:default;overflow:visible}
+.h-dz.empty{background:transparent;overflow:hidden}.h-dz.filled{border-style:solid}
 .dz-ph{font-size:11px;color:var(--text-3)}
 .h-dz.dv,.h-dz.hv{border-color:var(--accent-dark);background:#DBE8E5;border-style:solid}
 .h-dz.dv{box-shadow:0 0 0 2px #DBE8E5}
@@ -220,7 +220,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .h-dz.filled.dv:hover,.h-dz.filled.hv:hover,.h-dz.filled.dv.dok,.h-dz.filled.hv.dok{border-color:var(--accent-dark);box-shadow:0 0 0 2px #DBE8E5,inset 0 0 0 9999px rgba(111,163,154,0.07)}
 .h-dz.da:hover,.h-dz.ha:hover,.h-dz.da.dok,.h-dz.ha.dok{background:#F8CEAA;border-color:#D97706}
 .h-dz.filled.da:hover,.h-dz.filled.ha:hover,.h-dz.filled.da.dok,.h-dz.filled.ha.dok{border-color:#D97706;box-shadow:0 0 0 2px #FDDFBE,inset 0 0 0 9999px rgba(217,119,6,0.07)}
-.avail-chip{position:absolute;overflow:hidden;border-radius:2px;cursor:pointer;z-index:2;transition:filter .1s}
+.avail-chip{position:absolute;overflow:hidden;border-radius:4px;cursor:pointer;z-index:2;transition:filter .1s}
 .avail-chip:hover{filter:brightness(.9)}
 .chip-covered-content{position:absolute;top:0;bottom:0;overflow:hidden;display:flex;flex-direction:column;justify-content:center;padding:2px}
 .avail-chip-inner{display:flex;align-items:center;gap:5px;width:100%;overflow:hidden;flex:0 0 auto}
@@ -228,9 +228,9 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .chip-time{font-size:10px;font-family:var(--mono);opacity:.6;white-space:nowrap;flex-shrink:0}
 .chip-spacer{flex:1;min-width:4px}
 .chip-quota{font-size:9px;font-family:var(--mono);font-weight:700;white-space:nowrap;flex-shrink:0;opacity:.8}
-.chip-x{cursor:pointer;opacity:.3;transition:opacity .1s;position:absolute;right:0;top:0;bottom:0;width:44px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.chip-x{cursor:pointer;opacity:.3;transition:opacity .1s;position:absolute;right:0;top:0;bottom:0;width:44px;display:flex;align-items:center;justify-content:center}
 .chip-x:hover{opacity:1}
-.chip-note{font-size:10px;font-style:italic;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;margin-top:1px;padding-right:28px}
+.chip-note{font-size:10px;font-style:italic;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;margin-top:1px;padding-right:44px}
 .emp-badge{font-size:9px;font-weight:700;letter-spacing:.05em;padding:1px 4px;border-radius:3px;flex-shrink:0;border:1px solid currentColor;opacity:.75}
 .prog-wrap{margin-top:10px}
 .prog-track{height:4px;background:var(--border-light);border-radius:2px;overflow:hidden}
@@ -2084,7 +2084,7 @@ function renderHoraire(){
         dz.style.background='transparent';
         dz.style.borderColor='var(--border)';
 
-        const CHIP_H_BASE=30,CHIP_H_NOTE=46,CHIP_LANE_PAD=4;
+        const CHIP_H_BASE=26,CHIP_H_NOTE=42,CHIP_LANE_PAD=4;
 
         // Collecter les données de chaque chip
         const chipData=assignedList.map(assignedName=>{
@@ -2126,7 +2126,7 @@ function renderHoraire(){
         const laneY=Array(numLanes).fill(0);
         for(let i=1;i<numLanes;i++)laneY[i]=laneY[i-1]+laneH[i-1]+CHIP_LANE_PAD;
         const totalH=numLanes>0?(laneY[numLanes-1]+laneH[numLanes-1]):0;
-        const rowH=Math.max(36,totalH+12);
+        const rowH=Math.max(38,totalH+12);
 
         row.style.minHeight=rowH+'px';
         tl.style.height=rowH+'px';
@@ -2158,17 +2158,21 @@ function renderHoraire(){
           const lane=lanes[chipIdx];
 
           const covStart=Math.round(toPx(aSH)-toPx(dzFromH));
+          const hGapL=(aSH<=dzFromH+0.001)?3:0;
+          const hGapR=(aEH>=shift.toH-0.001)?3:0;
+          const chipLeft=covStart+hGapL;
+          const chipWidth=Math.max(1,cW-hGapL-hGapR);
 
           const chip=document.createElement('div');chip.className='avail-chip';
           chip.style.top=(laneY[lane]+3)+'px';
           chip.style.height=chipH+'px';
           chip.style.bottom='auto';
-          chip.style.left=covStart+'px';chip.style.width=cW+'px';
+          chip.style.left=chipLeft+'px';chip.style.width=chipWidth+'px';
           chip.style.background='var(--surface)';
           chip.style.border=`${chipBorderWidth} solid ${chipBorderColor}`;
 
           const covWrap=document.createElement('div');covWrap.className='chip-covered-content';
-          covWrap.style.left='0';covWrap.style.width=cW+'px';
+          covWrap.style.left='0';covWrap.style.width=chipWidth+'px';
 
           const inner=document.createElement('div');inner.className='avail-chip-inner';
           inner.style.paddingRight='44px';
@@ -2184,7 +2188,8 @@ function renderHoraire(){
             }
           }
           covWrap.appendChild(inner);
-          const x=document.createElement('span');x.className='chip-x';x.textContent='×';
+          const x=document.createElement('span');x.className='chip-x';
+          x.innerHTML='<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14.4678 0.469727C14.7607 0.17689 15.2354 0.176852 15.5283 0.469727C15.8211 0.762605 15.8211 1.2374 15.5283 1.53027L9.05859 8L15.5283 14.4697C15.8211 14.7626 15.8212 15.2374 15.5283 15.5303C15.2355 15.8231 14.7607 15.8231 14.4678 15.5303L7.99805 9.06055L1.52832 15.5303C1.23545 15.8231 0.760671 15.8231 0.467773 15.5303C0.17488 15.2374 0.17488 14.7626 0.467773 14.4697L6.9375 8L0.467773 1.53027C0.17488 1.23738 0.17488 0.76262 0.467773 0.469727C0.760667 0.176833 1.23543 0.176833 1.52832 0.469727L7.99805 6.93945L14.4678 0.469727Z" fill="#757473"/></svg>';
           if(!past)x.addEventListener('click',ev=>{
             ev.stopPropagation();
             const _ot=getAssignTimes(wk,shift.id,role,assignedName);
@@ -2202,7 +2207,7 @@ function renderHoraire(){
             noteLine.textContent=noteVal;covWrap.appendChild(noteLine);
           }
           chip.appendChild(covWrap);
-          if(!past)chip.addEventListener('click',ev=>{if(ev.target===x)return;openTP(ev,assignedName,shift.id,role,shift,wk);});
+          if(!past)chip.addEventListener('click',ev=>{if(x.contains(ev.target))return;openTP(ev,assignedName,shift.id,role,shift,wk);});
           if(!past){
             chip.draggable=true;
             chip.addEventListener('dragstart',ev=>{
@@ -2223,8 +2228,8 @@ function renderHoraire(){
           dz.appendChild(chip);
         });
       } else {
-        row.style.minHeight='36px';
-        tl.style.height='36px';
+        row.style.minHeight='38px';
+        tl.style.height='38px';
         dz.classList.add('empty');
         const ph=document.createElement('span');ph.className='dz-ph';
         ph.textContent=past?'—':'— glissez ici';dz.appendChild(ph);
