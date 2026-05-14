@@ -712,6 +712,9 @@ alter table assignments add column if not exists note text;
 -- Migration : ajouter la colonne pin si elle n'existe pas
 alter table people add column if not exists pin text default '';
 
+-- Migration : ajouter la colonne locked pour distinguer assignations manuelles / auto
+alter table assignments add column if not exists locked boolean not null default false;
+
 -- Activer la sécurité par ligne (RLS) avec accès public en lecture/écriture
 -- (pour usage interne sans authentification)
 alter table people enable row level security;
@@ -874,6 +877,7 @@ let draggingFromRole=null; // {shiftId, role, name} quand on drag depuis un bloc
 let undoStack=[]; // max 20 entrées — chaque entrée est un tableau d'actions inverses
 let redoStack=[];
 let _finBlobUrl=null;
+let _autoAssignRunning=false;
 let tpCtx=null,pmCtx=null;
 let directory=[],nextId=1;
 let emailList=[],emailIdx=0;
@@ -1022,10 +1026,11 @@ async function loadAssignments(wk) {
       assigns[wk][k+'__t__'+r.person_name] = {s: r.start_mins, e: r.end_mins};
     }
     if (r.note) assigns[wk][k+'__n__'+r.person_name] = r.note;
+    if (r.locked) assigns[wk][k+'__l__'+r.person_name] = true;
   });
 }
 
-async function saveAssignment(wk, shiftId, role, name, startMins, endMins, note=null) {
+async function saveAssignment(wk, shiftId, role, name, startMins, endMins, note=null, locked=false) {
   if (!sb) return;
   const row = {
     week_key: wk,
@@ -1035,6 +1040,7 @@ async function saveAssignment(wk, shiftId, role, name, startMins, endMins, note=
     start_mins: startMins ?? null,
     end_mins: endMins ?? null,
     note: note ?? null,
+    locked: locked,
     updated_at: new Date().toISOString()
   };
   // Unique sur (week_key, shift_id, role, person_name)
@@ -1092,6 +1098,8 @@ function subscribeRealtime(wk) {
           if (r.start_mins != null) assigns[wk][k+'__t__'+r.person_name] = {s: r.start_mins, e: r.end_mins};
           if (r.note) assigns[wk][k+'__n__'+r.person_name] = r.note;
           else delete assigns[wk][k+'__n__'+r.person_name];
+          if (r.locked) assigns[wk][k+'__l__'+r.person_name] = true;
+          else delete assigns[wk][k+'__l__'+r.person_name];
         }
         renderHoraire();
       }
@@ -1748,15 +1756,16 @@ async function undoLast(){
   const redoEntry=[];
   for(const a of actions){
     if(a.type==='remove'){
-      redoEntry.push({type:'add',wk:a.wk,sid:a.sid,role:a.role,name:a.name,times:a.times,note:a.note});
+      redoEntry.push({type:'add',wk:a.wk,sid:a.sid,role:a.role,name:a.name,times:a.times,note:a.note,locked:a.locked??false});
       removeAssign(a.wk,a.sid,a.role,a.name);
       await deleteAssignment(a.wk,a.sid,a.role,a.name);
     } else {
-      redoEntry.push({type:'remove',wk:a.wk,sid:a.sid,role:a.role,name:a.name,times:a.times,note:a.note});
+      redoEntry.push({type:'remove',wk:a.wk,sid:a.sid,role:a.role,name:a.name,times:a.times,note:a.note,locked:a.locked??false});
       addAssign(a.wk,a.sid,a.role,a.name);
       if(a.times){setAssignTimes(a.wk,a.sid,a.role,a.times.s,a.times.e,a.name);}
       if(a.note){setAssignNote(a.wk,a.sid,a.role,a.note,a.name);}
-      await saveAssignment(a.wk,a.sid,a.role,a.name,a.times?.s??null,a.times?.e??null,a.note??null);
+      setAssignLocked(a.wk,a.sid,a.role,a.locked??false,a.name);
+      await saveAssignment(a.wk,a.sid,a.role,a.name,a.times?.s??null,a.times?.e??null,a.note??null,a.locked??false);
     }
   }
   redoStack.push(redoEntry);
@@ -1772,15 +1781,17 @@ async function redoLast(){
     if(a.type==='remove'){
       const _ot=getAssignTimes(a.wk,a.sid,a.role,a.name);
       const _on=getAssignNote(a.wk,a.sid,a.role,a.name);
-      undoEntry.push({type:'add',wk:a.wk,sid:a.sid,role:a.role,name:a.name,times:_ot??a.times,note:_on??a.note});
+      const _ol=getAssignLocked(a.wk,a.sid,a.role,a.name);
+      undoEntry.push({type:'add',wk:a.wk,sid:a.sid,role:a.role,name:a.name,times:_ot??a.times,note:_on??a.note,locked:_ol??a.locked??false});
       removeAssign(a.wk,a.sid,a.role,a.name);
       await deleteAssignment(a.wk,a.sid,a.role,a.name);
     } else {
-      undoEntry.push({type:'remove',wk:a.wk,sid:a.sid,role:a.role,name:a.name});
+      undoEntry.push({type:'remove',wk:a.wk,sid:a.sid,role:a.role,name:a.name,locked:a.locked??false});
       addAssign(a.wk,a.sid,a.role,a.name);
       if(a.times){setAssignTimes(a.wk,a.sid,a.role,a.times.s,a.times.e,a.name);}
       if(a.note){setAssignNote(a.wk,a.sid,a.role,a.note,a.name);}
-      await saveAssignment(a.wk,a.sid,a.role,a.name,a.times?.s??null,a.times?.e??null,a.note??null);
+      setAssignLocked(a.wk,a.sid,a.role,a.locked??false,a.name);
+      await saveAssignment(a.wk,a.sid,a.role,a.name,a.times?.s??null,a.times?.e??null,a.note??null,a.locked??false);
     }
   }
   undoStack.push(undoEntry);
@@ -1905,6 +1916,7 @@ function removeAssign(wk,sid,role,name){
   if(arr.length)assigns[wk][k]=arr; else delete assigns[wk][k];
   delete assigns[wk][akey(sid,role)+'__t__'+name];
   delete assigns[wk][akey(sid,role)+'__n__'+name];
+  delete assigns[wk][akey(sid,role)+'__l__'+name];
 }
 // Compat setAssign: remplace tout le tableau par un seul nom (ou supprime si null)
 function setAssign(wk,sid,role,name){
@@ -1924,6 +1936,12 @@ function setAssignTimes(wk,sid,role,s,e,name){
   if(!name)name=getAssign(wk,sid,role);
   if(!name)return;
   assigns[wk][akey(sid,role)+'__t__'+name]={s,e};
+}
+function getAssignLocked(wk,sid,role,name){return !!((assigns[wk]||{})[akey(sid,role)+'__l__'+name]);}
+function setAssignLocked(wk,sid,role,locked,name){
+  if(!assigns[wk])assigns[wk]={};
+  if(locked)assigns[wk][akey(sid,role)+'__l__'+name]=true;
+  else delete assigns[wk][akey(sid,role)+'__l__'+name];
 }
 
 function volPrefersRole(name,role){
@@ -2156,7 +2174,8 @@ function renderHoraire(){
             ev.stopPropagation();
             const _ot=getAssignTimes(wk,shift.id,role,assignedName);
             const _on=getAssignNote(wk,shift.id,role,assignedName);
-            pushUndo([{type:'add',wk,sid:shift.id,role,name:assignedName,times:_ot,note:_on}]);
+            const _ol=getAssignLocked(wk,shift.id,role,assignedName);
+            pushUndo([{type:'add',wk,sid:shift.id,role,name:assignedName,times:_ot,note:_on,locked:_ol}]);
             removeAssign(wk,shift.id,role,assignedName);
             deleteAssignment(wk,shift.id,role,assignedName);
             renderHoraire();
@@ -2222,12 +2241,13 @@ function renderHoraire(){
           if(draggingFromRole&&!(draggingFromRole.shiftId===shift.id&&draggingFromRole.role===role)){
             const _ot=getAssignTimes(wk,draggingFromRole.shiftId,draggingFromRole.role,name);
             const _on=getAssignNote(wk,draggingFromRole.shiftId,draggingFromRole.role,name);
-            _ue.push({type:'add',wk,sid:draggingFromRole.shiftId,role:draggingFromRole.role,name,times:_ot,note:_on});
+            const _ol=getAssignLocked(wk,draggingFromRole.shiftId,draggingFromRole.role,name);
+            _ue.push({type:'add',wk,sid:draggingFromRole.shiftId,role:draggingFromRole.role,name,times:_ot,note:_on,locked:_ol});
             removeAssign(wk,draggingFromRole.shiftId,draggingFromRole.role,name);
             deleteAssignment(wk,draggingFromRole.shiftId,draggingFromRole.role,name);
           }
           if(doAssign(wk,shift,role,name)){
-            _ue.unshift({type:'remove',wk,sid:shift.id,role,name});
+            _ue.unshift({type:'remove',wk,sid:shift.id,role,name,locked:true});
             pushUndo(_ue);
             renderHoraire();
           }
@@ -2324,7 +2344,8 @@ function buildCards(wk,shifts){
     const {shiftId,role,name}=draggingFromRole;
     const _ot=getAssignTimes(wk,shiftId,role,name);
     const _on=getAssignNote(wk,shiftId,role,name);
-    pushUndo([{type:'add',wk,sid:shiftId,role,name,times:_ot,note:_on}]);
+    const _ol=getAssignLocked(wk,shiftId,role,name);
+    pushUndo([{type:'add',wk,sid:shiftId,role,name,times:_ot,note:_on,locked:_ol}]);
     removeAssign(wk,shiftId,role,name);
     deleteAssignment(wk,shiftId,role,name);
     draggingFromRole=null;draggingVol=null;
@@ -2343,7 +2364,8 @@ function buildCards(wk,shifts){
     const {shiftId,role,name}=draggingFromRole;
     const _ot=getAssignTimes(wk,shiftId,role,name);
     const _on=getAssignNote(wk,shiftId,role,name);
-    pushUndo([{type:'add',wk,sid:shiftId,role,name,times:_ot,note:_on}]);
+    const _ol=getAssignLocked(wk,shiftId,role,name);
+    pushUndo([{type:'add',wk,sid:shiftId,role,name,times:_ot,note:_on,locked:_ol}]);
     removeAssign(wk,shiftId,role,name);
     deleteAssignment(wk,shiftId,role,name);
     draggingFromRole=null;draggingVol=null;
@@ -2465,14 +2487,16 @@ function buildCards(wk,shifts){
 function doAssign(wk,shift,role,name){
   if(isEmp(name)){
     addAssign(wk,shift.id,role,name);
-    saveAssignment(wk,shift.id,role,name,null,null,null);
+    setAssignLocked(wk,shift.id,role,true,name);
+    saveAssignment(wk,shift.id,role,name,null,null,null,true);
   } else {
     if(volAssignedToShift(wk,name,shift)){alert(name+' est déjà assigné(e) à ce shift.');return false;}
     const ov=overlapMins(wk,name,shift);
     if(!ov){alert(name+' n\'est pas disponible sur ce shift.');return false;}
     addAssign(wk,shift.id,role,name);
     setAssignTimes(wk,shift.id,role,ov.s,ov.e,name);
-    saveAssignment(wk,shift.id,role,name,ov.s,ov.e,null);
+    setAssignLocked(wk,shift.id,role,true,name);
+    saveAssignment(wk,shift.id,role,name,ov.s,ov.e,null,true);
   }
   return true;
 }
@@ -2517,9 +2541,10 @@ function closeTP(){
   const e=parseInt(document.getElementById('tp-end')?.value);
   if(!isNaN(s)&&!isNaN(e)&&e>s){
     const note=document.getElementById('tp-note').value.trim()||null;
+    const wasLocked=getAssignLocked(tpCtx.wk,tpCtx.sid,tpCtx.role,tpCtx.name);
     setAssignTimes(tpCtx.wk,tpCtx.sid,tpCtx.role,s,e,tpCtx.name);
     setAssignNote(tpCtx.wk,tpCtx.sid,tpCtx.role,note,tpCtx.name);
-    saveAssignment(tpCtx.wk,tpCtx.sid,tpCtx.role,tpCtx.name,s,e,note);
+    saveAssignment(tpCtx.wk,tpCtx.sid,tpCtx.role,tpCtx.name,s,e,note,wasLocked);
     document.getElementById('time-pop').classList.remove('open');
     tpCtx=null;
     renderHoraire();
@@ -2540,7 +2565,8 @@ function removeAssignTP(){
   if(!tpCtx)return;
   const _ot=getAssignTimes(tpCtx.wk,tpCtx.sid,tpCtx.role,tpCtx.name);
   const _on=getAssignNote(tpCtx.wk,tpCtx.sid,tpCtx.role,tpCtx.name);
-  pushUndo([{type:'add',wk:tpCtx.wk,sid:tpCtx.sid,role:tpCtx.role,name:tpCtx.name,times:_ot,note:_on}]);
+  const _ol=getAssignLocked(tpCtx.wk,tpCtx.sid,tpCtx.role,tpCtx.name);
+  pushUndo([{type:'add',wk:tpCtx.wk,sid:tpCtx.sid,role:tpCtx.role,name:tpCtx.name,times:_ot,note:_on,locked:_ol}]);
   removeAssign(tpCtx.wk,tpCtx.sid,tpCtx.role,tpCtx.name);
   deleteAssignment(tpCtx.wk,tpCtx.sid,tpCtx.role,tpCtx.name);
   document.getElementById('time-pop').classList.remove('open');
@@ -2856,19 +2882,48 @@ function volQuotaReached(wk, name, tempShiftCounts) {
 }
 
 async function openAutoAssign(){
+  if(_autoAssignRunning)return;
+  _autoAssignRunning=true;
+  try{
   const wk=wkey(oMon);
-  if(sb){await loadPeople();await loadAssignments(wk);}
+  if(sb){
+    await loadPeople();
+    assigns[wk]={};           // reset local cache — loadAssignments ne fait qu'ajouter, jamais supprimer
+    await loadAssignments(wk);// lecture fraîche depuis DB
+  }
 
   const wkData=avail[wk]||{};
   const today=new Date();today.setHours(0,0,0,0);
 
-  // ── Comptage shifts déjà assignés cette semaine (hors jours fermés) ──
+  // ── Étape 1 : collecter et effacer toutes les assignations non-verrouillées ──
+  const cleared=[];
+  DAYS.forEach(day=>{
+    if((closedDays[wk]||new Set()).has(day.id))return;
+    const dayDate_=dayDate(oMon,day.dow);
+    if(dayDate_<today)return;
+    (SHIFTS[day.id]||[]).forEach(sh=>{
+      [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(role=>{
+        getAssigns(wk,sh.id,role).slice().forEach(name=>{
+          if(!getAssignLocked(wk,sh.id,role,name)){
+            cleared.push({wk,shiftId:sh.id,role,name,
+              times:getAssignTimes(wk,sh.id,role,name),
+              note:getAssignNote(wk,sh.id,role,name)});
+          }
+        });
+      });
+    });
+  });
+  cleared.forEach(d=>removeAssign(d.wk,d.shiftId,d.role,d.name));
+  await Promise.all(cleared.map(d=>deleteAssignment(d.wk,d.shiftId,d.role,d.name)));
+  const lockedTrueCount=Object.keys(assigns[wk]||{}).filter(k=>k.includes('__l__')).length;
+  console.log(`[auto-assign] supprimées locked:false=${cleared.length} | restantes locked:true=${lockedTrueCount}`);
+
+  // ── Étape 2 : comptage depuis les assignations verrouillées restantes ──
   const weekShiftCounts={};
   const weekShiftSeen=new Set();
-  // name -> Set<shiftId> par jour
   const assignedShifts={}; // name+'|'+dayId -> Set<shiftId>
   DAYS.forEach(day=>{
-    if((closedDays[wk]||new Set()).has(day.id))return; // ignorer les jours fermés
+    if((closedDays[wk]||new Set()).has(day.id))return;
     (SHIFTS[day.id]||[]).forEach(sh=>{
       [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(role=>{
         getAssigns(wk,sh.id,role).forEach(ex=>{
@@ -2949,51 +3004,63 @@ async function openAutoAssign(){
   const toSave=[];
 
   rolesQueue.forEach(({sh,role,dayId,isOpt})=>{
-    // rôle peut avoir plusieurs assignés
-
-    // Bénévoles disponibles ce jour, quota non atteint, pas déjà dans ce shift
+    // Bénévoles disponibles ce jour, quota non atteint, pas déjà dans ce shift, préférence requise
     const candidates=Object.keys(wkData).filter(n=>
       !isEmp(n)&&
       !quotaReached(n)&&
       !alreadyOnShift(n,dayId,sh.id)&&
-      volCoversShiftFor(wk,n,sh,dayId)
+      volCoversShiftFor(wk,n,sh,dayId)&&
+      prefScore(n,role)>0
     );
     if(!candidates.length)return;
 
-    const best=candidates.reduce((b,c)=>compare(c,b,role,sh,dayId)>0?c:b);
-    if(prefScore(best,role)===0)return; // règle 5 : pas d'assignation sans préférence
+    // Trier par score décroissant, essayer chacun jusqu'au premier valide
+    candidates.sort((a,b)=>compare(b,a,role,sh,dayId));
 
-    const ov=overlapFor(wk,best,sh,dayId);if(!ov)return;
+    for(const cand of candidates){
+      const ov=overlapFor(wk,cand,sh,dayId);if(!ov)continue;
 
-    // Vérifier si la plage du candidat est déjà entièrement couverte
-    const existingIvs=getAssigns(wk,sh.id,role).filter(n=>n!==best).map(n=>{
-      const ct=getAssignTimes(wk,sh.id,role,n);
-      if(ct)return{s:ct.s,e:ct.e};
-      const r=volDayRangeFor(wk,n,dayId);
-      return r?{s:Math.max(r.startMins,sh.fromH*60),e:Math.min(r.endMins,sh.toH*60)}:{s:sh.fromH*60,e:sh.toH*60};
-    }).filter(iv=>iv.e>iv.s);
-    if(isCovered(ov.s,ov.e,existingIvs))return;
+      const existingIvs=getAssigns(wk,sh.id,role).filter(n=>n!==cand).map(n=>{
+        const ct=getAssignTimes(wk,sh.id,role,n);
+        if(ct)return{s:ct.s,e:ct.e};
+        const r=volDayRangeFor(wk,n,dayId);
+        return r?{s:Math.max(r.startMins,sh.fromH*60),e:Math.min(r.endMins,sh.toH*60)}:{s:sh.fromH*60,e:sh.toH*60};
+      }).filter(iv=>iv.e>iv.s);
 
-    addAssign(wk,sh.id,role,best);
-    setAssignTimes(wk,sh.id,role,ov.s,ov.e,best);
-    setAssignNote(wk,sh.id,role,null,best);
-    markAssigned(best,dayId,sh.id);
-    toSave.push({wk,shiftId:sh.id,role,name:best,s:ov.s,e:ov.e});
+      // Plage déjà entièrement couverte → ce slot n'a pas besoin de plus
+      if(isCovered(ov.s,ov.e,existingIvs))return;
+
+      // Chevauchement horaire avec une assignation existante → essayer le suivant
+      if(existingIvs.some(iv=>ov.s<iv.e&&iv.s<ov.e))continue;
+
+      addAssign(wk,sh.id,role,cand);
+      setAssignTimes(wk,sh.id,role,ov.s,ov.e,cand);
+      setAssignNote(wk,sh.id,role,null,cand);
+      setAssignLocked(wk,sh.id,role,false,cand);
+      markAssigned(cand,dayId,sh.id);
+      toSave.push({wk,shiftId:sh.id,role,name:cand,s:ov.s,e:ov.e});
+      break;
+    }
   });
 
-  if(toSave.length)pushUndo(toSave.map(a=>({type:'remove',wk:a.wk,sid:a.shiftId,role:a.role,name:a.name})));
-  for(const a of toSave)await saveAssignment(a.wk,a.shiftId,a.role,a.name,a.s,a.e);
+  const undoEntries=[
+    ...cleared.map(d=>({type:'add',wk:d.wk,sid:d.shiftId,role:d.role,name:d.name,times:d.times,note:d.note,locked:false})),
+    ...toSave.map(a=>({type:'remove',wk:a.wk,sid:a.shiftId,role:a.role,name:a.name,locked:false}))
+  ];
+  if(undoEntries.length)pushUndo(undoEntries);
+  for(const a of toSave)await saveAssignment(a.wk,a.shiftId,a.role,a.name,a.s,a.e,null,false);
   renderHoraire();
 
   // Feedback
   const n=toSave.length;
-  if(n>0){
+  if(n>0||cleared.length>0){
     setSyncBadge('o-sync-badge','saved',`✓ ${n} assignation${n>1?'s':''} ajoutée${n>1?'s':''}`);
     setTimeout(()=>setSyncBadge('o-sync-badge','saved',''),3500);
   } else {
     setSyncBadge('o-sync-badge','saved','✓ Horaire déjà optimisé');
     setTimeout(()=>setSyncBadge('o-sync-badge','saved',''),3500);
   }
+  }finally{_autoAssignRunning=false;}
 }
 
 /* ══════════════════════════════════════════════
