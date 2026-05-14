@@ -204,7 +204,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .h-role-name{width:var(--role-col);min-width:var(--role-col);flex-shrink:0;border-right:1px solid var(--border);padding:0 8px;display:flex;align-items:center;font-size:11px;color:var(--text-2);background:var(--surface);line-height:1.3;transition:font-weight .1s,color .1s}
 .h-role-name.opt{color:var(--text-3);font-style:italic}
 .h-timeline{flex:1;position:relative;background:var(--bg);overflow:visible}
-.h-dz{position:absolute;top:3px;bottom:3px;border:2px dashed var(--border);border-radius:6px;display:flex;flex-direction:column;justify-content:center;padding:3px;box-sizing:border-box;gap:3px;transition:border-color .1s,background .1s;cursor:default;overflow:hidden}
+.h-dz{position:absolute;top:3px;bottom:3px;border:2px dashed var(--border);border-radius:6px;display:flex;align-items:center;padding:0 10px;transition:border-color .1s,background .1s;cursor:default;overflow:hidden}
 .h-dz.empty{background:transparent}.h-dz.filled{border-style:solid}
 .dz-ph{font-size:11px;color:var(--text-3)}
 .h-dz.dv,.h-dz.hv{border-color:var(--accent-dark);background:#DBE8E5;border-style:solid}
@@ -220,7 +220,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .h-dz.filled.dv:hover,.h-dz.filled.hv:hover,.h-dz.filled.dv.dok,.h-dz.filled.hv.dok{border-color:var(--accent-dark);box-shadow:0 0 0 2px #DBE8E5,inset 0 0 0 9999px rgba(111,163,154,0.07)}
 .h-dz.da:hover,.h-dz.ha:hover,.h-dz.da.dok,.h-dz.ha.dok{background:#F8CEAA;border-color:#D97706}
 .h-dz.filled.da:hover,.h-dz.filled.ha:hover,.h-dz.filled.da.dok,.h-dz.filled.ha.dok{border-color:#D97706;box-shadow:0 0 0 2px #FDDFBE,inset 0 0 0 9999px rgba(217,119,6,0.07)}
-.avail-chip{position:relative;overflow:hidden;border-radius:4px;cursor:pointer;transition:filter .1s}
+.avail-chip{position:absolute;overflow:hidden;border-radius:4px;cursor:pointer;transition:filter .1s;min-height:26px}
 .avail-chip:hover{filter:brightness(.9)}
 .chip-covered-content{position:absolute;top:0;right:0;bottom:0;left:0;overflow:hidden;display:flex;flex-direction:column;justify-content:center;padding:2px}
 .avail-chip-inner{display:flex;align-items:center;gap:5px;width:100%;overflow:hidden;flex:0 0 auto}
@@ -2084,7 +2084,7 @@ function renderHoraire(){
         dz.style.background='transparent';
         dz.style.borderColor='var(--border)';
 
-        const CHIP_H_BASE=26,CHIP_H_NOTE=42,CHIP_LANE_PAD=4;
+        const CHIP_H_BASE=26,CHIP_H_NOTE=42;
 
         // Collecter les données de chaque chip
         const chipData=assignedList.map(assignedName=>{
@@ -2110,8 +2110,8 @@ function renderHoraire(){
         // Trier par heure de début
         chipData.sort((a,b)=>a.aSH-b.aSH);
 
-        const totalH=chipData.reduce((s,cd)=>s+cd.chipH,0)+Math.max(0,chipData.length-1)*3;
-        const rowH=Math.max(38,totalH+12);
+        const maxChipH=chipData.reduce((m,cd)=>Math.max(m,cd.chipH),0);
+        const rowH=Math.max(38,maxChipH+12);
 
         row.style.minHeight=rowH+'px';
         tl.style.height=rowH+'px';
@@ -2140,8 +2140,20 @@ function renderHoraire(){
           const chipBorderColor=isOverQuota?'#DC2626':'#CEC9C4';
           const chipBorderWidth=isOverQuota?'2px':(emp?'2.5px':'1.5px');
 
+          const shiftDur=shift.toH-dzFromH;
+          const leftPct=((aSH-dzFromH)/shiftDur*100).toFixed(3);
+          const wPct=((aEH-aSH)/shiftDur*100).toFixed(3);
+          const hGapL=(aSH<=dzFromH+0.001)?3:0;
+          const hGapR=(aEH>=shift.toH-0.001)?3:0;
+          const chipLeft=hGapL?`calc(${leftPct}% + ${hGapL}px)`:`${leftPct}%`;
+          const chipWidth=(hGapL+hGapR)?`calc(${wPct}% - ${hGapL+hGapR}px)`:`${wPct}%`;
+
           const chip=document.createElement('div');chip.className='avail-chip';
+          chip.style.top='3px';
           chip.style.height=chipH+'px';
+          chip.style.bottom='auto';
+          chip.style.left=chipLeft;
+          chip.style.width=chipWidth;
           chip.style.background='var(--surface)';
           chip.style.border=`${chipBorderWidth} solid ${chipBorderColor}`;
 
