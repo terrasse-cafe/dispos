@@ -1974,7 +1974,12 @@ function highlightDZs(wk,shifts){
     });
   });
 }
-function clearDZHighlights(){document.querySelectorAll('.h-dz').forEach(dz=>dz.classList.remove('dv','di','dok','da','hv','ha','hvo'));}
+function clearDZHighlights(){
+  document.querySelectorAll('.h-dz').forEach(dz=>{
+    dz.classList.remove('dv','di','dok','da','hv','ha','hvo');
+    if(dz._hoverCssText!==undefined){dz.style.cssText=dz._hoverCssText;delete dz._hoverCssText;}
+  });
+}
 function hoverHighlightDZs(wk,shifts,name,freeIvs){
   shifts.forEach(sh=>{
     const coversFree=freeIvs
@@ -1986,11 +1991,24 @@ function hoverHighlightDZs(wk,shifts,name,freeIvs){
       const dz=document.getElementById('dz-'+sh.id+'-'+role.replace(/[^a-z0-9]/gi,'_'));
       if(!dz)return;
       const pref=volPrefersRole(name,role);
+      const filled=dz.classList.contains('filled');
       if(coversFree){
         dz.classList.toggle('hv',pref);
         dz.classList.toggle('ha',!pref);
-      } else if(pref&&dz.classList.contains('filled')){
+      } else if(pref&&filled){
         dz.classList.add('hvo');
+      }
+      // Inline styles on filled dz override CSS class rules — apply directly
+      if(filled){
+        if(dz.classList.contains('hv')||dz.classList.contains('hvo')){
+          dz._hoverCssText=dz.style.cssText;
+          dz.style.background='#DBE8E5';
+          dz.style.borderColor='var(--accent-dark)';
+        } else if(dz.classList.contains('ha')){
+          dz._hoverCssText=dz.style.cssText;
+          dz.style.background='#FDDFBE';
+          dz.style.borderColor='#D97706';
+        }
       }
     });
   });
