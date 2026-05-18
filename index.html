@@ -3414,10 +3414,10 @@ function buildPdfBlob(){
       });
 
       // Col 1 : Rôle — centré verticalement sur toute la hauteur de la ligne
-      doc.setFont('helvetica', row.isOpt?'italic':'normal');
+      doc.setFont('helvetica','normal');
       doc.setFontSize(7.5);
-      setTextColor(row.isOpt?C.text3:C.text2);
-      const roleText=(row.isOpt?'★ ':'')+roleLabel(row.role);
+      setTextColor(C.text2);
+      const roleText=roleLabel(row.role);
       doc.text(doc.splitTextToSize(roleText, cRole-5)[0], margin+3, y+totalRowH/2+1.5);
 
       // Cols 2-4 : une sous-ligne par bénévole
@@ -3426,10 +3426,9 @@ function buildPdfBlob(){
         if(ei > 0){ setDraw(C.border); doc.line(margin+cRole, subY, margin+usable, subY); }
         const midY = subY + h/2 + 1.5;
         if(entry.name){
-          const emp = isEmp(entry.name);
-          setTextColor(emp?C.amber:C.text);
-          doc.setFont('helvetica', emp?'bold':'normal'); doc.setFontSize(8);
-          doc.text(emp?'▪ '+entry.name:entry.name, margin+cRole+3, midY);
+          setTextColor(C.text);
+          doc.setFont('helvetica','normal'); doc.setFontSize(8);
+          doc.text(entry.name, margin+cRole+3, midY);
           doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
           setTextColor(C.text3);
           doc.text(entry.timeStr, margin+cRole+cName+3, midY);
