@@ -1286,7 +1286,8 @@ function pinVolCancel() {
 /* ══════════════════════════════════════════════
    ORG PIN AUTH
 ══════════════════════════════════════════════ */
-// ?gestion=1 dans l'URL → affiche l'écran PIN organisatriceconst ORG_MODE = new URLSearchParams(location.search).get('gestion') === '1';
+// ?gestion=1 dans l'URL → affiche l'écran PIN organisatrice
+const ORG_MODE = new URLSearchParams(location.search).get('gestion') === '1';
 const TEST_MODE = new URLSearchParams(location.search).get('mode') === 'test';
 let orgUnlocked = false;
 
