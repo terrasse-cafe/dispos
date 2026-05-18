@@ -126,7 +126,7 @@ main{flex:1;padding:1rem 1.25rem;width:100%;overflow-x:clip}
 .day-tab-closed.active::after{display:none}
 .day-badge{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;border-radius:8px;font-size:9px;font-weight:700;padding:0 3px;margin-left:2px;line-height:1}
 .day-badge.empty{display:none}
-.day-badge.red{background:#1C1917;color:#fff}
+.day-badge.red{background:#DC2626;color:#fff}
 .day-badge.green{background:#15803D;color:#fff}
 .org-tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:1.25rem}
 .org-tab{padding:7px 18px;border-radius:var(--radius-sm) var(--radius-sm) 0 0;border:1px solid transparent;border-bottom:none;background:transparent;font-size:13px;cursor:pointer;color:var(--text-2);transition:all .12s;margin-bottom:-1px}
@@ -204,35 +204,32 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .h-role-name{width:var(--role-col);min-width:var(--role-col);flex-shrink:0;border-right:1px solid var(--border);padding:0 8px;display:flex;align-items:center;font-size:11px;color:var(--text-2);background:var(--surface);line-height:1.3;transition:font-weight .1s,color .1s}
 .h-role-name.opt{color:var(--text-3);font-style:italic}
 .h-timeline{flex:1;position:relative;background:var(--bg);overflow:visible}
-.h-dz{position:absolute;top:3px;bottom:3px;border:2px dashed var(--border);border-radius:6px;display:flex;align-items:center;padding:0 10px;transition:border-color .1s,background .1s;cursor:default;overflow:hidden}
-.h-dz.empty{background:transparent}.h-dz.filled{border-style:solid}
+.h-dz{position:absolute;top:5px;bottom:5px;border:2px dashed var(--border);border-radius:var(--radius-sm);display:flex;align-items:center;padding:0 10px;transition:border-color .1s,background .1s;cursor:default;overflow:visible}
+.h-dz.empty{background:transparent;overflow:hidden}.h-dz.filled{border-style:solid;top:3px;bottom:3px}
 .dz-ph{font-size:11px;color:var(--text-3)}
 .h-dz.dv,.h-dz.hv{border-color:var(--accent-dark);background:#DBE8E5;border-style:solid}
 .h-dz.dv{box-shadow:0 0 0 2px #DBE8E5}
-.h-dz.filled.dv{background:transparent;border-color:var(--accent-dark);box-shadow:0 0 0 2px #DBE8E5}
+.h-dz.filled.dv,.h-dz.filled.hv{background:transparent;border-color:var(--accent-dark)}
+.h-dz.filled.dv{box-shadow:0 0 0 2px #DBE8E5}
 .h-dz.da,.h-dz.ha{border-color:#D97706;background:#FDDFBE;border-style:solid}
 .h-dz.da{box-shadow:0 0 0 2px #FDDFBE}
 .h-dz.filled.da,.h-dz.filled.ha{background:transparent;border-color:#D97706}
 .h-dz.filled.da{box-shadow:0 0 0 2px #FDDFBE}
 .h-dz.di{opacity:.38;cursor:not-allowed}
-.h-dz.dv:hover,.h-dz.hv:hover,.h-dz.dv.dok,.h-dz.hv.dok{background:#CADCD8;border-color:var(--accent-dark)}
-.h-dz.filled.dv:hover,.h-dz.filled.dv.dok{border-color:var(--accent-dark);box-shadow:0 0 0 2px #DBE8E5,inset 0 0 0 9999px rgba(111,163,154,0.07)}
-.h-dz.hvo{background:#DBE8E5;border-color:var(--accent-dark);border-style:solid}
-.h-dz.da:hover,.h-dz.ha:hover,.h-dz.da.dok,.h-dz.ha.dok{background:#F8CEAA;border-color:#D97706}
-.h-dz.filled.da:hover,.h-dz.filled.ha:hover,.h-dz.filled.da.dok,.h-dz.filled.ha.dok{border-color:#D97706;box-shadow:0 0 0 2px #FDDFBE,inset 0 0 0 9999px rgba(217,119,6,0.07)}
-.avail-chip{position:absolute;overflow:hidden;border-radius:4px;cursor:pointer;transition:filter .1s;min-height:26px}
+.h-dz.dv:hover,.h-dz.hv:hover,.h-dz.dv.dok,.h-dz.hv.dok{background:var(--accent-dark);border-color:var(--accent-dark)}
+.h-dz.filled.dv:hover,.h-dz.filled.hv:hover,.h-dz.filled.dv.dok,.h-dz.filled.hv.dok{background:transparent;border-color:var(--accent-dark)}
+.h-dz.da:hover,.h-dz.ha:hover,.h-dz.da.dok,.h-dz.ha.dok{background:#D97706;border-color:#D97706}
+.h-dz.filled.da:hover,.h-dz.filled.ha:hover,.h-dz.filled.da.dok,.h-dz.filled.ha.dok{background:transparent;border-color:#D97706}
+.avail-chip{position:absolute;overflow:hidden;border-radius:5px;display:flex;flex-direction:column;justify-content:center;padding:2px 7px;cursor:pointer;z-index:2;transition:filter .1s}
 .avail-chip:hover{filter:brightness(.9)}
-#chip-pref-tooltip{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-md);padding:5px 10px;font-size:11px;color:var(--text-2);pointer-events:none;opacity:0;transition:opacity .15s;z-index:500;white-space:nowrap}
-#chip-pref-tooltip.visible{opacity:1}
-.chip-covered-content{position:absolute;top:0;right:0;bottom:0;left:0;overflow:hidden;display:flex;flex-direction:column;justify-content:center;padding:2px}
 .avail-chip-inner{display:flex;align-items:center;gap:5px;width:100%;overflow:hidden;flex:0 0 auto}
 .chip-name{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0}
 .chip-time{font-size:10px;font-family:var(--mono);opacity:.6;white-space:nowrap;flex-shrink:0}
 .chip-spacer{flex:1;min-width:4px}
 .chip-quota{font-size:9px;font-family:var(--mono);font-weight:700;white-space:nowrap;flex-shrink:0;opacity:.8}
-.chip-x{cursor:pointer;opacity:.3;transition:opacity .1s;position:absolute;right:0;top:0;bottom:0;width:28px;display:flex;align-items:center;justify-content:center}
+.chip-x{cursor:pointer;font-size:16px;opacity:.3;line-height:1;transition:opacity .1s;padding:0 1px;position:absolute;right:3px;top:50%;transform:translateY(-50%)}
 .chip-x:hover{opacity:1}
-.chip-note{font-size:10px;font-style:italic;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;margin-top:1px;padding-right:28px}
+.chip-note{font-size:10px;font-style:italic;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;margin-top:1px;padding-right:18px}
 .emp-badge{font-size:9px;font-weight:700;letter-spacing:.05em;padding:1px 4px;border-radius:3px;flex-shrink:0;border:1px solid currentColor;opacity:.75}
 .prog-wrap{margin-top:10px}
 .prog-track{height:4px;background:var(--border-light);border-radius:2px;overflow:hidden}
@@ -311,14 +308,14 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 
 /* ── TIME POPOVER ── */
 .time-pop{position:fixed;z-index:400;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);padding:14px 16px;width:240px;display:none}
-.time-pop.open{display:flex;flex-direction:column;gap:12px}
+.time-pop.open{display:block}
 .tp-name{font-size:13px;font-weight:600}
-.tp-role{font-size:11px;color:var(--text-3);font-family:var(--mono)}
-.tp-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tp-role{font-size:11px;color:var(--text-3);margin-bottom:12px;font-family:var(--mono)}
+.tp-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
 .tp-fields label{display:block;font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
 .tp-fields select{width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font);background:var(--surface);outline:none}
 .tp-close:hover{color:var(--text)!important}
-.tp-remove{width:100%;padding:5px;border:none;background:none;font-size:11px;color:#DC2626;cursor:pointer;border-radius:var(--radius-sm);transition:background .1s}
+.tp-remove{width:100%;margin-top:2px;padding:5px;border:none;background:none;font-size:11px;color:#DC2626;cursor:pointer;border-radius:var(--radius-sm);transition:background .1s}
 .tp-remove:hover{background:#FEF2F2;text-decoration:none}
 #tp-note:focus{border-color:var(--accent-dark);outline:none}
 
@@ -355,6 +352,35 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 </style>
 </head>
 <body>
+
+<!-- ═══ ÉCRAN PIN ORGANISATRICE ═══ -->
+<div id="org-pin-overlay" class="pin-overlay" role="dialog" aria-modal="true" aria-label="Connexion organisatrice">
+  <div class="pin-box">
+    <img class="pin-logo" src="https://raw.githubusercontent.com/terrasse-cafe/dispos/main/photos/logo-terrasse-cafe.jpg" alt="Logo Terrasse Café"/>
+    <div class="pin-title">Espace organisatrice</div>
+    <div class="pin-sub">Entrez votre code PIN à 6 chiffres</div>
+    <div class="pin-dots" id="org-pin-dots">
+      <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
+      <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
+    </div>
+    <div class="pin-error-msg" id="org-pin-error" aria-live="polite"></div>
+    <div class="pin-keypad" id="org-pin-keypad">
+      <button class="pin-key" onclick="orgPinKey('1')">1</button>
+      <button class="pin-key" onclick="orgPinKey('2')">2</button>
+      <button class="pin-key" onclick="orgPinKey('3')">3</button>
+      <button class="pin-key" onclick="orgPinKey('4')">4</button>
+      <button class="pin-key" onclick="orgPinKey('5')">5</button>
+      <button class="pin-key" onclick="orgPinKey('6')">6</button>
+      <button class="pin-key" onclick="orgPinKey('7')">7</button>
+      <button class="pin-key" onclick="orgPinKey('8')">8</button>
+      <button class="pin-key" onclick="orgPinKey('9')">9</button>
+      <button class="pin-key" style="visibility:hidden" aria-hidden="true"></button>
+      <button class="pin-key" onclick="orgPinKey('0')">0</button>
+      <button class="pin-key del" onclick="orgPinDel()" aria-label="Effacer">⌫</button>
+    </div>
+    <div class="pin-hint">Code réservé à l'organisatrice</div>
+  </div>
+</div>
 
 <div class="shell">
 <header>
@@ -502,9 +528,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       </div>
       <div style="flex:1"></div>
       <span id="o-sync-badge" class="sync-badge offline" style="display:none"></span>
-      <button class="btn btn-subtle btn-icon" id="undo-btn" onclick="undoLast()" disabled title="Annuler"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6.00033 2.66663L2.66699 5.99996L6.00033 9.33329M2.66699 5.99996H10.667C11.3742 5.99996 12.0525 6.28091 12.5526 6.78101C13.0527 7.2811 13.3337 7.95938 13.3337 8.66663V13.3333" stroke="currentColor" stroke-width="1.33333" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-      <button class="btn btn-subtle btn-icon" id="redo-btn" onclick="redoLast()" disabled title="Rétablir"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10.0003 2.66663L13.3337 5.99996L10.0003 9.33329M13.3337 5.99996H5.33366C4.62641 5.99996 3.94814 6.28091 3.44804 6.78101C2.94794 7.2811 2.66699 7.95938 2.66699 8.66663V13.3333" stroke="currentColor" stroke-width="1.33333" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       <button class="btn btn-subtle" id="auto-btn" onclick="openAutoAssign()"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8.667 1.333 2 9.333h6l-.667 5.334L14 6.667H8l.667-5.334Z" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/></svg> Assignation auto</button>
+      <button class="btn btn-subtle" id="undo-btn" onclick="undoLast()" disabled>↩ Annuler</button>
       <button class="btn btn-secondary" id="finaliser-btn" onclick="openFinaliser()"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M13.333 4 6 11.333 2.667 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Finaliser l'horaire</button>
     </div>
     <div id="past-week-banner">Semaine passée — lecture seule</div>
@@ -562,8 +587,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 
 <!-- TIME POPOVER -->
 <div class="time-pop" id="time-pop" style="width:268px">
-  <div style="display:flex;align-items:flex-start;justify-content:space-between">
-    <div class="tp-name" id="tp-name">—</div>
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:2px">
+    <div class="tp-name" id="tp-name" style="margin-bottom:0">—</div>
     <button onclick="closeTP()" style="border:none;background:none;cursor:pointer;font-size:16px;line-height:1;color:var(--text-3);padding:0 0 0 8px;flex-shrink:0;transition:color .1s" title="Fermer">×</button>
   </div>
   <div class="tp-role" id="tp-role">—</div>
@@ -571,14 +596,15 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     <div><label>Début</label></div>
     <div><label>Fin</label></div>
   </div>
-  <div>
+  <div style="margin:2px 0 10px">
     <label style="font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px">Note / renfort</label>
     <textarea id="tp-note" rows="2" placeholder="ex: + Marie 17h-19h en renfort" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;resize:vertical;outline:none;line-height:1.5;transition:border-color .15s"></textarea>
   </div>
+  <div id="tp-saved-badge" style="font-size:11px;color:var(--green);text-align:right;min-height:16px;margin-bottom:4px;transition:opacity .3s;opacity:0">✓ Sauvegardé</div>
   <button class="tp-remove" onclick="removeAssignTP()">Retirer ce bénévole</button>
 </div>
 
-<div id="chip-pref-tooltip"></div>
+
 
 <!-- PERSON MODAL -->
 <div class="overlay" id="person-overlay" onclick="if(event.target===this)closePersonModal()">
@@ -624,17 +650,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <!-- LEFT: PDF preview -->
       <div style="border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden">
         <div style="padding:10px 14px;background:var(--bg);border-bottom:1px solid var(--border);font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;flex-shrink:0">Aperçu de l'horaire</div>
-        <div id="fin-pdf-wrap" style="flex:1;position:relative;overflow:hidden;background:var(--bg)">
-          <iframe id="fin-pdf-frame" style="width:100%;height:100%;border:none;display:none" title="Aperçu PDF"></iframe>
-          <div id="fin-pdf-fallback" style="display:none;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:14px;padding:24px;text-align:center">
-            <svg width="44" height="44" viewBox="0 0 44 44" fill="none" style="flex-shrink:0"><rect width="44" height="44" rx="10" fill="var(--border)"/><path d="M14 30V16a2 2 0 0 1 2-2h8.5L30 19.5V30a2 2 0 0 1-2 2H16a2 2 0 0 1-2-2Z" stroke="var(--text-3)" stroke-width="1.5" stroke-linejoin="round"/><path d="M24.5 14v5.5H30" stroke="var(--text-3)" stroke-width="1.5" stroke-linejoin="round"/></svg>
-            <div style="font-size:13px;color:var(--text-2)">Aperçu non disponible sur cet appareil</div>
-            <button class="btn btn-outlined btn-sm" id="fin-pdf-newtab">Prévisualiser dans un nouvel onglet ↗</button>
-          </div>
-          <div id="fin-pdf-loading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg)">
-            <span style="font-size:12px;color:var(--text-3)">Génération de l'aperçu…</span>
-          </div>
-        </div>
+        <div id="fin-preview" style="flex:1;overflow-y:auto;padding:16px;font-size:12px;font-family:var(--mono);line-height:1.7"></div>
       </div>
       <!-- RIGHT: Actions -->
       <div style="display:flex;flex-direction:column;overflow-y:auto">
@@ -704,17 +720,14 @@ create table if not exists assignments (
 );
 
 -- Migration : changer la contrainte unique pour supporter plusieurs bénévoles par rôle
-alter table assignments drop constraint if exists assignments_week_key_shift_id_role_key;
-alter table assignments add constraint if not exists assignments_unique unique(week_key, shift_id, role, person_name);
+-- alter table assignments drop constraint if exists assignments_week_key_shift_id_role_key;
+-- alter table assignments add constraint assignments_wk_shift_role_person unique(week_key, shift_id, role, person_name);
 
 -- Migration : ajouter la colonne note si elle n'existe pas
 alter table assignments add column if not exists note text;
 
 -- Migration : ajouter la colonne pin si elle n'existe pas
 alter table people add column if not exists pin text default '';
-
--- Migration : ajouter la colonne locked pour distinguer assignations manuelles / auto
-alter table assignments add column if not exists locked boolean not null default false;
 
 -- Activer la sécurité par ligne (RLS) avec accès public en lecture/écriture
 -- (pour usage interne sans authentification)
@@ -733,6 +746,17 @@ create table if not exists confirmed_weeks (
   confirmed_by text default 'organisatrice'
 );
 create policy "public_all" on confirmed_weeks for all using (true) with check (true);
+
+-- Table de configuration (stocke le hash SHA-256 du PIN organisatrice)
+create table if not exists org_config (
+  key   text primary key,
+  value text not null
+);
+alter table org_config enable row level security;
+create policy "public_read" on org_config for select using (true);
+-- Insérer le hash SHA-256 de votre PIN à 6 chiffres :
+-- (générez-le sur https://emn178.github.io/online-tools/sha256.html)
+-- insert into org_config (key, value) values ('org_pin_hash', 'VOTRE_HASH_ICI');
 `.trim();
 
 function getSavedConfig() {
@@ -875,11 +899,7 @@ let bSel={},avail={},assigns={},vcols={};
 let curDay='vendredi';
 let draggingVol=null;
 let draggingFromRole=null; // {shiftId, role, name} quand on drag depuis un bloc assigné
-let draggingVolFreeIvs=null; // plages libres résiduelles au moment du drag depuis une vol-card
 let undoStack=[]; // max 20 entrées — chaque entrée est un tableau d'actions inverses
-let redoStack=[];
-let _finBlobUrl=null;
-let _autoAssignRunning=false;
 let tpCtx=null,pmCtx=null;
 let directory=[],nextId=1;
 let emailList=[],emailIdx=0;
@@ -1028,11 +1048,10 @@ async function loadAssignments(wk) {
       assigns[wk][k+'__t__'+r.person_name] = {s: r.start_mins, e: r.end_mins};
     }
     if (r.note) assigns[wk][k+'__n__'+r.person_name] = r.note;
-    if (r.locked) assigns[wk][k+'__l__'+r.person_name] = true;
   });
 }
 
-async function saveAssignment(wk, shiftId, role, name, startMins, endMins, note=null, locked=false) {
+async function saveAssignment(wk, shiftId, role, name, startMins, endMins, note=null) {
   if (!sb) return;
   const row = {
     week_key: wk,
@@ -1042,7 +1061,6 @@ async function saveAssignment(wk, shiftId, role, name, startMins, endMins, note=
     start_mins: startMins ?? null,
     end_mins: endMins ?? null,
     note: note ?? null,
-    locked: locked,
     updated_at: new Date().toISOString()
   };
   // Unique sur (week_key, shift_id, role, person_name)
@@ -1100,8 +1118,6 @@ function subscribeRealtime(wk) {
           if (r.start_mins != null) assigns[wk][k+'__t__'+r.person_name] = {s: r.start_mins, e: r.end_mins};
           if (r.note) assigns[wk][k+'__n__'+r.person_name] = r.note;
           else delete assigns[wk][k+'__n__'+r.person_name];
-          if (r.locked) assigns[wk][k+'__l__'+r.person_name] = true;
-          else delete assigns[wk][k+'__l__'+r.person_name];
         }
         renderHoraire();
       }
@@ -1268,11 +1284,116 @@ function pinVolCancel() {
 }
 
 /* ══════════════════════════════════════════════
-   SECRET KEY
+   ORG PIN AUTH
 ══════════════════════════════════════════════ */
-const SECRET_KEY='cafe2025';
-let orgUnlocked=new URLSearchParams(location.search).get('cle')===SECRET_KEY;
-const TEST_MODE=new URLSearchParams(location.search).get('mode')==='test';
+// ?org=1 dans l'URL → affiche l'écran PIN organisatrice
+const ORG_MODE = new URLSearchParams(location.search).get('gestion') === '1';
+const TEST_MODE = new URLSearchParams(location.search).get('mode') === 'test';
+let orgUnlocked = false;
+
+let orgPinEntry = '';
+const ORG_PIN_LEN = 6;
+
+// Le PIN est stocké dans Supabase (table org_config, clé 'org_pin')
+// Il n'est jamais écrit dans le code source.
+let orgPinHash = null; // hash SHA-256 du PIN, chargé depuis Supabase
+
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function loadOrgPinHash() {
+  if (!sb) return;
+  const { data, error } = await sb.from('org_config').select('value').eq('key', 'org_pin_hash').maybeSingle();
+  if (error) { console.error('loadOrgPinHash:', error); return; }
+  if (data) orgPinHash = data.value;
+}
+
+function orgPinKey(digit) {
+  if (orgPinEntry.length >= ORG_PIN_LEN) return;
+  orgPinEntry += digit;
+  renderOrgPinDots();
+  if (orgPinEntry.length === ORG_PIN_LEN) {
+    setTimeout(verifyOrgPin, 120); // petit délai pour voir le dernier point
+  }
+}
+
+function orgPinDel() {
+  orgPinEntry = orgPinEntry.slice(0, -1);
+  renderOrgPinDots();
+  document.getElementById('org-pin-error').textContent = '';
+}
+
+function renderOrgPinDots() {
+  const dots = document.querySelectorAll('#org-pin-dots .pin-dot');
+  dots.forEach((d, i) => {
+    d.classList.toggle('filled', i < orgPinEntry.length);
+    d.classList.remove('error');
+  });
+}
+
+async function verifyOrgPin() {
+  const entered = orgPinEntry;
+  const enteredHash = await sha256(entered);
+
+  if (enteredHash === orgPinHash) {
+    // Succès — stocker en sessionStorage pour éviter de retaper à chaque rechargement
+    sessionStorage.setItem('org_auth', enteredHash);
+    unlockOrg();
+  } else {
+    // Erreur — animation shake
+    const dots = document.querySelectorAll('#org-pin-dots .pin-dot');
+    dots.forEach(d => d.classList.add('error'));
+    document.getElementById('org-pin-error').textContent = 'Code incorrect, réessayez.';
+    orgPinEntry = '';
+    setTimeout(() => {
+      dots.forEach(d => { d.classList.remove('error', 'filled'); });
+    }, 900);
+  }
+}
+
+function unlockOrg() {
+  orgUnlocked = true;
+  // Fermer l'overlay PIN
+  document.getElementById('org-pin-overlay').classList.remove('open');
+  // Afficher les contrôles org dans le header
+  const headerTabs = document.getElementById('header-tabs');
+  if (headerTabs) headerTabs.style.display = 'flex';
+  const vueBtn = document.getElementById('btn-vue-benevole');
+  if (vueBtn) vueBtn.style.display = '';
+  switchMain._orgLoaded = true;
+  switchMain('organisatrice', null);
+  if (!sb) {
+    document.getElementById('setup-banner').style.display = 'block';
+    document.getElementById('setup-sql').textContent = SETUP_SQL;
+  }
+}
+
+async function initOrgPinScreen() {
+  // Charger le hash du PIN depuis Supabase
+  await loadOrgPinHash();
+
+  // Vérifier si déjà authentifié dans cette session
+  const stored = sessionStorage.getItem('org_auth');
+  if (stored && stored === orgPinHash) {
+    unlockOrg();
+    return;
+  }
+
+  // Afficher l'écran PIN
+  document.getElementById('org-pin-overlay').classList.add('open');
+
+  // Support clavier
+  document.addEventListener('keydown', function orgKeyHandler(e) {
+    if (!document.getElementById('org-pin-overlay').classList.contains('open')) {
+      document.removeEventListener('keydown', orgKeyHandler);
+      return;
+    }
+    if (e.key >= '0' && e.key <= '9') orgPinKey(e.key);
+    else if (e.key === 'Backspace') orgPinDel();
+  });
+}
 
 /* ══════════════════════════════════════════════
    TAB SWITCHING
@@ -1299,8 +1420,8 @@ function switchMain(id,btn){
 }
 
 function openVolView(){
-  // Ouvre la vue bénévole dans un nouvel onglet (sans le paramètre ?cle=)
   const url=new URL(location.href);
+  url.searchParams.delete('gestion');
   url.searchParams.delete('cle');
   window.open(url.toString(),'_blank');
 }
@@ -1697,7 +1818,7 @@ async function submitAvail(){
 ══════════════════════════════════════════════ */
 async function oShift(d){
   oMon=addWeeks(oMon,d);
-  undoStack=[];redoStack=[];updateUndoBtn();updateRedoBtn();
+  undoStack=[];updateUndoBtn();
   const wk=wkey(oMon);
   if(sb){
     await loadAvail(wk);
@@ -1735,69 +1856,31 @@ function renderO(){
   buildDayTabs();renderHoraire();
 }
 
-/* ── Undo / Redo ── */
+/* ── Undo ── */
 function pushUndo(entries){
   undoStack.push(entries);
   if(undoStack.length>20)undoStack.shift();
-  redoStack=[];
   updateUndoBtn();
-  updateRedoBtn();
 }
 function updateUndoBtn(){
   const btn=document.getElementById('undo-btn');
   if(btn){const off=undoStack.length===0||isPastWeek();btn.disabled=off;btn.style.opacity=off?'0.4':'1';}
 }
-function updateRedoBtn(){
-  const btn=document.getElementById('redo-btn');
-  if(btn){const off=redoStack.length===0||isPastWeek();btn.disabled=off;btn.style.opacity=off?'0.4':'1';}
-}
 async function undoLast(){
   if(!undoStack.length)return;
   const actions=undoStack.pop();
   updateUndoBtn();
-  const redoEntry=[];
   for(const a of actions){
     if(a.type==='remove'){
-      redoEntry.push({type:'add',wk:a.wk,sid:a.sid,role:a.role,name:a.name,times:a.times,note:a.note,locked:a.locked??false});
       removeAssign(a.wk,a.sid,a.role,a.name);
       await deleteAssignment(a.wk,a.sid,a.role,a.name);
     } else {
-      redoEntry.push({type:'remove',wk:a.wk,sid:a.sid,role:a.role,name:a.name,times:a.times,note:a.note,locked:a.locked??false});
       addAssign(a.wk,a.sid,a.role,a.name);
       if(a.times){setAssignTimes(a.wk,a.sid,a.role,a.times.s,a.times.e,a.name);}
       if(a.note){setAssignNote(a.wk,a.sid,a.role,a.note,a.name);}
-      setAssignLocked(a.wk,a.sid,a.role,a.locked??false,a.name);
-      await saveAssignment(a.wk,a.sid,a.role,a.name,a.times?.s??null,a.times?.e??null,a.note??null,a.locked??false);
+      await saveAssignment(a.wk,a.sid,a.role,a.name,a.times?.s??null,a.times?.e??null,a.note??null);
     }
   }
-  redoStack.push(redoEntry);
-  updateRedoBtn();
-  renderHoraire();
-}
-async function redoLast(){
-  if(!redoStack.length)return;
-  const actions=redoStack.pop();
-  updateRedoBtn();
-  const undoEntry=[];
-  for(const a of actions){
-    if(a.type==='remove'){
-      const _ot=getAssignTimes(a.wk,a.sid,a.role,a.name);
-      const _on=getAssignNote(a.wk,a.sid,a.role,a.name);
-      const _ol=getAssignLocked(a.wk,a.sid,a.role,a.name);
-      undoEntry.push({type:'add',wk:a.wk,sid:a.sid,role:a.role,name:a.name,times:_ot??a.times,note:_on??a.note,locked:_ol??a.locked??false});
-      removeAssign(a.wk,a.sid,a.role,a.name);
-      await deleteAssignment(a.wk,a.sid,a.role,a.name);
-    } else {
-      undoEntry.push({type:'remove',wk:a.wk,sid:a.sid,role:a.role,name:a.name,locked:a.locked??false});
-      addAssign(a.wk,a.sid,a.role,a.name);
-      if(a.times){setAssignTimes(a.wk,a.sid,a.role,a.times.s,a.times.e,a.name);}
-      if(a.note){setAssignNote(a.wk,a.sid,a.role,a.note,a.name);}
-      setAssignLocked(a.wk,a.sid,a.role,a.locked??false,a.name);
-      await saveAssignment(a.wk,a.sid,a.role,a.name,a.times?.s??null,a.times?.e??null,a.note??null,a.locked??false);
-    }
-  }
-  undoStack.push(undoEntry);
-  updateUndoBtn();
   renderHoraire();
 }
 
@@ -1918,7 +2001,6 @@ function removeAssign(wk,sid,role,name){
   if(arr.length)assigns[wk][k]=arr; else delete assigns[wk][k];
   delete assigns[wk][akey(sid,role)+'__t__'+name];
   delete assigns[wk][akey(sid,role)+'__n__'+name];
-  delete assigns[wk][akey(sid,role)+'__l__'+name];
 }
 // Compat setAssign: remplace tout le tableau par un seul nom (ou supprime si null)
 function setAssign(wk,sid,role,name){
@@ -1939,12 +2021,6 @@ function setAssignTimes(wk,sid,role,s,e,name){
   if(!name)return;
   assigns[wk][akey(sid,role)+'__t__'+name]={s,e};
 }
-function getAssignLocked(wk,sid,role,name){return !!((assigns[wk]||{})[akey(sid,role)+'__l__'+name]);}
-function setAssignLocked(wk,sid,role,locked,name){
-  if(!assigns[wk])assigns[wk]={};
-  if(locked)assigns[wk][akey(sid,role)+'__l__'+name]=true;
-  else delete assigns[wk][akey(sid,role)+'__l__'+name];
-}
 
 function volPrefersRole(name,role){
   const p=getPerson(name);if(!p||!p.roles)return false;
@@ -1954,9 +2030,7 @@ function volPrefersRole(name,role){
 function highlightDZs(wk,shifts){
   shifts.forEach(sh=>{
     const fromRole=draggingFromRole;
-    const covers=draggingVolFreeIvs
-      ?draggingVolFreeIvs.some(iv=>iv.s<sh.toH*60&&iv.e>sh.fromH*60)
-      :volCoversShift(wk,draggingVol,sh);
+    const covers=volCoversShift(wk,draggingVol,sh);
     const alreadyOnShift=!isEmp(draggingVol)&&volAssignedToShift(wk,draggingVol,sh)
       &&!(fromRole&&fromRole.shiftId===sh.id&&fromRole.role!==null);
     [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(role=>{
@@ -1967,49 +2041,23 @@ function highlightDZs(wk,shifts){
       }
       const v=covers&&!alreadyOnShift;
       if(!v){dz.classList.add('di');dz.classList.remove('dv','da');return;}
-      const pref=volPrefersRole(draggingVol,role);
+      const pref=isEmp(draggingVol)||volPrefersRole(draggingVol,role);
       dz.classList.toggle('dv',pref);
       dz.classList.toggle('da',!pref);
       dz.classList.remove('di');
     });
   });
 }
-function clearDZHighlights(){
-  document.querySelectorAll('.h-dz').forEach(dz=>{
-    dz.classList.remove('dv','di','dok','da','hv','ha','hvo');
-    if(dz._hoverCssText!==undefined){dz.style.cssText=dz._hoverCssText;delete dz._hoverCssText;}
-  });
-}
-function hoverHighlightDZs(wk,shifts,name,freeIvs){
+function clearDZHighlights(){document.querySelectorAll('.h-dz').forEach(dz=>dz.classList.remove('dv','di','dok','da','hv','ha'));}
+function hoverHighlightDZs(wk,shifts,name){
   shifts.forEach(sh=>{
-    const coversFree=freeIvs
-      ?freeIvs.some(iv=>iv.s<sh.toH*60&&iv.e>sh.fromH*60)
-      :volCoversShift(wk,name,sh);
-    const coversRaw=volCoversShift(wk,name,sh);
-    if(!coversFree&&!coversRaw)return;
+    if(!volCoversShift(wk,name,sh))return;
     [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(role=>{
       const dz=document.getElementById('dz-'+sh.id+'-'+role.replace(/[^a-z0-9]/gi,'_'));
       if(!dz)return;
-      const pref=volPrefersRole(name,role);
-      const filled=dz.classList.contains('filled');
-      if(coversFree){
-        dz.classList.toggle('hv',pref);
-        dz.classList.toggle('ha',!pref);
-      } else if(pref&&filled){
-        dz.classList.add('hvo');
-      }
-      // Inline styles on filled dz override CSS class rules — apply directly
-      if(filled){
-        if(dz.classList.contains('hv')||dz.classList.contains('hvo')){
-          dz._hoverCssText=dz.style.cssText;
-          dz.style.background='#DBE8E5';
-          dz.style.borderColor='var(--accent-dark)';
-        } else if(dz.classList.contains('ha')){
-          dz._hoverCssText=dz.style.cssText;
-          dz.style.background='#FDDFBE';
-          dz.style.borderColor='#D97706';
-        }
-      }
+      const pref=isEmp(name)||volPrefersRole(name,role);
+      dz.classList.toggle('hv',pref);
+      dz.classList.toggle('ha',!pref);
     });
   });
 }
@@ -2108,7 +2156,7 @@ function renderHoraire(){
         dz.style.background='transparent';
         dz.style.borderColor='var(--border)';
 
-        const CHIP_H_BASE=26,CHIP_H_NOTE=42;
+        const CHIP_H_BASE=30,CHIP_H_NOTE=46,CHIP_LANE_PAD=4;
 
         // Collecter les données de chaque chip
         const chipData=assignedList.map(assignedName=>{
@@ -2134,99 +2182,80 @@ function renderHoraire(){
         // Trier par heure de début
         chipData.sort((a,b)=>a.aSH-b.aSH);
 
-        const totalH=chipData.reduce((s,cd)=>s+cd.chipH,0)+Math.max(0,chipData.length-1)*2;
-        const rowH=Math.max(40,totalH+14);
+        // Affectation de couloirs par intervalle glouton
+        const laneEnds=[];
+        const lanes=chipData.map(cd=>{
+          let lane=laneEnds.findIndex(end=>end<=cd.aSH);
+          if(lane===-1){lane=laneEnds.length;laneEnds.push(cd.aEH);}
+          else{laneEnds[lane]=cd.aEH;}
+          return lane;
+        });
+        const numLanes=laneEnds.length||0;
+
+        // Hauteur max par couloir et positions Y cumulées
+        const laneH=Array(numLanes).fill(0);
+        chipData.forEach((cd,i)=>{laneH[lanes[i]]=Math.max(laneH[lanes[i]],cd.chipH);});
+        const laneY=Array(numLanes).fill(0);
+        for(let i=1;i<numLanes;i++)laneY[i]=laneY[i-1]+laneH[i-1]+CHIP_LANE_PAD;
+        const totalH=numLanes>0?(laneY[numLanes-1]+laneH[numLanes-1]):0;
+        const rowH=Math.max(36,totalH+16);
 
         row.style.minHeight=rowH+'px';
         tl.style.height=rowH+'px';
         dz.style.top='3px';dz.style.bottom='3px';
 
-        // Hachures uniquement sur les portions non couvertes du bloc rôle
-        const hatchPat='repeating-linear-gradient(-45deg,var(--border) 0px,var(--border) 1px,var(--bg) 1px,var(--bg) 7px)';
-        const covIvs=chipData.map(cd=>({s:cd.aSH,e:cd.aEH})).sort((a,b)=>a.s-b.s);
-        const covUnion=[];
-        for(const iv of covIvs){
-          if(covUnion.length&&iv.s<=covUnion[covUnion.length-1].e)covUnion[covUnion.length-1].e=Math.max(covUnion[covUnion.length-1].e,iv.e);
-          else covUnion.push({s:iv.s,e:iv.e});
-        }
-        const uncovIvs=[];let ucCur=dzFromH;
-        for(const iv of covUnion){if(iv.s>ucCur)uncovIvs.push({s:ucCur,e:iv.s});ucCur=Math.max(ucCur,iv.e);}
-        if(ucCur<shift.toH)uncovIvs.push({s:ucCur,e:shift.toH});
-        if(uncovIvs.length>0){
-          dz.style.backgroundImage=uncovIvs.map(()=>hatchPat).join(',');
-          dz.style.backgroundSize=uncovIvs.map(u=>`${Math.round(toPx(u.e)-toPx(u.s))}px 100%`).join(',');
-          dz.style.backgroundPosition=uncovIvs.map(u=>`${Math.round(toPx(u.s)-toPx(dzFromH))}px 0`).join(',');
-          dz.style.backgroundRepeat=uncovIvs.map(()=>'no-repeat').join(',');
-        }
-
-        let chipTopCur=2;
-        chipData.forEach((cd)=>{
+        chipData.forEach((cd,chipIdx)=>{
           const {assignedName,emp,col,aSH,aEH,noteVal,chipH,isOverQuota,sm,em2}=cd;
-          const chipBorderColor=isOverQuota?'#DC2626':'#CEC9C4';
-          const chipBorderWidth=isOverQuota?'2px':'1.5px';
-
-          const shiftDur=shift.toH-dzFromH;
-          const leftPct=((aSH-dzFromH)/shiftDur*100).toFixed(3);
-          const wPct=((aEH-aSH)/shiftDur*100).toFixed(3);
-          const hGapL=(aSH<=dzFromH+0.001)?3:0;
-          const hGapR=(aEH>=shift.toH-0.001)?3:0;
-          const chipLeft=hGapL?`calc(${leftPct}% + ${hGapL}px)`:`${leftPct}%`;
-          const chipWidth=(hGapL+hGapR)?`calc(${wPct}% - ${hGapL+hGapR}px)`:`${wPct}%`;
+          const cL=toPx(aSH)-spx,cW=toPx(aEH)-toPx(aSH);
+          const chipBorderColor=isOverQuota?'#DC2626':'var(--border)';
+          const chipBorderWidth=isOverQuota?'2px':(emp?'2.5px':'1.5px');
+          const lane=lanes[chipIdx];
 
           const chip=document.createElement('div');chip.className='avail-chip';
-          chip.style.top=chipTopCur+'px';
+          chip.style.top=(laneY[lane]+3)+'px';
           chip.style.height=chipH+'px';
           chip.style.bottom='auto';
-          chip.style.left=chipLeft;
-          chip.style.width=chipWidth;
+          chip.style.left=cL+'px';chip.style.width=cW+'px';
           chip.style.background='var(--surface)';
           chip.style.border=`${chipBorderWidth} solid ${chipBorderColor}`;
 
-          const covWrap=document.createElement('div');covWrap.className='chip-covered-content';
-
           const inner=document.createElement('div');inner.className='avail-chip-inner';
-          inner.style.paddingRight='28px';
+          inner.style.paddingRight='18px';
+          if(emp){const b=document.createElement('span');b.className='emp-badge';b.textContent='EMP';inner.appendChild(b);}
           const nm=document.createElement('span');nm.className='chip-name';nm.textContent=assignedName;inner.appendChild(nm);
           const tm=document.createElement('span');tm.className='chip-time';tm.textContent=mStr(sm)+'–'+mStr(em2);inner.appendChild(tm);
           const spacer=document.createElement('span');spacer.className='chip-spacer';inner.appendChild(spacer);
-          if(emp){
-            const espan=document.createElement('span');espan.className='chip-quota';
-            espan.style.color='var(--text-2)';espan.textContent='EMP';inner.appendChild(espan);
-          } else {
+          if(!emp){
             const cq=volQuota(wk,assignedName);const cu=volWeekShiftCount(wk,assignedName);
             if(cq!==99&&cq>0){
               const qspan=document.createElement('span');qspan.className='chip-quota';
               qspan.style.color=isOverQuota?'#B91C1C':'var(--text-2)';qspan.textContent=cu+'/'+cq;inner.appendChild(qspan);
             }
           }
-          covWrap.appendChild(inner);
-          const x=document.createElement('span');x.className='chip-x';
-          x.innerHTML='<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9.79096 1.21967C10.0838 0.926977 10.5587 0.926902 10.8515 1.21967C11.1443 1.5125 11.1442 1.98731 10.8515 2.28022L7.09565 6.0351L10.8515 9.79096C11.1443 10.0839 11.1444 10.5587 10.8515 10.8515C10.5587 11.1444 10.0839 11.1443 9.79096 10.8515L6.0351 7.09565L2.28022 10.8515C1.98732 11.1444 1.51256 11.1444 1.21967 10.8515C0.926842 10.5586 0.926799 10.0838 1.21967 9.79096L4.97455 6.0351L1.21967 2.28022C0.926777 1.98732 0.926777 1.51256 1.21967 1.21967C1.51256 0.926777 1.98732 0.926777 2.28022 1.21967L6.0351 4.97455L9.79096 1.21967Z" fill="#57534E"/></svg>';
+          chip.appendChild(inner);
+          const x=document.createElement('span');x.className='chip-x';x.textContent='×';
           if(!past)x.addEventListener('click',ev=>{
             ev.stopPropagation();
             const _ot=getAssignTimes(wk,shift.id,role,assignedName);
             const _on=getAssignNote(wk,shift.id,role,assignedName);
-            const _ol=getAssignLocked(wk,shift.id,role,assignedName);
-            pushUndo([{type:'add',wk,sid:shift.id,role,name:assignedName,times:_ot,note:_on,locked:_ol}]);
+            pushUndo([{type:'add',wk,sid:shift.id,role,name:assignedName,times:_ot,note:_on}]);
             removeAssign(wk,shift.id,role,assignedName);
             deleteAssignment(wk,shift.id,role,assignedName);
             renderHoraire();
           });
           else x.style.display='none';
-          covWrap.appendChild(x);
+          chip.appendChild(x);
           if(noteVal){
             const noteLine=document.createElement('div');noteLine.className='chip-note';
-            noteLine.textContent=noteVal;covWrap.appendChild(noteLine);
+            noteLine.textContent=noteVal;chip.appendChild(noteLine);
           }
-          chip.appendChild(covWrap);
-          if(!past)chip.addEventListener('click',ev=>{if(x.contains(ev.target))return;openTP(ev,assignedName,shift.id,role,shift,wk);});
+          if(!past)chip.addEventListener('click',ev=>{if(ev.target===x)return;openTP(ev,assignedName,shift.id,role,shift,wk);});
           if(!past){
             chip.draggable=true;
             chip.addEventListener('dragstart',ev=>{
               ev.stopPropagation();
               draggingVol=assignedName;
               draggingFromRole={shiftId:shift.id,role,name:assignedName};
-              draggingVolFreeIvs=null;
               ev.dataTransfer.setData('text/plain',assignedName);
               ev.dataTransfer.effectAllowed='move';
               setTimeout(()=>chip.style.opacity='.35',0);
@@ -2234,35 +2263,14 @@ function renderHoraire(){
             });
             chip.addEventListener('dragend',()=>{
               chip.style.opacity='';
-              draggingVol=null;draggingFromRole=null;draggingVolFreeIvs=null;clearDZHighlights();
+              draggingVol=null;draggingFromRole=null;clearDZHighlights();
             });
           }
-          {
-            const prefs=(getPerson(assignedName)?.roles||[]).filter(r=>r).map(r=>roleDisplayLabel(r));
-            if(prefs.length){
-              const tt=document.getElementById('chip-pref-tooltip');
-              chip.addEventListener('mouseenter',()=>{
-                chip._ttTimer=setTimeout(()=>{
-                  tt.textContent='Rôles préférés : '+prefs.join(', ');
-                  const rect=chip.getBoundingClientRect();
-                  tt.style.left=rect.left+'px';
-                  tt.style.top=(rect.top-6)+'px';
-                  tt.style.transform='translateY(-100%)';
-                  tt.classList.add('visible');
-                },400);
-              });
-              chip.addEventListener('mouseleave',()=>{
-                clearTimeout(chip._ttTimer);
-                tt.classList.remove('visible');
-              });
-            }
-          }
           dz.appendChild(chip);
-          chipTopCur+=chipH+2;
         });
       } else {
-        row.style.minHeight='40px';
-        tl.style.height='40px';
+        row.style.minHeight='36px';
+        tl.style.height='36px';
         dz.classList.add('empty');
         const ph=document.createElement('span');ph.className='dz-ph';
         ph.textContent=past?'—':'— glissez ici';dz.appendChild(ph);
@@ -2295,13 +2303,12 @@ function renderHoraire(){
           if(draggingFromRole&&!(draggingFromRole.shiftId===shift.id&&draggingFromRole.role===role)){
             const _ot=getAssignTimes(wk,draggingFromRole.shiftId,draggingFromRole.role,name);
             const _on=getAssignNote(wk,draggingFromRole.shiftId,draggingFromRole.role,name);
-            const _ol=getAssignLocked(wk,draggingFromRole.shiftId,draggingFromRole.role,name);
-            _ue.push({type:'add',wk,sid:draggingFromRole.shiftId,role:draggingFromRole.role,name,times:_ot,note:_on,locked:_ol});
+            _ue.push({type:'add',wk,sid:draggingFromRole.shiftId,role:draggingFromRole.role,name,times:_ot,note:_on});
             removeAssign(wk,draggingFromRole.shiftId,draggingFromRole.role,name);
             deleteAssignment(wk,draggingFromRole.shiftId,draggingFromRole.role,name);
           }
           if(doAssign(wk,shift,role,name)){
-            _ue.unshift({type:'remove',wk,sid:shift.id,role,name,locked:true});
+            _ue.unshift({type:'remove',wk,sid:shift.id,role,name});
             pushUndo(_ue);
             renderHoraire();
           }
@@ -2336,7 +2343,6 @@ function renderHoraire(){
   buildCards(wk,shifts);
   updateDayBadges();
   updateUndoBtn();
-  updateRedoBtn();
 }
 
 /* ══════════════════════════════════════════════
@@ -2398,11 +2404,10 @@ function buildCards(wk,shifts){
     const {shiftId,role,name}=draggingFromRole;
     const _ot=getAssignTimes(wk,shiftId,role,name);
     const _on=getAssignNote(wk,shiftId,role,name);
-    const _ol=getAssignLocked(wk,shiftId,role,name);
-    pushUndo([{type:'add',wk,sid:shiftId,role,name,times:_ot,note:_on,locked:_ol}]);
+    pushUndo([{type:'add',wk,sid:shiftId,role,name,times:_ot,note:_on}]);
     removeAssign(wk,shiftId,role,name);
     deleteAssignment(wk,shiftId,role,name);
-    draggingFromRole=null;draggingVol=null;draggingVolFreeIvs=null;
+    draggingFromRole=null;draggingVol=null;
     renderHoraire();
   });
   vp.innerHTML='';
@@ -2418,11 +2423,10 @@ function buildCards(wk,shifts){
     const {shiftId,role,name}=draggingFromRole;
     const _ot=getAssignTimes(wk,shiftId,role,name);
     const _on=getAssignNote(wk,shiftId,role,name);
-    const _ol=getAssignLocked(wk,shiftId,role,name);
-    pushUndo([{type:'add',wk,sid:shiftId,role,name,times:_ot,note:_on,locked:_ol}]);
+    pushUndo([{type:'add',wk,sid:shiftId,role,name,times:_ot,note:_on}]);
     removeAssign(wk,shiftId,role,name);
     deleteAssignment(wk,shiftId,role,name);
-    draggingFromRole=null;draggingVol=null;draggingVolFreeIvs=null;
+    draggingFromRole=null;draggingVol=null;
     renderHoraire();
   });
   ep.innerHTML='';
@@ -2444,7 +2448,6 @@ function buildCards(wk,shifts){
     if(emp){nm.innerHTML='<span class="emp-badge" style="margin-right:5px">EMP</span>'+name;}
     else nm.textContent=name;
     row1.appendChild(nm);
-    let freeIvs=null;
     const t=document.createElement('div');t.className='vc-time';
     if(emp){t.textContent='Plein shift';}
     else{
@@ -2463,7 +2466,6 @@ function buildCards(wk,shifts){
         const free=[];let cur=r.startMins;
         assigned.forEach(({s,e})=>{if(s>cur)free.push({s:cur,e:s});cur=Math.max(cur,e);});
         if(cur<r.endMins)free.push({s:cur,e:r.endMins});
-        freeIvs=free;
         t.innerHTML=free.length?free.map(f=>mStr(f.s)+' – '+mStr(f.e)).join(' &amp; '):(mStr(r.startMins)+' – '+mStr(r.endMins));
       }
     }
@@ -2489,15 +2491,15 @@ function buildCards(wk,shifts){
       if(qw.children.length)row1.appendChild(qw);
     }
     if(!isPast_){
-      card.addEventListener('mouseenter',()=>hoverHighlightDZs(wk,shifts,name,freeIvs));
+      card.addEventListener('mouseenter',()=>hoverHighlightDZs(wk,shifts,name));
       card.addEventListener('mouseleave',()=>clearDZHighlights());
     }
     card.addEventListener('dragstart',e=>{
       clearDZHighlights();
-      draggingVol=name;draggingVolFreeIvs=freeIvs;e.dataTransfer.setData('text/plain',name);e.dataTransfer.effectAllowed='move';
+      draggingVol=name;e.dataTransfer.setData('text/plain',name);e.dataTransfer.effectAllowed='move';
       setTimeout(()=>{card.classList.add('dragging');highlightDZs(wk,shifts);},0);
     });
-    card.addEventListener('dragend',()=>{card.classList.remove('dragging');draggingVol=null;draggingFromRole=null;draggingVolFreeIvs=null;clearDZHighlights();document.getElementById('vol-cards').style.outline='';document.getElementById('emp-cards').style.outline='';});
+    card.addEventListener('dragend',()=>{card.classList.remove('dragging');draggingVol=null;draggingFromRole=null;clearDZHighlights();document.getElementById('vol-cards').style.outline='';document.getElementById('emp-cards').style.outline='';});
     return card;
   }
   const vols=Object.keys(wkData).filter(n=>!isEmp(n)&&Object.keys(wkData[n].slots||{}).some(k=>k.startsWith(curDay+'_')));
@@ -2543,16 +2545,14 @@ function buildCards(wk,shifts){
 function doAssign(wk,shift,role,name){
   if(isEmp(name)){
     addAssign(wk,shift.id,role,name);
-    setAssignLocked(wk,shift.id,role,true,name);
-    saveAssignment(wk,shift.id,role,name,null,null,null,true);
+    saveAssignment(wk,shift.id,role,name,null,null,null);
   } else {
     if(volAssignedToShift(wk,name,shift)){alert(name+' est déjà assigné(e) à ce shift.');return false;}
     const ov=overlapMins(wk,name,shift);
     if(!ov){alert(name+' n\'est pas disponible sur ce shift.');return false;}
     addAssign(wk,shift.id,role,name);
     setAssignTimes(wk,shift.id,role,ov.s,ov.e,name);
-    setAssignLocked(wk,shift.id,role,true,name);
-    saveAssignment(wk,shift.id,role,name,ov.s,ov.e,null,true);
+    saveAssignment(wk,shift.id,role,name,ov.s,ov.e,null);
   }
   return true;
 }
@@ -2597,10 +2597,9 @@ function closeTP(){
   const e=parseInt(document.getElementById('tp-end')?.value);
   if(!isNaN(s)&&!isNaN(e)&&e>s){
     const note=document.getElementById('tp-note').value.trim()||null;
-    const wasLocked=getAssignLocked(tpCtx.wk,tpCtx.sid,tpCtx.role,tpCtx.name);
     setAssignTimes(tpCtx.wk,tpCtx.sid,tpCtx.role,s,e,tpCtx.name);
     setAssignNote(tpCtx.wk,tpCtx.sid,tpCtx.role,note,tpCtx.name);
-    saveAssignment(tpCtx.wk,tpCtx.sid,tpCtx.role,tpCtx.name,s,e,note,wasLocked);
+    saveAssignment(tpCtx.wk,tpCtx.sid,tpCtx.role,tpCtx.name,s,e,note);
     document.getElementById('time-pop').classList.remove('open');
     tpCtx=null;
     renderHoraire();
@@ -2610,12 +2609,18 @@ function closeTP(){
   }
 }
 function saveTP(){closeTP();} // garde la compatibilité si appelé ailleurs
+function showTPSaved(){
+  const badge=document.getElementById('tp-saved-badge');
+  if(!badge)return;
+  badge.style.opacity='1';
+  clearTimeout(showTPSaved._t);
+  showTPSaved._t=setTimeout(()=>badge.style.opacity='0',1800);
+}
 function removeAssignTP(){
   if(!tpCtx)return;
   const _ot=getAssignTimes(tpCtx.wk,tpCtx.sid,tpCtx.role,tpCtx.name);
   const _on=getAssignNote(tpCtx.wk,tpCtx.sid,tpCtx.role,tpCtx.name);
-  const _ol=getAssignLocked(tpCtx.wk,tpCtx.sid,tpCtx.role,tpCtx.name);
-  pushUndo([{type:'add',wk:tpCtx.wk,sid:tpCtx.sid,role:tpCtx.role,name:tpCtx.name,times:_ot,note:_on,locked:_ol}]);
+  pushUndo([{type:'add',wk:tpCtx.wk,sid:tpCtx.sid,role:tpCtx.role,name:tpCtx.name,times:_ot,note:_on}]);
   removeAssign(tpCtx.wk,tpCtx.sid,tpCtx.role,tpCtx.name);
   deleteAssignment(tpCtx.wk,tpCtx.sid,tpCtx.role,tpCtx.name);
   document.getElementById('time-pop').classList.remove('open');
@@ -2756,49 +2761,11 @@ function buildScheduleSummary(wk){
 function openFinaliser(){
   const wk=wkey(oMon);
   document.getElementById('fin-week-lbl').textContent='— '+wlabel(oMon);
+  renderFinPreview(wk);
   renderFinEmail(wk);
   document.getElementById('finaliser-overlay').classList.add('open');
-  requestAnimationFrame(()=>setTimeout(_generateFinPdf,0));
 }
-function closeFinaliser(){
-  document.getElementById('finaliser-overlay').classList.remove('open');
-  const fr=document.getElementById('fin-pdf-frame');if(fr)fr.src='about:blank';
-  if(_finBlobUrl){URL.revokeObjectURL(_finBlobUrl);_finBlobUrl=null;}
-}
-function _generateFinPdf(){
-  const loading=document.getElementById('fin-pdf-loading');
-  const frame=document.getElementById('fin-pdf-frame');
-  const fallback=document.getElementById('fin-pdf-fallback');
-  if(loading)loading.style.display='flex';
-  if(frame){frame.style.display='none';frame.src='about:blank';}
-  if(fallback)fallback.style.display='none';
-  if(_finBlobUrl){URL.revokeObjectURL(_finBlobUrl);_finBlobUrl=null;}
-  try{
-    const blob=buildPdfBlob();
-    _finBlobUrl=URL.createObjectURL(blob);
-    const isMobile=/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    const canEmbed=!isMobile&&navigator.pdfViewerEnabled!==false;
-    if(canEmbed&&frame){
-      frame.onload=()=>{if(loading)loading.style.display='none';};
-      frame.src=_finBlobUrl;
-      frame.style.display='block';
-      setTimeout(()=>{if(loading)loading.style.display='none';},4000);
-    } else {
-      if(loading)loading.style.display='none';
-      if(fallback){
-        fallback.style.display='flex';
-        const btn=document.getElementById('fin-pdf-newtab');
-        if(btn)btn.onclick=()=>window.open(_finBlobUrl,'_blank');
-      }
-    }
-  } catch(err){
-    console.error('PDF preview error',err);
-    if(loading){
-      const sp=loading.querySelector('span');
-      if(sp)sp.textContent='Erreur lors de la génération de l\'aperçu.';
-    }
-  }
-}
+function closeFinaliser(){document.getElementById('finaliser-overlay').classList.remove('open');}
 
 function renderFinPreview(wk){
   const el=document.getElementById('fin-preview');el.innerHTML='';
@@ -2931,48 +2898,19 @@ function volQuotaReached(wk, name, tempShiftCounts) {
 }
 
 async function openAutoAssign(){
-  if(_autoAssignRunning)return;
-  _autoAssignRunning=true;
-  try{
   const wk=wkey(oMon);
-  if(sb){
-    await loadPeople();
-    assigns[wk]={};           // reset local cache — loadAssignments ne fait qu'ajouter, jamais supprimer
-    await loadAssignments(wk);// lecture fraîche depuis DB
-  }
+  if(sb){await loadPeople();await loadAssignments(wk);}
 
   const wkData=avail[wk]||{};
   const today=new Date();today.setHours(0,0,0,0);
 
-  // ── Étape 1 : collecter et effacer toutes les assignations non-verrouillées ──
-  const cleared=[];
-  DAYS.forEach(day=>{
-    if((closedDays[wk]||new Set()).has(day.id))return;
-    const dayDate_=dayDate(oMon,day.dow);
-    if(dayDate_<today)return;
-    (SHIFTS[day.id]||[]).forEach(sh=>{
-      [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(role=>{
-        getAssigns(wk,sh.id,role).slice().forEach(name=>{
-          if(!getAssignLocked(wk,sh.id,role,name)){
-            cleared.push({wk,shiftId:sh.id,role,name,
-              times:getAssignTimes(wk,sh.id,role,name),
-              note:getAssignNote(wk,sh.id,role,name)});
-          }
-        });
-      });
-    });
-  });
-  cleared.forEach(d=>removeAssign(d.wk,d.shiftId,d.role,d.name));
-  await Promise.all(cleared.map(d=>deleteAssignment(d.wk,d.shiftId,d.role,d.name)));
-  const lockedTrueCount=Object.keys(assigns[wk]||{}).filter(k=>k.includes('__l__')).length;
-  console.log(`[auto-assign] supprimées locked:false=${cleared.length} | restantes locked:true=${lockedTrueCount}`);
-
-  // ── Étape 2 : comptage depuis les assignations verrouillées restantes ──
+  // ── Comptage shifts déjà assignés cette semaine (hors jours fermés) ──
   const weekShiftCounts={};
   const weekShiftSeen=new Set();
+  // name -> Set<shiftId> par jour
   const assignedShifts={}; // name+'|'+dayId -> Set<shiftId>
   DAYS.forEach(day=>{
-    if((closedDays[wk]||new Set()).has(day.id))return;
+    if((closedDays[wk]||new Set()).has(day.id))return; // ignorer les jours fermés
     (SHIFTS[day.id]||[]).forEach(sh=>{
       [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(role=>{
         getAssigns(wk,sh.id,role).forEach(ex=>{
@@ -3053,63 +2991,51 @@ async function openAutoAssign(){
   const toSave=[];
 
   rolesQueue.forEach(({sh,role,dayId,isOpt})=>{
-    // Bénévoles disponibles ce jour, quota non atteint, pas déjà dans ce shift, préférence requise
+    // rôle peut avoir plusieurs assignés
+
+    // Bénévoles disponibles ce jour, quota non atteint, pas déjà dans ce shift
     const candidates=Object.keys(wkData).filter(n=>
       !isEmp(n)&&
       !quotaReached(n)&&
       !alreadyOnShift(n,dayId,sh.id)&&
-      volCoversShiftFor(wk,n,sh,dayId)&&
-      prefScore(n,role)>0
+      volCoversShiftFor(wk,n,sh,dayId)
     );
     if(!candidates.length)return;
 
-    // Trier par score décroissant, essayer chacun jusqu'au premier valide
-    candidates.sort((a,b)=>compare(b,a,role,sh,dayId));
+    const best=candidates.reduce((b,c)=>compare(c,b,role,sh,dayId)>0?c:b);
+    if(prefScore(best,role)===0)return; // règle 5 : pas d'assignation sans préférence
 
-    for(const cand of candidates){
-      const ov=overlapFor(wk,cand,sh,dayId);if(!ov)continue;
+    const ov=overlapFor(wk,best,sh,dayId);if(!ov)return;
 
-      const existingIvs=getAssigns(wk,sh.id,role).filter(n=>n!==cand).map(n=>{
-        const ct=getAssignTimes(wk,sh.id,role,n);
-        if(ct)return{s:ct.s,e:ct.e};
-        const r=volDayRangeFor(wk,n,dayId);
-        return r?{s:Math.max(r.startMins,sh.fromH*60),e:Math.min(r.endMins,sh.toH*60)}:{s:sh.fromH*60,e:sh.toH*60};
-      }).filter(iv=>iv.e>iv.s);
+    // Vérifier si la plage du candidat est déjà entièrement couverte
+    const existingIvs=getAssigns(wk,sh.id,role).filter(n=>n!==best).map(n=>{
+      const ct=getAssignTimes(wk,sh.id,role,n);
+      if(ct)return{s:ct.s,e:ct.e};
+      const r=volDayRangeFor(wk,n,dayId);
+      return r?{s:Math.max(r.startMins,sh.fromH*60),e:Math.min(r.endMins,sh.toH*60)}:{s:sh.fromH*60,e:sh.toH*60};
+    }).filter(iv=>iv.e>iv.s);
+    if(isCovered(ov.s,ov.e,existingIvs))return;
 
-      // Plage déjà entièrement couverte → ce slot n'a pas besoin de plus
-      if(isCovered(ov.s,ov.e,existingIvs))return;
-
-      // Chevauchement horaire avec une assignation existante → essayer le suivant
-      if(existingIvs.some(iv=>ov.s<iv.e&&iv.s<ov.e))continue;
-
-      addAssign(wk,sh.id,role,cand);
-      setAssignTimes(wk,sh.id,role,ov.s,ov.e,cand);
-      setAssignNote(wk,sh.id,role,null,cand);
-      setAssignLocked(wk,sh.id,role,false,cand);
-      markAssigned(cand,dayId,sh.id);
-      toSave.push({wk,shiftId:sh.id,role,name:cand,s:ov.s,e:ov.e});
-      break;
-    }
+    addAssign(wk,sh.id,role,best);
+    setAssignTimes(wk,sh.id,role,ov.s,ov.e,best);
+    setAssignNote(wk,sh.id,role,null,best);
+    markAssigned(best,dayId,sh.id);
+    toSave.push({wk,shiftId:sh.id,role,name:best,s:ov.s,e:ov.e});
   });
 
-  const undoEntries=[
-    ...cleared.map(d=>({type:'add',wk:d.wk,sid:d.shiftId,role:d.role,name:d.name,times:d.times,note:d.note,locked:false})),
-    ...toSave.map(a=>({type:'remove',wk:a.wk,sid:a.shiftId,role:a.role,name:a.name,locked:false}))
-  ];
-  if(undoEntries.length)pushUndo(undoEntries);
-  for(const a of toSave)await saveAssignment(a.wk,a.shiftId,a.role,a.name,a.s,a.e,null,false);
+  if(toSave.length)pushUndo(toSave.map(a=>({type:'remove',wk:a.wk,sid:a.shiftId,role:a.role,name:a.name})));
+  for(const a of toSave)await saveAssignment(a.wk,a.shiftId,a.role,a.name,a.s,a.e);
   renderHoraire();
 
   // Feedback
   const n=toSave.length;
-  if(n>0||cleared.length>0){
+  if(n>0){
     setSyncBadge('o-sync-badge','saved',`✓ ${n} assignation${n>1?'s':''} ajoutée${n>1?'s':''}`);
     setTimeout(()=>setSyncBadge('o-sync-badge','saved',''),3500);
   } else {
     setSyncBadge('o-sync-badge','saved','✓ Horaire déjà optimisé');
     setTimeout(()=>setSyncBadge('o-sync-badge','saved',''),3500);
   }
-  }finally{_autoAssignRunning=false;}
 }
 
 /* ══════════════════════════════════════════════
@@ -3118,16 +3044,6 @@ async function openAutoAssign(){
 // openPdfModal replaced by openFinaliser
 
 function exportPdfTable(){
-  const filename='horaire-cafe-'+wkey(oMon)+'.pdf';
-  let ownUrl=null;
-  const url=_finBlobUrl||(()=>{const b=buildPdfBlob();ownUrl=URL.createObjectURL(b);return ownUrl;})();
-  const a=document.createElement('a');a.href=url;a.download=filename;
-  document.body.appendChild(a);a.click();document.body.removeChild(a);
-  if(ownUrl)setTimeout(()=>URL.revokeObjectURL(ownUrl),60000);
-  closeFinaliser();
-}
-
-function buildPdfBlob(){
   const wk = wkey(oMon);
   const wkClosed = closedDays[wk] || new Set();
   const { jsPDF } = window.jspdf;
@@ -3333,7 +3249,9 @@ function buildPdfBlob(){
     doc.text('Page '+p+' / '+totalPages, pageW-margin, pageH-3.5, {align:'right'});
   }
 
-  return doc.output('blob');
+  const filename='horaire-cafe-'+wkey(oMon)+'.pdf';
+  doc.save(filename);
+  closeFinaliser();
 }
 
 /* ══════════════════════════════════════════════
@@ -3421,11 +3339,9 @@ function loadTestData() {
 
 (async function init(){
   if (TEST_MODE) {
-    // ── Mode test : données fictives, pas de Supabase ──
     loadTestData();
     setConnDot('ok');
     renderB();
-    // Toujours montrer la vue organisatrice en mode test
     const headerTabs=document.getElementById('header-tabs');
     if(headerTabs)headerTabs.style.display='flex';
     const vueBtn=document.getElementById('btn-vue-benevole');
@@ -3435,7 +3351,6 @@ function loadTestData() {
     window.addEventListener('resize',()=>{
       if(document.getElementById('pane-organisatrice').classList.contains('visible'))renderHoraire();
     });
-    // sticky panel also needed in test mode
     setTimeout(()=>window.dispatchEvent(new Event('scroll')), 200);
     return;
   }
@@ -3443,41 +3358,28 @@ function loadTestData() {
   const cfg=getSavedConfig();
   if(cfg.url&&cfg.key){
     if(initSupabase(cfg.url,cfg.key)){
-      // Charger le répertoire pour tous (bénévoles et organisatrice)
       await loadPeople();
-      if(orgUnlocked){
-        const wk=wkey(oMon);
-        await loadAvail(wk);
-        await loadAssignments(wk);
-        subscribeRealtime(wk);
+
+      if (ORG_MODE) {
+        // Mode organisatrice : afficher l'écran PIN
+        await initOrgPinScreen();
+        if (orgUnlocked) {
+          const wk=wkey(oMon);
+          await loadAvail(wk);
+          await loadAssignments(wk);
+          subscribeRealtime(wk);
+        }
       }
     }
   } else {
     setConnDot('');
   }
 
-  // Côté bénévole : rendre le formulaire même sans Supabase
-  // (mais les données ne seront pas persistées)
   if(!sb){
-    // Mode démo : charger des données fictives pour que l'interface soit utilisable
     document.getElementById('b-loading').style.display='none';
   }
 
   renderB();
-
-  // Afficher l'interface organisatrice seulement si la clé est dans l'URL
-  if(orgUnlocked){
-    const headerTabs=document.getElementById('header-tabs');
-    if(headerTabs)headerTabs.style.display='flex';
-    const vueBtn=document.getElementById('btn-vue-benevole');
-    if(vueBtn)vueBtn.style.display='';
-    switchMain._orgLoaded=true;
-    switchMain('organisatrice',null);
-    if(!sb){
-      document.getElementById('setup-banner').style.display='block';
-      document.getElementById('setup-sql').textContent=SETUP_SQL;
-    }
-  }
 
   window.addEventListener('resize',()=>{
     if(document.getElementById('pane-organisatrice').classList.contains('visible'))renderHoraire();
