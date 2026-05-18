@@ -2095,15 +2095,12 @@ function highlightDZs(wk,shifts){
       if(fromRole&&fromRole.shiftId===sh.id&&fromRole.role===role){
         dz.classList.remove('dv','di','dok','da');return;
       }
-
-      const roleStart = sh.fromH * 60;
-      const roleEnd   = sh.toH   * 60;
-      const freeCoversRole = draggingVolFreeIvs
-        ? draggingVolFreeIvs.some(iv => iv.s <= roleStart && iv.e >= roleEnd)
-        : covers;
-
-      const v = freeCoversRole && !alreadyOnShift;
-      if(!v){dz.classList.add('di');dz.classList.remove('dv','da');return;}
+      const roleStart=sh.fromH*60;
+      const roleEnd=sh.toH*60;
+      const compatible=draggingVolFreeIvs
+        ?draggingVolFreeIvs.some(iv=>iv.s<roleEnd&&iv.e>roleStart)
+        :covers;
+      if(!compatible||alreadyOnShift){dz.classList.add('di');dz.classList.remove('dv','da');return;}
       const pref=volPrefersRole(draggingVol,role);
       dz.classList.toggle('dv',pref);
       dz.classList.toggle('da',!pref);
@@ -2127,29 +2124,22 @@ function hoverHighlightDZs(wk,shifts,name,freeIvs){
     [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(role=>{
       const dz=document.getElementById('dz-'+sh.id+'-'+role.replace(/[^a-z0-9]/gi,'_'));
       if(!dz)return;
-
-      const roleStart = sh.fromH * 60;
-      const roleEnd   = sh.toH   * 60;
-      const freeCoversRole = freeIvs
-        ? freeIvs.some(iv => iv.s <= roleStart && iv.e >= roleEnd)
-        : coversFree;
-
-      if(!freeCoversRole && !coversRaw) return;
-
+      const roleStart=sh.fromH*60;
+      const roleEnd=sh.toH*60;
+      const compatible=freeIvs
+        ?freeIvs.some(iv=>iv.s<roleEnd&&iv.e>roleStart)
+        :coversFree;
+      if(!compatible)return;
       const pref=volPrefersRole(name,role);
       const filled=dz.classList.contains('filled');
-      if(freeCoversRole){
-        dz.classList.toggle('hv',pref);
-        dz.classList.toggle('ha',!pref);
-      } else if(pref&&filled){
-        dz.classList.add('hvo');
-      }
+      dz.classList.toggle('hv',pref);
+      dz.classList.toggle('ha',!pref);
       if(filled){
-        if(dz.classList.contains('hv')||dz.classList.contains('hvo')){
+        if(pref){
           dz._hoverCssText=dz.style.cssText;
           dz.style.background='#DBE8E5';
           dz.style.borderColor='var(--accent-dark)';
-        } else if(dz.classList.contains('ha')){
+        } else {
           dz._hoverCssText=dz.style.cssText;
           dz.style.background='#FDDFBE';
           dz.style.borderColor='#D97706';
