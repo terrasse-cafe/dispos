@@ -1286,18 +1286,13 @@ function pinVolCancel() {
 /* ══════════════════════════════════════════════
    ORG PIN AUTH
 ══════════════════════════════════════════════ */
-// ?org=1 dans l'URL → affiche l'écran PIN organisatrice
-const ORG_MODE = new URLSearchParams(location.search).get('gestion') === '1';
+// ?gestion=1 dans l'URL → affiche l'écran PIN organisatriceconst ORG_MODE = new URLSearchParams(location.search).get('gestion') === '1';
 const TEST_MODE = new URLSearchParams(location.search).get('mode') === 'test';
 let orgUnlocked = false;
 
 let orgPinEntry = '';
 const ORG_PIN_LEN = 6;
-
-// Le PIN est stocké dans Supabase (table org_config, clé 'org_pin')
-// Il n'est jamais écrit dans le code source.
-let orgPinHash = null; // hash SHA-256 du PIN, chargé depuis Supabase
-
+let orgPinHash = null;
 async function sha256(str) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
@@ -1315,8 +1310,7 @@ function orgPinKey(digit) {
   orgPinEntry += digit;
   renderOrgPinDots();
   if (orgPinEntry.length === ORG_PIN_LEN) {
-    setTimeout(verifyOrgPin, 120); // petit délai pour voir le dernier point
-  }
+    setTimeout(verifyOrgPin, 120);  }
 }
 
 function orgPinDel() {
@@ -1336,29 +1330,19 @@ function renderOrgPinDots() {
 async function verifyOrgPin() {
   const entered = orgPinEntry;
   const enteredHash = await sha256(entered);
-
   if (enteredHash === orgPinHash) {
-    // Succès — stocker en sessionStorage pour éviter de retaper à chaque rechargement
     sessionStorage.setItem('org_auth', enteredHash);
     unlockOrg();
-  } else {
-    // Erreur — animation shake
-    const dots = document.querySelectorAll('#org-pin-dots .pin-dot');
+  } else {    const dots = document.querySelectorAll('#org-pin-dots .pin-dot');
     dots.forEach(d => d.classList.add('error'));
     document.getElementById('org-pin-error').textContent = 'Code incorrect, réessayez.';
     orgPinEntry = '';
-    setTimeout(() => {
-      dots.forEach(d => { d.classList.remove('error', 'filled'); });
-    }, 900);
-  }
+    setTimeout(() => { dots.forEach(d => { d.classList.remove('error', 'filled'); }); }, 900);  }
 }
 
 function unlockOrg() {
   orgUnlocked = true;
-  // Fermer l'overlay PIN
-  document.getElementById('org-pin-overlay').classList.remove('open');
-  // Afficher les contrôles org dans le header
-  const headerTabs = document.getElementById('header-tabs');
+  document.getElementById('org-pin-overlay').classList.remove('open');  const headerTabs = document.getElementById('header-tabs');
   if (headerTabs) headerTabs.style.display = 'flex';
   const vueBtn = document.getElementById('btn-vue-benevole');
   if (vueBtn) vueBtn.style.display = '';
@@ -1371,21 +1355,12 @@ function unlockOrg() {
 }
 
 async function initOrgPinScreen() {
-  // Charger le hash du PIN depuis Supabase
-  await loadOrgPinHash();
-
-  // Vérifier si déjà authentifié dans cette session
-  const stored = sessionStorage.getItem('org_auth');
+  await loadOrgPinHash();  const stored = sessionStorage.getItem('org_auth');
   if (stored && stored === orgPinHash) {
     unlockOrg();
     return;
   }
-
-  // Afficher l'écran PIN
-  document.getElementById('org-pin-overlay').classList.add('open');
-
-  // Support clavier
-  document.addEventListener('keydown', function orgKeyHandler(e) {
+  document.getElementById('org-pin-overlay').classList.add('open');  document.addEventListener('keydown', function orgKeyHandler(e) {
     if (!document.getElementById('org-pin-overlay').classList.contains('open')) {
       document.removeEventListener('keydown', orgKeyHandler);
       return;
@@ -3359,12 +3334,9 @@ function loadTestData() {
   if(cfg.url&&cfg.key){
     if(initSupabase(cfg.url,cfg.key)){
       await loadPeople();
-
-      if (ORG_MODE) {
-        // Mode organisatrice : afficher l'écran PIN
+      if(ORG_MODE){
         await initOrgPinScreen();
-        if (orgUnlocked) {
-          const wk=wkey(oMon);
+        if(orgUnlocked){          const wk=wkey(oMon);
           await loadAvail(wk);
           await loadAssignments(wk);
           subscribeRealtime(wk);
