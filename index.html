@@ -652,7 +652,10 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       </div>
     </div>
     <div class="modal-btns">
-      <button class="btn btn-danger" id="pm-delete" onclick="deletePersonFromModal()" style="margin-right:auto;display:none">Supprimer</button>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-right:auto">
+        <button class="btn btn-danger" id="pm-delete" onclick="deletePersonFromModal()" style="display:none">Supprimer</button>
+        <button class="btn btn-danger" id="pm-clear" onclick="clearAllPersonData(document.getElementById('pm-name').value.trim())" style="display:none;font-size:11px">Effacer toutes les données</button>
+      </div>
       <button class="btn btn-outlined" onclick="closePersonModal()">Annuler</button>
       <button class="btn btn-secondary" onclick="savePerson()">Enregistrer</button>
     </div>
@@ -2846,9 +2849,33 @@ async function openPersonModal(id){
   ['pm-r1','pm-r2','pm-r3'].forEach(id=>{document.getElementById(id).innerHTML='<option value="">— Aucun —</option>';});
   fillRoleSelects(vals);initRoleSelectListeners();
   document.getElementById('pm-delete').style.display=p?'inline-flex':'none';
+  document.getElementById('pm-clear').style.display=p?'inline-flex':'none';
   document.getElementById('person-overlay').classList.add('open');
 }
 function closePersonModal(){document.getElementById('person-overlay').classList.remove('open');pmCtx=null;}
+async function clearAllPersonData(name){
+  if(!name)return;
+  if(!confirm(`Supprimer toutes les disponibilités et assignations de ${name} ? Cette action est irréversible.`))return;
+  if(sb){
+    await Promise.all([
+      sb.from('availabilities').delete().eq('person_name',name),
+      sb.from('assignments').delete().eq('person_name',name)
+    ]);
+  }
+  // Purger le cache local
+  Object.keys(avail).forEach(wk=>{delete avail[wk][name];});
+  Object.keys(assigns).forEach(wk=>{
+    Object.keys(assigns[wk]).forEach(k=>{
+      if(k.includes('||')&&Array.isArray(assigns[wk][k])){
+        assigns[wk][k]=assigns[wk][k].filter(n=>n!==name);
+      } else if(k.endsWith('__t__'+name)||k.endsWith('__n__'+name)||k.endsWith('__l__'+name)){
+        delete assigns[wk][k];
+      }
+    });
+  });
+  closePersonModal();
+  renderB();renderHoraire();
+}
 async function deletePersonFromModal(){
   if(!pmCtx)return;if(!confirm('Supprimer cette personne ?'))return;
   await deletePerson_db(pmCtx);
