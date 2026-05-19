@@ -2788,9 +2788,13 @@ document.addEventListener('click',e=>{
 function renderDir(){
   const tbody=document.getElementById('dir-tbody');tbody.innerHTML='';
   directory.forEach(p=>{
+    const inactive=p.active===false;
     const tr=document.createElement('tr');
+    if(inactive)tr.style.opacity='0.5';
     tr.innerHTML=`
-      <td><strong>${p.name}</strong></td>
+      <td>${inactive
+        ?'<span style="font-style:italic;color:var(--text-2)">'+p.name+'</span> <span style="font-size:10px;font-weight:600;letter-spacing:.04em;padding:1px 6px;border-radius:10px;background:var(--bg);border:1px solid var(--border);color:var(--text-3);vertical-align:middle">Inactif</span>'
+        :'<strong>'+p.name+'</strong>'}</td>
       <td><a href="mailto:${p.email}" style="color:var(--text);font-size:13px">${p.email||'—'}</a></td>
       <td><span class="type-badge ${p.type}">${p.type==='vol'?'Bénévole':'Employé'}</span></td>
       <td><div class="role-tags">${p.roles.filter(Boolean).map(r=>'<span class="role-tag">'+roleLabel(r)+'</span>').join('')||'<span style="color:var(--text-3);font-size:12px">—</span>'}</div></td>
