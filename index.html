@@ -342,6 +342,14 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .pin-error-msg{font-size:12px;color:#DC2626;min-height:18px;margin-bottom:.5rem}
 /* champ PIN dans le répertoire modal */
 .pin-field-wrap{display:flex;align-items:center;gap:8px}
+.toggle-wrap{display:flex;align-items:center;gap:10px}
+.toggle-switch{position:relative;display:inline-block;width:36px;height:20px;flex-shrink:0}
+.toggle-switch input{opacity:0;width:0;height:0;position:absolute}
+.toggle-track{position:absolute;inset:0;border-radius:10px;background:var(--border);transition:background .2s;cursor:pointer}
+.toggle-track::before{content:'';position:absolute;width:14px;height:14px;left:3px;top:3px;border-radius:50%;background:var(--surface);transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.toggle-switch input:checked+.toggle-track{background:var(--accent-dark)}
+.toggle-switch input:checked+.toggle-track::before{transform:translateX(16px)}
+.toggle-label{font-size:13px;color:var(--text);font-family:var(--font);cursor:pointer;user-select:none}
 .pin-input-admin{width:100px;letter-spacing:.2em;font-family:var(--mono);font-size:14px;text-align:center}
 @media(max-width:639px){
   .pin-box{padding:1.25rem 1.5rem 1rem}
@@ -620,6 +628,16 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <div class="pin-field-wrap">
         <input type="text" id="pm-pin" class="pin-input-admin" maxlength="4" placeholder="••••" inputmode="numeric" pattern="[0-9]{4}"/>
         <span style="font-size:11px;color:var(--text-3)">Visible uniquement par l'organisatrice</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>Statut</label>
+      <div class="toggle-wrap">
+        <label class="toggle-switch">
+          <input type="checkbox" id="pm-active" checked/>
+          <span class="toggle-track"></span>
+        </label>
+        <span class="toggle-label">Actif</span>
       </div>
     </div>
     <div class="field"><label>Type</label>
@@ -988,7 +1006,7 @@ async function loadPeople() {
 
 async function upsertPerson(p) {
   if (!sb) return;
-  const row = {name:p.name, email:p.email, type:p.type, role1:p.roles[0]||'', role2:p.roles[1]||'', role3:p.roles[2]||'', pin:p.pin||''};
+  const row = {name:p.name, email:p.email, type:p.type, role1:p.roles[0]||'', role2:p.roles[1]||'', role3:p.roles[2]||'', pin:p.pin||'', active:p.active!==false};
   let error;
   if (p.id) {
     // Modification — update par id
@@ -2816,6 +2834,7 @@ async function openPersonModal(id){
   document.getElementById('pm-email').value=p?p.email:'';
   document.getElementById('pm-type').value=p?p.type:'vol';
   document.getElementById('pm-pin').value=p?p.pin||'':'';
+  document.getElementById('pm-active').checked=p?(p.active!==false):true;
   // Cacher le PIN pour les employés (pas pertinent)
   document.getElementById('pm-pin-field').style.display=(p&&p.type==='emp')?'none':'block';
   document.getElementById('pm-type').onchange=function(){document.getElementById('pm-pin-field').style.display=this.value==='emp'?'none':'block';};
@@ -2840,11 +2859,12 @@ async function savePerson(){
   const roles=[document.getElementById('pm-r1').value,document.getElementById('pm-r2').value,document.getElementById('pm-r3').value];
   const pinVal=document.getElementById('pm-pin').value.trim();
   if(type==='vol'&&pinVal&&!/^[0-9]{4}$/.test(pinVal)){alert('Le PIN doit contenir exactement 4 chiffres.');return;}
-  const personData={id:pmCtx||null,name,email,type,roles,pin:type==='vol'?pinVal:''};
+  const active=document.getElementById('pm-active').checked;
+  const personData={id:pmCtx||null,name,email,type,roles,pin:type==='vol'?pinVal:'',active};
   if(pmCtx){
     // Modification — mettre à jour localement immédiatement
     const p=directory.find(x=>x.id===pmCtx);
-    if(p){p.name=name;p.email=email;p.type=type;p.roles=roles;p.pin=personData.pin;}
+    if(p){p.name=name;p.email=email;p.type=type;p.roles=roles;p.pin=personData.pin;p.active=active;}
   } else {
     // Création — ajouter localement
     directory.push(personData);
