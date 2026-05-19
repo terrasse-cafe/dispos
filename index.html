@@ -103,6 +103,7 @@ main{flex:1;padding:1rem 1.25rem;width:100%;overflow-x:clip}
 .status-btn:hover{background:var(--bg)}
 .status-btn svg{flex-shrink:0;overflow:visible}
 .status-btn.active-open,.status-btn.active-closed{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
+.pm-type-pill.active{background:var(--accent-dark);color:#fff;border-color:var(--accent-dark)}
 
 /* Day tab fermé — non sélectionné : border #FDA2A2 + diagonale SVG clippée */
 .day-tab-closed{color:var(--text);border-color:#FDA2A2;position:relative;overflow:hidden}
@@ -634,7 +635,11 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     <div class="field"><label>Nom complet</label><input type="text" id="pm-name" placeholder="Prénom Nom"/></div>
     <div class="field"><label>Courriel</label><input type="email" id="pm-email" placeholder="prenom@exemple.com"/></div>
     <div class="field"><label>Type</label>
-      <select id="pm-type"><option value="vol">Bénévole</option><option value="emp">Employé</option></select>
+      <div style="display:flex;gap:6px">
+        <button type="button" id="pm-pill-vol" class="status-btn pm-type-pill active" onclick="setPmType('vol')">Bénévole</button>
+        <button type="button" id="pm-pill-emp" class="status-btn pm-type-pill" onclick="setPmType('emp')">Employé</button>
+      </div>
+      <input type="hidden" id="pm-type" value="vol"/>
     </div>
     <div class="field">
       <label>Rôles préférés (priorité auto-assignation)</label>
@@ -642,6 +647,9 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <select id="pm-r1"></select>
         <select id="pm-r2"></select>
         <select id="pm-r3"></select>
+        <select id="pm-r4"></select>
+        <select id="pm-r5"></select>
+        <select id="pm-r6"></select>
       </div>
     </div>
     <div class="modal-btns">
@@ -988,7 +996,7 @@ async function loadPeople() {
     name: r.name,
     email: r.email || '',
     type: r.type,
-    roles: [r.role1||'', r.role2||'', r.role3||''],
+    roles: [r.role1||'', r.role2||'', r.role3||'', r.role4||'', r.role5||'', r.role6||''],
     pin: r.pin || '',
     active: r.active !== false
   }));
@@ -1000,7 +1008,7 @@ async function loadPeople() {
 
 async function upsertPerson(p) {
   if (!sb) return;
-  const row = {name:p.name, email:p.email, type:p.type, role1:p.roles[0]||'', role2:p.roles[1]||'', role3:p.roles[2]||'', pin:p.pin||'', active:p.active!==false};
+  const row = {name:p.name, email:p.email, type:p.type, role1:p.roles[0]||'', role2:p.roles[1]||'', role3:p.roles[2]||'', role4:p.roles[3]||'', role5:p.roles[4]||'', role6:p.roles[5]||'', pin:p.pin||'', active:p.active!==false};
   let error;
   if (p.id) {
     // Modification — update par id
@@ -2801,13 +2809,12 @@ function renderDir(){
 }
 
 function fillRoleSelects(vals){
-  const ids=['pm-r1','pm-r2','pm-r3'];
-  // Options = noms uniques d'affichage (sans suffixe #)
+  const ids=['pm-r1','pm-r2','pm-r3','pm-r4','pm-r5','pm-r6'];
   const uniqueRoles=[...new Set(ALL_ROLES.map(roleDisplayLabel))];
   ids.forEach((id,i)=>{
     const sel=document.getElementById(id);
     const myVal=vals?vals[i]||'':'';
-    const otherVals=ids.filter((_,j)=>j!==i).map((_,k)=>vals?vals[[0,1,2].filter(x=>x!==i)[k]]||'':'').filter(Boolean);
+    const otherVals=(vals||[]).filter((_,j)=>j!==i).filter(Boolean);
     while(sel.options.length>1)sel.remove(1);
     uniqueRoles.forEach(role=>{
       const o=document.createElement('option');
@@ -2819,8 +2826,15 @@ function fillRoleSelects(vals){
   });
 }
 function initRoleSelectListeners(){
-  const ids=['pm-r1','pm-r2','pm-r3'];
+  const ids=['pm-r1','pm-r2','pm-r3','pm-r4','pm-r5','pm-r6'];
   ids.forEach(id=>{document.getElementById(id).addEventListener('change',()=>{const cur=ids.map(i=>document.getElementById(i).value);fillRoleSelects(cur);});});
+}
+function setPmType(val){
+  document.getElementById('pm-type').value=val;
+  document.getElementById('pm-pill-vol').classList.toggle('active',val==='vol');
+  document.getElementById('pm-pill-emp').classList.toggle('active',val==='emp');
+  const p=pmCtx?directory.find(x=>x.id===pmCtx):null;
+  document.getElementById('pm-reset-pin').style.display=(p&&val==='vol'&&p.pin)?'inline-flex':'none';
 }
 async function openPersonModal(id){
   // Recharger depuis Supabase pour avoir les ids à jour
@@ -2830,13 +2844,11 @@ async function openPersonModal(id){
   document.getElementById('pm-title').textContent=p?'Modifier — '+p.name:'Ajouter une personne';
   document.getElementById('pm-name').value=p?p.name:'';
   document.getElementById('pm-email').value=p?p.email:'';
-  document.getElementById('pm-type').value=p?p.type:'vol';
   document.getElementById('pm-active').checked=p?(p.active!==false):true;
   document.getElementById('pm-active-wrap').style.display=p?'flex':'none';
-  document.getElementById('pm-reset-pin').style.display=(p&&p.type==='vol'&&p.pin)?'inline-flex':'none';
-  document.getElementById('pm-type').onchange=function(){document.getElementById('pm-reset-pin').style.display=(p&&this.value==='vol'&&p.pin)?'inline-flex':'none';};
-  const vals=[(p&&p.roles[0])||'',(p&&p.roles[1])||'',(p&&p.roles[2])||''];
-  ['pm-r1','pm-r2','pm-r3'].forEach(id=>{document.getElementById(id).innerHTML='<option value="">— Aucun —</option>';});
+  setPmType(p?p.type:'vol');
+  const vals=[(p&&p.roles[0])||'',(p&&p.roles[1])||'',(p&&p.roles[2])||'',(p&&p.roles[3])||'',(p&&p.roles[4])||'',(p&&p.roles[5])||''];
+  ['pm-r1','pm-r2','pm-r3','pm-r4','pm-r5','pm-r6'].forEach(id=>{document.getElementById(id).innerHTML='<option value="">— Aucun —</option>';});
   fillRoleSelects(vals);initRoleSelectListeners();
   document.getElementById('pm-delete').style.display=p?'inline-flex':'none';
   document.getElementById('person-overlay').classList.add('open');
@@ -2901,7 +2913,7 @@ async function savePerson(){
   if(!name){alert('Le nom est requis.');return}
   const email=document.getElementById('pm-email').value.trim();
   const type=document.getElementById('pm-type').value;
-  const roles=[document.getElementById('pm-r1').value,document.getElementById('pm-r2').value,document.getElementById('pm-r3').value];
+  const roles=[document.getElementById('pm-r1').value,document.getElementById('pm-r2').value,document.getElementById('pm-r3').value,document.getElementById('pm-r4').value,document.getElementById('pm-r5').value,document.getElementById('pm-r6').value];
   const active=document.getElementById('pm-active').checked;
   const existingPin=pmCtx?(directory.find(x=>x.id===pmCtx)||{}).pin||'':'';
   const personData={id:pmCtx||null,name,email,type,roles,pin:type==='vol'?existingPin:'',active};
