@@ -1498,7 +1498,7 @@ function removeRecentProfile(name){
 }
 
 function renderRecentProfiles(){
-  const profiles=getRecentProfiles().filter(n=>getPerson(n));
+  const profiles=getRecentProfiles().filter(n=>{const p=getPerson(n);return p&&p.active!==false;});
   const section=document.getElementById('b-recent-profiles');
   const cards=document.getElementById('b-recent-cards');
   const manageWrap=document.getElementById('b-manage-wrap');
@@ -1564,7 +1564,7 @@ async function connectAsRecentProfile(name){
 function populateVolSelect(){
   const sel=document.getElementById('vol-select'),cur=sel.value;
   sel.innerHTML='<option value="">— Mon nom —</option>';
-  directory.filter(p=>p.type==='vol').forEach(p=>{
+  directory.filter(p=>p.type==='vol'&&p.active!==false).forEach(p=>{
     const o=document.createElement('option');o.value=p.name;
     o.textContent=p.name;sel.appendChild(o);
   });
