@@ -620,7 +620,17 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 <!-- PERSON MODAL -->
 <div class="overlay" id="person-overlay" onclick="if(event.target===this)closePersonModal()">
   <div class="modal-box">
-    <div class="modal-title" id="pm-title">Ajouter</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:1rem">
+      <div id="pm-title" style="font-size:15px;font-weight:600;flex:1">Ajouter</div>
+      <div id="pm-active-wrap" style="display:none;align-items:center;gap:8px">
+        <label class="toggle-switch">
+          <input type="checkbox" id="pm-active" checked/>
+          <span class="toggle-track"></span>
+        </label>
+        <span class="toggle-label">Actif</span>
+      </div>
+      <button onclick="closePersonModal()" style="border:none;background:none;cursor:pointer;font-size:20px;line-height:1;color:var(--text-3);padding:0 0 0 4px;flex-shrink:0;transition:color .1s" title="Fermer" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text-3)'">×</button>
+    </div>
     <div class="field"><label>Nom complet</label><input type="text" id="pm-name" placeholder="Prénom Nom"/></div>
     <div class="field"><label>Courriel</label><input type="email" id="pm-email" placeholder="prenom@exemple.com"/></div>
     <div class="field" id="pm-pin-field">
@@ -628,16 +638,6 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <div class="pin-field-wrap">
         <input type="text" id="pm-pin" class="pin-input-admin" maxlength="4" placeholder="••••" inputmode="numeric" pattern="[0-9]{4}"/>
         <span style="font-size:11px;color:var(--text-3)">Visible uniquement par l'organisatrice</span>
-      </div>
-    </div>
-    <div class="field">
-      <label>Statut</label>
-      <div class="toggle-wrap">
-        <label class="toggle-switch">
-          <input type="checkbox" id="pm-active" checked/>
-          <span class="toggle-track"></span>
-        </label>
-        <span class="toggle-label">Actif</span>
       </div>
     </div>
     <div class="field"><label>Type</label>
@@ -656,7 +656,6 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <button class="btn btn-danger" id="pm-delete" onclick="deletePersonFromModal()" style="display:none">Supprimer</button>
         <button class="btn btn-danger" id="pm-clear" onclick="clearAllPersonData(document.getElementById('pm-name').value.trim())" style="display:none;font-size:11px">Effacer toutes les données</button>
       </div>
-      <button class="btn btn-outlined" onclick="closePersonModal()">Annuler</button>
       <button class="btn btn-secondary" onclick="savePerson()">Enregistrer</button>
     </div>
   </div>
@@ -2843,6 +2842,7 @@ async function openPersonModal(id){
   document.getElementById('pm-type').value=p?p.type:'vol';
   document.getElementById('pm-pin').value=p?p.pin||'':'';
   document.getElementById('pm-active').checked=p?(p.active!==false):true;
+  document.getElementById('pm-active-wrap').style.display=p?'flex':'none';
   // Cacher le PIN pour les employés (pas pertinent)
   document.getElementById('pm-pin-field').style.display=(p&&p.type==='emp')?'none':'block';
   document.getElementById('pm-type').onchange=function(){document.getElementById('pm-pin-field').style.display=this.value==='emp'?'none':'block';};
