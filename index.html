@@ -999,7 +999,8 @@ async function loadPeople() {
     email: r.email || '',
     type: r.type,
     roles: [r.role1||'', r.role2||'', r.role3||''],
-    pin: r.pin || ''
+    pin: r.pin || '',
+    active: r.active !== false
   }));
   nextId = Math.max(0, ...directory.map(p=>p.id)) + 1;
   rebuildVcols();
