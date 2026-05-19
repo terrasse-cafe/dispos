@@ -633,13 +633,6 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     </div>
     <div class="field"><label>Nom complet</label><input type="text" id="pm-name" placeholder="Prénom Nom"/></div>
     <div class="field"><label>Courriel</label><input type="email" id="pm-email" placeholder="prenom@exemple.com"/></div>
-    <div class="field" id="pm-pin-field">
-      <label>Code PIN (4 chiffres)</label>
-      <div class="pin-field-wrap">
-        <input type="text" id="pm-pin" class="pin-input-admin" maxlength="4" placeholder="••••" inputmode="numeric" pattern="[0-9]{4}"/>
-        <span style="font-size:11px;color:var(--text-3)">Visible uniquement par l'organisatrice</span>
-      </div>
-    </div>
     <div class="field"><label>Type</label>
       <select id="pm-type"><option value="vol">Bénévole</option><option value="emp">Employé</option></select>
     </div>
@@ -652,10 +645,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       </div>
     </div>
     <div class="modal-btns">
-      <div style="display:flex;flex-direction:column;gap:6px;margin-right:auto">
-        <button class="btn btn-danger" id="pm-delete" onclick="deletePersonFromModal()" style="display:none">Supprimer</button>
-        <button class="btn btn-danger" id="pm-clear" onclick="clearAllPersonData(document.getElementById('pm-name').value.trim())" style="display:none;font-size:11px">Effacer toutes les données</button>
-      </div>
+      <button class="btn btn-danger" id="pm-delete" onclick="deletePersonFromModal()" style="display:none">Supprimer</button>
+      <button class="btn btn-outlined" id="pm-reset-pin" onclick="resetPersonPin()" style="display:none;margin-right:auto">Réinitialiser le PIN</button>
       <button class="btn btn-secondary" onclick="savePerson()">Enregistrer</button>
     </div>
   </div>
@@ -2840,17 +2831,14 @@ async function openPersonModal(id){
   document.getElementById('pm-name').value=p?p.name:'';
   document.getElementById('pm-email').value=p?p.email:'';
   document.getElementById('pm-type').value=p?p.type:'vol';
-  document.getElementById('pm-pin').value=p?p.pin||'':'';
   document.getElementById('pm-active').checked=p?(p.active!==false):true;
   document.getElementById('pm-active-wrap').style.display=p?'flex':'none';
-  // Cacher le PIN pour les employés (pas pertinent)
-  document.getElementById('pm-pin-field').style.display=(p&&p.type==='emp')?'none':'block';
-  document.getElementById('pm-type').onchange=function(){document.getElementById('pm-pin-field').style.display=this.value==='emp'?'none':'block';};
+  document.getElementById('pm-reset-pin').style.display=(p&&p.type==='vol'&&p.pin)?'inline-flex':'none';
+  document.getElementById('pm-type').onchange=function(){document.getElementById('pm-reset-pin').style.display=(p&&this.value==='vol'&&p.pin)?'inline-flex':'none';};
   const vals=[(p&&p.roles[0])||'',(p&&p.roles[1])||'',(p&&p.roles[2])||''];
   ['pm-r1','pm-r2','pm-r3'].forEach(id=>{document.getElementById(id).innerHTML='<option value="">— Aucun —</option>';});
   fillRoleSelects(vals);initRoleSelectListeners();
   document.getElementById('pm-delete').style.display=p?'inline-flex':'none';
-  document.getElementById('pm-clear').style.display=p?'inline-flex':'none';
   document.getElementById('person-overlay').classList.add('open');
 }
 function closePersonModal(){document.getElementById('person-overlay').classList.remove('open');pmCtx=null;}
@@ -2878,10 +2866,35 @@ async function clearAllPersonData(name){
   renderB();renderHoraire();
 }
 async function deletePersonFromModal(){
-  if(!pmCtx)return;if(!confirm('Supprimer cette personne ?'))return;
+  if(!pmCtx)return;
+  const p=directory.find(x=>x.id===pmCtx);
+  const nom=p?p.name:'';
+  if(!confirm(`Supprimer ${nom} et toutes ses données (disponibilités, assignations) ? Cette action est irréversible.`))return;
+  if(sb&&nom){
+    await Promise.all([
+      sb.from('availabilities').delete().eq('person_name',nom),
+      sb.from('assignments').delete().eq('person_name',nom)
+    ]);
+  }
+  Object.keys(avail).forEach(wk=>{delete avail[wk][nom];});
+  Object.keys(assigns).forEach(wk=>{
+    Object.keys(assigns[wk]).forEach(k=>{
+      if(k.includes('||')&&Array.isArray(assigns[wk][k])){assigns[wk][k]=assigns[wk][k].filter(n=>n!==nom);}
+      else if(k.endsWith('__t__'+nom)||k.endsWith('__n__'+nom)||k.endsWith('__l__'+nom)){delete assigns[wk][k];}
+    });
+  });
   await deletePerson_db(pmCtx);
-  directory=directory.filter(p=>p.id!==pmCtx);
-  rebuildVcols();populateVolSelect();renderDir();closePersonModal();
+  directory=directory.filter(x=>x.id!==pmCtx);
+  rebuildVcols();populateVolSelect();renderDir();closePersonModal();renderB();renderHoraire();
+}
+async function resetPersonPin(){
+  if(!pmCtx)return;
+  const p=directory.find(x=>x.id===pmCtx);
+  if(!p)return;
+  if(!confirm(`Réinitialiser le PIN de ${p.name} ? Il devra en créer un nouveau à sa prochaine connexion.`))return;
+  if(sb){await sb.from('people').update({pin:''}).eq('id',pmCtx);}
+  p.pin='';
+  document.getElementById('pm-reset-pin').style.display='none';
 }
 async function savePerson(){
   const name=document.getElementById('pm-name').value.trim();
@@ -2889,10 +2902,9 @@ async function savePerson(){
   const email=document.getElementById('pm-email').value.trim();
   const type=document.getElementById('pm-type').value;
   const roles=[document.getElementById('pm-r1').value,document.getElementById('pm-r2').value,document.getElementById('pm-r3').value];
-  const pinVal=document.getElementById('pm-pin').value.trim();
-  if(type==='vol'&&pinVal&&!/^[0-9]{4}$/.test(pinVal)){alert('Le PIN doit contenir exactement 4 chiffres.');return;}
   const active=document.getElementById('pm-active').checked;
-  const personData={id:pmCtx||null,name,email,type,roles,pin:type==='vol'?pinVal:'',active};
+  const existingPin=pmCtx?(directory.find(x=>x.id===pmCtx)||{}).pin||'':'';
+  const personData={id:pmCtx||null,name,email,type,roles,pin:type==='vol'?existingPin:'',active};
   if(pmCtx){
     // Modification — mettre à jour localement immédiatement
     const p=directory.find(x=>x.id===pmCtx);
