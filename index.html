@@ -178,6 +178,11 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .b-toggle-thumb{position:absolute;top:3px;left:3px;width:20px;height:20px;background:#fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.18);transition:transform .2s}
 .b-day-card.readonly{opacity:.65;pointer-events:none}
 #b-past-notice{font-size:11px;color:var(--text-3);display:none;margin-top:-1rem;margin-bottom:1rem}
+.lang-btn{height:22px;padding:0 7px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text-3);font-family:var(--font);transition:all .15s;line-height:1}
+.lang-btn:first-child{border-radius:5px 0 0 5px}
+.lang-btn:last-child{border-radius:0 5px 5px 0;margin-left:-1px}
+.lang-btn.active{background:var(--accent-dark);color:#fff;border-color:var(--accent-dark);z-index:1;position:relative}
+.lang-btn:hover:not(.active){background:var(--bg);color:var(--text)}
 #b-shift-chips.b-past{pointer-events:none;cursor:default;opacity:.5}
 #vol-email.b-past{pointer-events:none;cursor:default;color:var(--text-2)}
 .b-readonly-week{opacity:.5;cursor:not-allowed}
@@ -409,6 +414,10 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   </nav>
   <div class="header-spacer"></div>
   <button class="btn btn-outlined" id="btn-vue-benevole" style="display:none;gap:6px;margin-right:8px" onclick="openVolView()"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M12 8.667V12.667C12 13.404 11.403 14 10.667 14H3.333C2.597 14 2 13.404 2 12.667V5.333C2 4.597 2.597 4 3.333 4H7.333M14 6V2h-4M14 2 6.667 9.333" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/></svg> Vue bénévole</button>
+  <div id="lang-toggle" style="display:flex;margin-right:8px">
+    <button class="lang-btn active" id="lang-btn-fr" onclick="setLang('fr')">FR</button>
+    <button class="lang-btn" id="lang-btn-en" onclick="setLang('en')">EN</button>
+  </div>
   <div id="conn-dot" class="conn-dot" title="État de la connexion Supabase"></div>
 </header>
 <main>
@@ -420,15 +429,15 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     <!-- EMPTY STATE -->
     <div id="b-empty-state" style="margin-top:3rem;text-align:center;padding:2.5rem 2rem;border:1px solid var(--border);border-radius:16px;background:var(--surface);box-shadow:var(--shadow)">
       <img src="https://raw.githubusercontent.com/terrasse-cafe/dispos/main/photos/logo-terrasse-cafe.jpg" alt="Terrasse Café" style="width:140px;height:140px;object-fit:contain;margin-bottom:1.25rem;opacity:.9"/>
-      <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:6px">Entrez vos disponibilités</div>
-      <div style="font-size:13px;color:var(--text-2);margin-bottom:1.5rem;line-height:1.6;max-width:340px;margin-left:auto;margin-right:auto">Sélectionnez votre nom pour indiquer vos disponibilités pour la semaine.</div>
+      <div id="b-empty-title" style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:6px">Entrez vos disponibilités</div>
+      <div id="b-empty-subtitle" style="font-size:13px;color:var(--text-2);margin-bottom:1.5rem;line-height:1.6;max-width:340px;margin-left:auto;margin-right:auto">Sélectionnez votre nom pour indiquer vos disponibilités pour la semaine.</div>
       <div id="b-loading" style="font-size:13px;color:var(--text-3);margin-bottom:1rem;display:none">Chargement de la liste…</div>
 
       <!-- Profils récents -->
       <div id="b-recent-profiles" style="display:none;margin-bottom:1.25rem">
         <div id="b-recent-cards" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:1rem"></div>
-        <div style="font-size:12px;color:var(--text-3);margin-bottom:.5rem">— ou —</div>
-        <div style="font-size:12px;font-weight:500;color:var(--text-2);margin-bottom:6px">Se connecter avec un autre compte</div>
+        <div id="b-recent-or" style="font-size:12px;color:var(--text-3);margin-bottom:.5rem">— ou —</div>
+        <div id="b-recent-other-label" style="font-size:12px;font-weight:500;color:var(--text-2);margin-bottom:6px">Se connecter avec un autre compte</div>
       </div>
 
       <select id="vol-select" style="width:260px;font-size:14px;padding:10px 36px 10px 14px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface)" onchange="onVolSelect()">
@@ -437,7 +446,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 
       <!-- Gérer les comptes -->
       <div id="b-manage-wrap" style="display:none;margin-top:12px">
-        <button id="b-manage-btn" onclick="toggleManageAccounts()" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--text-3);font-family:var(--font);padding:4px 0;text-decoration:underline;text-underline-offset:2px">Gérer les comptes</button>
+        <button id="b-manage-btn" onclick="toggleManageAccounts()" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--text-3);font-family:var(--font);padding:4px 0;text-decoration:underline;text-underline-offset:2px">Gérer les comptes</button><!-- text set by applyLang -->
         <div id="b-manage-list" style="display:none;margin-top:8px;text-align:left;border:1px solid var(--border-light);border-radius:8px;padding:4px 12px;background:var(--bg)"></div>
       </div>
     </div>
@@ -458,7 +467,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <div class="pin-error-msg" id="pin-vol-error"></div>
         <div class="pin-keypad" id="pin-vol-keypad"></div>
         <div class="pin-hint" id="pin-vol-hint"></div>
-        <button onclick="pinVolCancel()" style="margin-top:1rem;background:none;border:none;cursor:pointer;font-size:12px;color:var(--text-3);font-family:var(--font);padding:4px 8px;border-radius:4px;transition:color .15s" onmouseover="this.style.color='var(--text-2)'" onmouseout="this.style.color='var(--text-3)'">Oups, mauvais nom</button>
+        <button id="pin-vol-cancel-btn" onclick="pinVolCancel()" style="margin-top:1rem;background:none;border:none;cursor:pointer;font-size:12px;color:var(--text-3);font-family:var(--font);padding:4px 8px;border-radius:4px;transition:color .15s" onmouseover="this.style.color='var(--text-2)'" onmouseout="this.style.color='var(--text-3)'">Oups, mauvais nom</button>
       </div>
     </div>
 
@@ -466,7 +475,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     <div id="b-name-section" style="display:none">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid var(--border-light)">
         <div style="font-size:15px;font-weight:600;color:var(--text)" id="b-greeting"></div>
-        <button class="btn btn-outlined" onclick="resetVolSelect()" style="margin-left:auto">Changer</button>
+        <button id="b-change-btn" class="btn btn-outlined" onclick="resetVolSelect()" style="margin-left:auto">Changer</button>
       </div>
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:1.5rem">
         <button class="btn btn-subtle btn-icon" onclick="bShift(-1)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
@@ -477,23 +486,23 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       </div>
       <div id="b-past-notice">Semaine passée — les disponibilités ne sont plus modifiables.</div>
       <div style="margin-bottom:1.5rem">
-        <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:10px">Combien de quarts souhaitez-vous faire cette semaine ?</div>
+        <div id="b-quota-label" style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:10px">Combien de quarts souhaitez-vous faire cette semaine ?</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap" id="b-shift-chips"></div>
       </div>
       <div id="b-week-section" style="display:none">
         <div class="b-days-wrap" id="b-days-wrap"></div>
         <div class="b-summary" id="b-summary"></div>
         <div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border-light)">
-          <label style="display:block;font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Courriel de notification</label>
+          <label id="b-email-label" style="display:block;font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Courriel de notification</label>
           <div style="display:flex;align-items:center;gap:8px">
             <input type="email" id="vol-email" placeholder="prenom@exemple.com" style="width:260px;font-size:13px" onblur="onVolEmailBlur()"/>
             <span id="vol-email-saved" style="font-size:11px;color:var(--green);display:none">✓ Enregistré</span>
           </div>
-          <div style="font-size:11px;color:var(--text-3);margin-top:5px">Vous serez notifié(e) quand l'horaire sera disponible.</div>
+          <div id="b-email-hint" style="font-size:11px;color:var(--text-3);margin-top:5px">Vous serez notifié(e) quand l'horaire sera disponible.</div>
         </div>
       </div>
       <div class="b-actions">
-        <button class="btn btn-secondary" onclick="submitAvail()">Envoyer mes disponibilités</button>
+        <button id="b-submit-btn" class="btn btn-secondary" onclick="submitAvail()">Envoyer mes disponibilités</button>
         <span id="b-sync-badge" class="sync-badge offline" style="display:none"></span>
       </div>
     </div>
@@ -860,6 +869,133 @@ function setSyncBadge(id, state, msg) {
 /* ══════════════════════════════════════════════
    CONSTANTS
 ══════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════
+   INTERNATIONALISATION (vue bénévole)
+══════════════════════════════════════════════ */
+let lang=(()=>{try{return localStorage.getItem('tc_lang')||'fr';}catch{return 'fr';}})();
+const TRANSLATIONS={
+  fr:{
+    empty_title:'Entrez vos disponibilités',
+    empty_subtitle:'Sélectionnez votre nom pour indiquer vos disponibilités pour la semaine.',
+    loading:'Chargement de la liste…',
+    recent_or:'— ou —',
+    recent_other_label:'Se connecter avec un autre compte',
+    my_name:'— Mon nom —',
+    manage_accounts:'Gérer les comptes',
+    hide_accounts:'Masquer ↑',
+    remove:'Retirer',
+    change:'Changer',
+    this_week:'Cette semaine',
+    copy_prev_week:'Copier la semaine précédente',
+    past_notice:'Semaine passée — les disponibilités ne sont plus modifiables.',
+    quota_label:'Combien de quarts souhaitez-vous faire cette semaine ?',
+    email_label:'Courriel de notification',
+    email_placeholder:'prenom@exemple.com',
+    email_saved:'✓ Enregistré',
+    email_hint:'Vous serez notifié(e) quand l\'horaire sera disponible.',
+    submit:'Envoyer mes disponibilités',
+    toast:'✓ Disponibilités enregistrées. Merci !',
+    shift_none:'Aucun',
+    shift_any:'Ça ne me dérange pas',
+    day_jeudi:'Jeudi',day_vendredi:'Vendredi',day_samedi:'Samedi',day_dimanche:'Dimanche',
+    greeting:'Bonjour',
+    pin_sub_enter:'Entrez votre code PIN à 4 chiffres.',
+    pin_sub_existing:pin=>'Votre PIN est : '+pin+'  — entrez-le ci-dessous.',
+    pin_sub_create:'Créez votre code PIN à 4 chiffres. Il vous sera demandé à chaque connexion.',
+    pin_hint_create:'💡 Choisissez un code facile à retenir.',
+    pin_error:'PIN incorrect. Réessayez.',
+    pin_cancel:'Oups, mauvais nom',
+    sync_offline:'Hors-ligne — non sauvegardé',
+    sync_saving:'Enregistrement…',
+    sync_error:'Erreur d\'enregistrement',
+    sync_saved:'✓ Enregistré',
+    alert_select_name:'Sélectionnez votre nom.',
+    alert_select_day:'Activez au moins un jour.',
+    confirm_copy_prev:'Remplacer vos disponibilités actuelles par celles de la semaine précédente ?',
+    from_lbl:'DE',to_lbl:'À',
+  },
+  en:{
+    empty_title:'Enter your availability',
+    empty_subtitle:'Select your name to indicate your availability for the week.',
+    loading:'Loading list…',
+    recent_or:'— or —',
+    recent_other_label:'Sign in with another account',
+    my_name:'— My name —',
+    manage_accounts:'Manage accounts',
+    hide_accounts:'Hide ↑',
+    remove:'Remove',
+    change:'Change',
+    this_week:'This week',
+    copy_prev_week:'Copy previous week',
+    past_notice:'Past week — availability can no longer be modified.',
+    quota_label:'How many shifts would you like to do this week?',
+    email_label:'Notification email',
+    email_placeholder:'firstname@example.com',
+    email_saved:'✓ Saved',
+    email_hint:'You will be notified when the schedule is available.',
+    submit:'Send my availability',
+    toast:'✓ Availability saved. Thank you!',
+    shift_none:'None',
+    shift_any:"Doesn't matter to me",
+    day_jeudi:'Thursday',day_vendredi:'Friday',day_samedi:'Saturday',day_dimanche:'Sunday',
+    greeting:'Hello',
+    pin_sub_enter:'Enter your 4-digit PIN.',
+    pin_sub_existing:pin=>'Your PIN is: '+pin+'  — enter it below.',
+    pin_sub_create:'Create your 4-digit PIN. You will be asked for it at each login.',
+    pin_hint_create:'💡 Choose a code that\'s easy to remember.',
+    pin_error:'Incorrect PIN. Try again.',
+    pin_cancel:'Oops, wrong name',
+    sync_offline:'Offline — not saved',
+    sync_saving:'Saving…',
+    sync_error:'Save error',
+    sync_saved:'✓ Saved',
+    alert_select_name:'Select your name.',
+    alert_select_day:'Enable at least one day.',
+    confirm_copy_prev:"Replace your current availability with last week's?",
+    from_lbl:'FROM',to_lbl:'TO',
+  }
+};
+function t(key,...args){
+  const tr=TRANSLATIONS[lang]??TRANSLATIONS.fr;
+  const val=tr[key]??TRANSLATIONS.fr[key]??key;
+  return typeof val==='function'?val(...args):val;
+}
+function setLang(l){
+  lang=l;
+  try{localStorage.setItem('tc_lang',l);}catch{}
+  ['fr','en'].forEach(c=>{const b=document.getElementById('lang-btn-'+c);if(b)b.classList.toggle('active',c===l);});
+  applyLang();
+  buildShiftChips();
+  const showWeek=document.getElementById('b-week-section')?.style.display!=='none';
+  if(showWeek)renderB();else updateBSummary();
+  renderRecentProfiles();
+}
+function applyLang(){
+  const s=(id,txt)=>{const el=document.getElementById(id);if(el)el.textContent=txt;};
+  s('b-empty-title',t('empty_title'));
+  s('b-empty-subtitle',t('empty_subtitle'));
+  s('b-loading',t('loading'));
+  s('b-recent-or',t('recent_or'));
+  s('b-recent-other-label',t('recent_other_label'));
+  s('b-change-btn',t('change'));
+  s('b-today-btn',t('this_week'));
+  s('b-copy-btn','↩ '+t('copy_prev_week'));
+  s('b-past-notice',t('past_notice'));
+  s('b-quota-label',t('quota_label'));
+  s('b-email-label',t('email_label'));
+  s('vol-email-saved',t('email_saved'));
+  s('b-email-hint',t('email_hint'));
+  s('b-submit-btn',t('submit'));
+  s('b-toast',t('toast'));
+  s('pin-vol-cancel-btn',t('pin_cancel'));
+  s('b-manage-btn',t('manage_accounts'));
+  const opt=document.querySelector('#vol-select option[value=""]');
+  if(opt)opt.textContent=t('my_name');
+  const emailEl=document.getElementById('vol-email');
+  if(emailEl)emailEl.placeholder=t('email_placeholder');
+  ['fr','en'].forEach(c=>{const b=document.getElementById('lang-btn-'+c);if(b)b.classList.toggle('active',c===lang);});
+}
+
 const DAYS=[
   {id:'jeudi',    label:'Jeudi',    oH:15,oM:0, cH:21,cM:0,  dow:3},
   {id:'vendredi', label:'Vendredi', oH:11,oM:0, cH:21,cM:30, dow:4},
@@ -960,8 +1096,9 @@ function getMonday(d){const dt=new Date(d),dy=dt.getDay();dt.setDate(dt.getDate(
 function addWeeks(d,n){const r=new Date(d);r.setDate(r.getDate()+n*7);return r}
 function wkey(m){return m.toISOString().split('T')[0]}
 function dayDate(mon,dow){const d=new Date(mon);d.setDate(mon.getDate()+dow);d.setHours(0,0,0,0);return d}
-function fmt(d){return d.toLocaleDateString('fr-CA',{day:'numeric',month:'short'})}
-function fmtLong(d){return d.toLocaleDateString('fr-CA',{day:'numeric',month:'long',year:'numeric'})}
+function fmtLocale(){return lang==='en'?'en-CA':'fr-CA';}
+function fmt(d){return d.toLocaleDateString(fmtLocale(),{day:'numeric',month:'short'})}
+function fmtLong(d){return d.toLocaleDateString(fmtLocale(),{day:'numeric',month:'long',year:'numeric'})}
 function wlabel(mon){return fmt(dayDate(mon,3))+' – '+fmtLong(dayDate(mon,6))}
 function slotMins(s){return GSH*60+s*30}
 function isOpen(day,s){const m=slotMins(s);return m>=day.oH*60+day.oM&&m<day.cH*60+day.cM}
@@ -1057,11 +1194,11 @@ async function loadAvail(wk) {
 
 async function saveAvail(wk, name, slots, quota) {
   if (!sb) {
-    setSyncBadge('b-sync-badge','offline','Hors-ligne — non sauvegardé');
+    setSyncBadge('b-sync-badge','offline',t('sync_offline'));
     setTimeout(()=>setSyncBadge('b-sync-badge','offline',''),3000);
     return;
   }
-  setSyncBadge('b-sync-badge','saving','Enregistrement…');
+  setSyncBadge('b-sync-badge','saving',t('sync_saving'));
   const payload = { slots };
   if (quota !== undefined) payload.quota = quota;
   const { error } = await sb.from('availabilities').upsert(
@@ -1070,9 +1207,9 @@ async function saveAvail(wk, name, slots, quota) {
   );
   if (error) {
     console.error('saveAvail:', error);
-    setSyncBadge('b-sync-badge','error','Erreur d\'enregistrement');
+    setSyncBadge('b-sync-badge','error',t('sync_error'));
   } else {
-    setSyncBadge('b-sync-badge','saved','✓ Enregistré');
+    setSyncBadge('b-sync-badge','saved',t('sync_saved'));
     setTimeout(()=>setSyncBadge('b-sync-badge','saved',''),2500);
   }
 }
@@ -1230,20 +1367,19 @@ function openVolPin(name, isNew, onSuccess) {
 
   const overlay = document.getElementById('pin-vol-overlay');
   const firstName = name.split(' ')[0];
-  document.getElementById('pin-vol-title').textContent = 'Bonjour, ' + firstName + ' 👋';
+  document.getElementById('pin-vol-title').textContent = t('greeting')+', ' + firstName + ' 👋';
 
   if (isNew) {
     const p = getPerson(name);
     const existingPin = p ? p.pin || '' : '';
     if (existingPin) {
-      // PIN déjà défini par l'organisatrice — le montrer pour que le bénévole le mémorise
-      document.getElementById('pin-vol-sub').textContent = 'Votre PIN est : ' + existingPin + '  — entrez-le ci-dessous.';
+      document.getElementById('pin-vol-sub').textContent = t('pin_sub_existing', existingPin);
     } else {
-      document.getElementById('pin-vol-sub').textContent = 'Créez votre code PIN à 4 chiffres. Il vous sera demandé à chaque connexion.';
+      document.getElementById('pin-vol-sub').textContent = t('pin_sub_create');
     }
-    document.getElementById('pin-vol-hint').textContent = isNew && !existingPin ? '💡 Choisissez un code facile à retenir.' : '';
+    document.getElementById('pin-vol-hint').textContent = isNew && !existingPin ? t('pin_hint_create') : '';
   } else {
-    document.getElementById('pin-vol-sub').textContent = 'Entrez votre code PIN à 4 chiffres.';
+    document.getElementById('pin-vol-sub').textContent = t('pin_sub_enter');
     document.getElementById('pin-vol-hint').textContent = '';
   }
 
@@ -1311,7 +1447,7 @@ async function processVolPin(onSuccess) {
       onSuccess();
     } else {
       updateVolDots(pinVolEntry, true);
-      document.getElementById('pin-vol-error').textContent = 'PIN incorrect. Réessayez.';
+      document.getElementById('pin-vol-error').textContent = t('pin_error');
       setTimeout(() => { pinVolEntry = ''; updateVolDots('', false); }, 700);
     }
   }
@@ -1544,7 +1680,7 @@ function renderManageList(){
     nm.style.cssText='font-size:13px;color:var(--text)';
     nm.textContent=name;
     const btn=document.createElement('button');
-    btn.textContent='Retirer';
+    btn.textContent=t('remove');
     btn.style.cssText='font-size:11px;color:var(--text-3);background:none;border:none;cursor:pointer;padding:2px 8px;border-radius:4px;font-family:var(--font);transition:color .1s';
     btn.onmouseover=()=>btn.style.color='#DC2626';
     btn.onmouseout=()=>btn.style.color='var(--text-3)';
@@ -1559,7 +1695,7 @@ function toggleManageAccounts(){
   const btn=document.getElementById('b-manage-btn');
   const open=list.style.display==='none';
   list.style.display=open?'block':'none';
-  btn.textContent=open?'Masquer ↑':'Gérer les comptes';
+  btn.textContent=open?t('hide_accounts'):t('manage_accounts');
 }
 
 async function connectAsRecentProfile(name){
@@ -1596,7 +1732,7 @@ function buildShiftChips(){
   SHIFT_OPTIONS.forEach(opt=>{
     const btn=document.createElement('button');
     const active=bShiftsDesired===opt.value;
-    btn.textContent=opt.label;
+    btn.textContent=opt.value===0?t('shift_none'):opt.value===99?t('shift_any'):String(opt.value);
     btn.className='b-shift-chip'+(active?' active':'');
     btn.onclick=()=>{
       const name=document.getElementById('vol-select').value;
@@ -1628,7 +1764,7 @@ async function _afterVolPinSuccess(name, p) {
   bMon=restoreBVolWeek(name)||getSmartBMon();
   document.getElementById('b-empty-state').style.display='none';
   document.getElementById('b-name-section').style.display='block';
-  document.getElementById('b-greeting').textContent='Bonjour, '+name.split(' ')[0]+' 👋';
+  document.getElementById('b-greeting').textContent=t('greeting')+', '+name.split(' ')[0]+' 👋';
   document.getElementById('vol-email').value=p?p.email:'';
   bShiftsDesired=bShiftMemory[name]!==undefined?bShiftMemory[name]:0;
   document.getElementById('b-wlabel').textContent=wlabel(bMon);
@@ -1787,7 +1923,7 @@ function renderB(){
     const card=document.createElement('div');card.className='b-day-card'+(enabled?' active':'');
     const head=document.createElement('div');head.className='b-day-card-head';
     const title=document.createElement('div');title.className='b-day-card-title';
-    title.innerHTML=day.label+' <span>'+fmt(dayDate(bMon,day.dow))+'</span>';
+    title.innerHTML=t('day_'+day.id)+' <span>'+fmt(dayDate(bMon,day.dow))+'</span>';
     const toggleLabel=document.createElement('label');toggleLabel.className='b-toggle';
     const chk=document.createElement('input');chk.type='checkbox';chk.checked=enabled;
     const track=document.createElement('span');track.className='b-toggle-track';
@@ -1839,7 +1975,7 @@ async function copyPrevWeek(){
   const prevEntry=avail[prevWk]&&avail[prevWk][name];
   if(!prevEntry)return;
   const hasExisting=bSel[wk]&&Object.keys(bSel[wk]).length>0;
-  if(hasExisting&&!confirm('Remplacer vos disponibilités actuelles par celles de la semaine précédente ?'))return;
+  if(hasExisting&&!confirm(t('confirm_copy_prev')))return;
   const slots=prevEntry.slots||{};
   bSel[wk]={};
   DAYS.forEach(day=>{
@@ -1887,15 +2023,15 @@ function clearBSel(){bSel[wkey(bMon)]={};renderB();}
 
 function updateBSummary(){
   const wk=wkey(bMon),sel=bSel[wk]||{};
-  const parts=DAYS.filter(d=>sel[d.id]).map(d=>{const{from,to}=sel[d.id];return d.label+': '+mStr(from)+' – '+mStr(to);});
+  const parts=DAYS.filter(d=>sel[d.id]).map(d=>{const{from,to}=sel[d.id];return t('day_'+d.id)+': '+mStr(from)+' – '+mStr(to);});
   document.getElementById('b-summary').textContent=parts.length?parts.join('  ·  '):'';
 }
 
 async function submitAvail(){
   const name=document.getElementById('vol-select').value;
-  if(!name){alert('Sélectionnez votre nom.');return}
+  if(!name){alert(t('alert_select_name'));return}
   const wk=wkey(bMon),sel=bSel[wk]||{};
-  if(!Object.keys(sel).length){alert('Activez au moins un jour.');return}
+  if(!Object.keys(sel).length){alert(t('alert_select_day'));return}
   if(!avail[wk])avail[wk]={};
   const slots={};
   DAYS.forEach(day=>{
@@ -1906,8 +2042,8 @@ async function submitAvail(){
   const quota=bShiftsDesired; // 0=aucun, 1, 2, 3, 99=peu importe
   avail[wk][name]={slots,quota};
   await saveAvail(wk,name,slots,quota);
-  const t=document.getElementById('b-toast');t.style.display='block';
-  setTimeout(()=>t.style.display='none',3000);
+  const toastEl=document.getElementById('b-toast');toastEl.style.display='block';
+  setTimeout(()=>toastEl.style.display='none',3000);
 }
 
 /* ══════════════════════════════════════════════
@@ -3740,6 +3876,7 @@ function loadTestData() {
     document.getElementById('b-loading').style.display='none';
   }
 
+  applyLang();
   renderB();
 
   window.addEventListener('resize',()=>{
