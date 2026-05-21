@@ -469,6 +469,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <button class="btn btn-subtle btn-icon" onclick="bShift(-1)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <span style="font-size:14px;font-weight:500;color:var(--text)" id="b-wlabel">—</span>
         <button class="btn btn-subtle btn-icon" onclick="bShift(1)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M6 12l4-4-4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button id="b-today-btn" class="btn btn-subtle btn-sm" onclick="goToCurrentWeek()" style="display:none">Cette semaine</button>
       </div>
       <div style="margin-bottom:1.5rem">
         <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:10px">Combien de quarts souhaitez-vous faire cette semaine ?</div>
@@ -1625,6 +1626,7 @@ async function _afterVolPinSuccess(name, p) {
   document.getElementById('vol-email').value=p?p.email:'';
   bShiftsDesired=bShiftMemory[name]!==undefined?bShiftMemory[name]:0;
   document.getElementById('b-wlabel').textContent=wlabel(bMon);
+  updateBCurrentBtn();
 
   // Charger les dispos existantes pour cette semaine
   const wk=wkey(bMon);
@@ -1729,6 +1731,7 @@ async function bShift(d){
   const wk=wkey(bMon);
   // Toujours mettre à jour le label de semaine, qu'un nom soit sélectionné ou non
   document.getElementById('b-wlabel').textContent=wlabel(bMon);
+  updateBCurrentBtn();
   await bootVolData(wk);
   if(name){
     restoreWeekState(name, wk);
@@ -1815,6 +1818,29 @@ function renderB(){
     wrap.appendChild(card);
   });
   updateBSummary();
+  updateBCurrentBtn();
+}
+
+function updateBCurrentBtn(){
+  const btn=document.getElementById('b-today-btn');
+  if(btn)btn.style.display=wkey(bMon)===wkey(getSmartBMon())?'none':'inline-flex';
+}
+async function goToCurrentWeek(){
+  bMon=getSmartBMon();
+  const name=document.getElementById('vol-select').value;
+  saveBVolWeek(name);
+  const wk=wkey(bMon);
+  document.getElementById('b-wlabel').textContent=wlabel(bMon);
+  await bootVolData(wk);
+  if(name){
+    restoreWeekState(name,wk);
+    buildShiftChips();
+    const showWeek=bShiftsDesired!==0;
+    document.getElementById('b-week-section').style.display=showWeek?'block':'none';
+    if(showWeek)renderB();else updateBCurrentBtn();
+  } else {
+    renderB();
+  }
 }
 
 function clearBSel(){bSel[wkey(bMon)]={};renderB();}
