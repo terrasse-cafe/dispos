@@ -468,11 +468,12 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <div style="font-size:15px;font-weight:600;color:var(--text)" id="b-greeting"></div>
         <button class="btn btn-outlined" onclick="resetVolSelect()" style="margin-left:auto">Changer</button>
       </div>
-      <div style="display:inline-flex;align-items:center;gap:8px;margin-bottom:1.5rem">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:1.5rem">
         <button class="btn btn-subtle btn-icon" onclick="bShift(-1)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <span style="font-size:14px;font-weight:500;color:var(--text)" id="b-wlabel">—</span>
         <button class="btn btn-subtle btn-icon" onclick="bShift(1)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M6 12l4-4-4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <button id="b-today-btn" class="btn btn-subtle btn-sm" onclick="goToCurrentWeek()" style="display:none">Cette semaine</button>
+        <button id="b-copy-btn" class="btn btn-outlined btn-sm" onclick="copyPrevWeek()" style="display:none;margin-left:auto">↩ Copier la semaine précédente</button>
       </div>
       <div id="b-past-notice">Semaine passée — les disponibilités ne sont plus modifiables.</div>
       <div style="margin-bottom:1.5rem">
@@ -1191,7 +1192,8 @@ async function bootOrgData() {
 
 async function bootVolData(wk) {
   if (!sb) return;
-  await loadAvail(wk);
+  const prevWk=wkey(addWeeks(new Date(wk+'T12:00:00'),-1));
+  await Promise.all([loadAvail(wk),loadAvail(prevWk)]);
 }
 
 
@@ -1817,8 +1819,39 @@ function renderB(){
   });
   updateBSummary();
   updateBCurrentBtn();
+  updateBCopyBtn();
 }
 
+function updateBCopyBtn(){
+  const btn=document.getElementById('b-copy-btn');
+  if(!btn)return;
+  const name=document.getElementById('vol-select').value;
+  if(!name){btn.style.display='none';return;}
+  if(isWeekReadOnly(wkey(bMon))){btn.style.display='none';return;}
+  const prevWk=wkey(addWeeks(bMon,-1));
+  btn.style.display=(avail[prevWk]&&avail[prevWk][name])?'inline-flex':'none';
+}
+async function copyPrevWeek(){
+  const name=document.getElementById('vol-select').value;
+  if(!name)return;
+  const prevWk=wkey(addWeeks(bMon,-1));
+  const wk=wkey(bMon);
+  const prevEntry=avail[prevWk]&&avail[prevWk][name];
+  if(!prevEntry)return;
+  const hasExisting=bSel[wk]&&Object.keys(bSel[wk]).length>0;
+  if(hasExisting&&!confirm('Remplacer vos disponibilités actuelles par celles de la semaine précédente ?'))return;
+  const slots=prevEntry.slots||{};
+  bSel[wk]={};
+  DAYS.forEach(day=>{
+    const daySlots=Object.keys(slots).filter(k=>k.startsWith(day.id+'_')).map(k=>parseInt(k.split('_')[1]));
+    if(daySlots.length){const mins=daySlots.map(s=>GSH*60+s*30);bSel[wk][day.id]={from:Math.min(...mins),to:Math.max(...mins)+30};}
+  });
+  if(prevEntry.quota!==undefined){bShiftsDesired=prevEntry.quota;bShiftMemory[name]=prevEntry.quota;}
+  buildShiftChips();
+  const showWeek=bShiftsDesired!==0;
+  document.getElementById('b-week-section').style.display=showWeek?'block':'none';
+  if(showWeek)renderB();
+}
 function applyBPastState(readOnly){
   document.getElementById('b-past-notice').style.display=readOnly?'block':'none';
   document.getElementById('b-shift-chips').classList.toggle('b-past',readOnly);
@@ -1826,6 +1859,7 @@ function applyBPastState(readOnly){
   if(emailEl)emailEl.classList.toggle('b-past',readOnly);
   const submitBtn=document.querySelector('.b-actions .btn-secondary');
   if(submitBtn)submitBtn.style.display=readOnly?'none':'';
+  updateBCopyBtn();
 }
 function updateBCurrentBtn(){
   const btn=document.getElementById('b-today-btn');
