@@ -178,11 +178,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .b-toggle-thumb{position:absolute;top:3px;left:3px;width:20px;height:20px;background:#fff;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.18);transition:transform .2s}
 .b-day-card.readonly{opacity:.65;pointer-events:none}
 #b-past-notice{font-size:11px;color:var(--text-3);display:none;margin-top:-1rem;margin-bottom:1rem}
-.lang-btn{height:22px;padding:0 7px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--text-3);font-family:var(--font);transition:all .15s;line-height:1}
-.lang-btn:first-child{border-radius:5px 0 0 5px}
-.lang-btn:last-child{border-radius:0 5px 5px 0;margin-left:-1px}
-.lang-btn.active{background:var(--accent-dark);color:#fff;border-color:var(--accent-dark);z-index:1;position:relative}
-.lang-btn:hover:not(.active){background:var(--bg);color:var(--text)}
+.lang-select{height:32px;padding:0 28px 0 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;font-weight:600;font-family:var(--font);background:var(--surface);color:var(--text);appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%2357534E' d='M5 6L0 0h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;cursor:pointer;outline:none;transition:border-color .15s}
+.lang-select:focus{border-color:var(--accent-dark)}
 #b-shift-chips.b-past{pointer-events:none;cursor:default;opacity:.5}
 #vol-email.b-past{pointer-events:none;cursor:default;color:var(--text-2)}
 .b-readonly-week{opacity:.5;cursor:not-allowed}
@@ -415,8 +412,10 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   <div class="header-spacer"></div>
   <button class="btn btn-outlined" id="btn-vue-benevole" style="display:none;gap:6px;margin-right:8px" onclick="openVolView()"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M12 8.667V12.667C12 13.404 11.403 14 10.667 14H3.333C2.597 14 2 13.404 2 12.667V5.333C2 4.597 2.597 4 3.333 4H7.333M14 6V2h-4M14 2 6.667 9.333" stroke="currentColor" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/></svg> Vue bénévole</button>
   <div id="lang-toggle" style="display:flex;margin-right:8px">
-    <button class="lang-btn active" id="lang-btn-fr" onclick="setLang('fr')">FR</button>
-    <button class="lang-btn" id="lang-btn-en" onclick="setLang('en')">EN</button>
+    <select id="lang-select" class="lang-select" onchange="setLang(this.value)">
+      <option value="fr">FR</option>
+      <option value="en">EN</option>
+    </select>
   </div>
   <div id="conn-dot" class="conn-dot" title="État de la connexion Supabase"></div>
 </header>
@@ -963,7 +962,7 @@ function t(key,...args){
 function setLang(l){
   lang=l;
   try{localStorage.setItem('tc_lang',l);}catch{}
-  ['fr','en'].forEach(c=>{const b=document.getElementById('lang-btn-'+c);if(b)b.classList.toggle('active',c===l);});
+  const sel=document.getElementById('lang-select');if(sel)sel.value=l;
   applyLang();
   buildShiftChips();
   const showWeek=document.getElementById('b-week-section')?.style.display!=='none';
@@ -993,7 +992,7 @@ function applyLang(){
   if(opt)opt.textContent=t('my_name');
   const emailEl=document.getElementById('vol-email');
   if(emailEl)emailEl.placeholder=t('email_placeholder');
-  ['fr','en'].forEach(c=>{const b=document.getElementById('lang-btn-'+c);if(b)b.classList.toggle('active',c===lang);});
+  const sel=document.getElementById('lang-select');if(sel)sel.value=lang;
 }
 
 const DAYS=[
@@ -1576,6 +1575,7 @@ function switchMain(id,btn){
   // En mode org, on affiche toujours le pane organisatrice
   document.getElementById('pane-benevole').classList.toggle('visible',id==='benevole');
   document.getElementById('pane-organisatrice').classList.toggle('visible',id==='organisatrice');
+  const lt=document.getElementById('lang-toggle');if(lt)lt.style.display=id==='organisatrice'?'none':'flex';
   if(id==='organisatrice'){
     if(!sb){
       document.getElementById('setup-banner').style.display='block';
@@ -1931,9 +1931,9 @@ function renderB(){
     toggleLabel.appendChild(chk);toggleLabel.appendChild(track);toggleLabel.appendChild(thumb);
     head.appendChild(title);head.appendChild(toggleLabel);card.appendChild(head);
     const body=document.createElement('div');body.className='b-day-card-body';body.style.display=enabled?'grid':'none';
-    const fromField=document.createElement('div');fromField.className='b-field';fromField.innerHTML='<label>DE</label>';
+    const fromField=document.createElement('div');fromField.className='b-field';fromField.innerHTML='<label>'+t('from_lbl')+'</label>';
     let fromSel=buildTimeSelect(day,'from',dayData?dayData.from:undefined);fromField.appendChild(fromSel);
-    const toField=document.createElement('div');toField.className='b-field';toField.innerHTML='<label>À</label>';
+    const toField=document.createElement('div');toField.className='b-field';toField.innerHTML='<label>'+t('to_lbl')+'</label>';
     let toSel=buildTimeSelect(day,'to',dayData?dayData.to:undefined,dayData?dayData.from:undefined);toField.appendChild(toSel);
     body.appendChild(fromField);body.appendChild(toField);card.appendChild(body);
     function saveDay(){bSel[wk][day.id]={from:parseInt(fromSel.value),to:parseInt(toSel.value)};updateBSummary();}
@@ -3877,6 +3877,7 @@ function loadTestData() {
   }
 
   applyLang();
+  if(ORG_MODE){const lt=document.getElementById('lang-toggle');if(lt)lt.style.display='none';}
   renderB();
 
   window.addEventListener('resize',()=>{
