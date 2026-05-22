@@ -480,13 +480,12 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <button class="btn btn-subtle btn-icon" onclick="bShift(-1)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <span style="font-size:14px;font-weight:500;color:var(--text)" id="b-wlabel">—</span>
         <button class="btn btn-subtle btn-icon" onclick="bShift(1)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M6 12l4-4-4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-        <button id="b-today-btn" class="btn btn-subtle btn-sm" onclick="goToCurrentWeek()" style="display:none">Cette semaine</button>
-        <button id="b-copy-btn" class="btn btn-outlined btn-sm" onclick="copyPrevWeek()" style="display:none;margin-left:auto">↩ Copier la semaine précédente</button>
+        <button id="b-copy-btn" class="btn btn-outlined btn-sm" onclick="copyPrevWeek()" style="display:none;font-size:13px">Copier la semaine précédente</button>
       </div>
       <div id="b-past-notice">Semaine passée — les disponibilités ne sont plus modifiables.</div>
       <div style="margin-bottom:1.5rem">
         <div id="b-quota-label" style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:10px">Combien de quarts souhaitez-vous faire cette semaine ?</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap" id="b-shift-chips"></div>
+        <div style="display:flex;gap:8px;flex-wrap:nowrap" id="b-shift-chips"></div>
       </div>
       <div id="b-week-section" style="display:none">
         <div class="b-days-wrap" id="b-days-wrap"></div>
@@ -894,8 +893,8 @@ const TRANSLATIONS={
     email_hint:'Vous serez notifié(e) quand l\'horaire sera disponible.',
     submit:'Envoyer mes disponibilités',
     toast:'✓ Disponibilités enregistrées. Merci !',
-    shift_none:'Aucun',
-    shift_any:'Ça ne me dérange pas',
+    shift_none:'0',
+    shift_any:'Peu importe',
     day_jeudi:'Jeudi',day_vendredi:'Vendredi',day_samedi:'Samedi',day_dimanche:'Dimanche',
     greeting:'Bonjour',
     pin_sub_enter:'Entrez votre code PIN à 4 chiffres.',
@@ -934,8 +933,8 @@ const TRANSLATIONS={
     email_hint:'You will be notified when the schedule is available.',
     submit:'Send my availability',
     toast:'✓ Availability saved. Thank you!',
-    shift_none:'None',
-    shift_any:"Doesn't matter to me",
+    shift_none:'0',
+    shift_any:'Any',
     day_jeudi:'Thursday',day_vendredi:'Friday',day_samedi:'Saturday',day_dimanche:'Sunday',
     greeting:'Hello',
     pin_sub_enter:'Enter your 4-digit PIN.',
@@ -977,8 +976,7 @@ function applyLang(){
   s('b-recent-or',t('recent_or'));
   s('b-recent-other-label',t('recent_other_label'));
   s('b-change-btn',t('change'));
-  s('b-today-btn',t('this_week'));
-  s('b-copy-btn','↩ '+t('copy_prev_week'));
+  s('b-copy-btn',t('copy_prev_week'));
   s('b-past-notice',t('past_notice'));
   s('b-quota-label',t('quota_label'));
   s('b-email-label',t('email_label'));
@@ -1098,7 +1096,29 @@ function dayDate(mon,dow){const d=new Date(mon);d.setDate(mon.getDate()+dow);d.s
 function fmtLocale(){return lang==='en'?'en-CA':'fr-CA';}
 function fmt(d){return d.toLocaleDateString(fmtLocale(),{day:'numeric',month:'short'})}
 function fmtLong(d){return d.toLocaleDateString(fmtLocale(),{day:'numeric',month:'long',year:'numeric'})}
-function wlabel(mon){return fmt(dayDate(mon,3))+' – '+fmtLong(dayDate(mon,6))}
+function fmtAbbr(d,showYear){
+  let s=d.toLocaleDateString(fmtLocale(),{day:'numeric',month:'short'});
+  // Remove trailing dot on month abbreviation if locale adds one (e.g. "mai." → "mai")
+  // Also normalize "janv." etc by removing trailing dot
+  s=s.replace(/\.\s*$/, '');
+  if(showYear)s+=' '+d.getFullYear();
+  return s;
+}
+function wlabel(mon){
+  const start=dayDate(mon,3);
+  const end=dayDate(mon,6);
+  if(start.getMonth()===end.getMonth()){
+    // same month: "27 – 30 sept. 2026"
+    const day1=start.getDate();
+    const day2=end.getDate();
+    let monthStr=end.toLocaleDateString(fmtLocale(),{month:'short'});
+    const year=end.getFullYear();
+    return day1+' – '+day2+' '+monthStr+' '+year;
+  } else {
+    // cross-month: "29 sept. – 2 oct. 2026"
+    return fmtAbbr(start,false)+' – '+fmtAbbr(end,true);
+  }
+}
 function slotMins(s){return GSH*60+s*30}
 function isOpen(day,s){const m=slotMins(s);return m>=day.oH*60+day.oM&&m<day.cH*60+day.cM}
 function skey(dayId,s){return dayId+'_'+s}
@@ -1768,7 +1788,6 @@ async function _afterVolPinSuccess(name, p) {
   document.getElementById('vol-email').value=p?p.email:'';
   bShiftsDesired=bShiftMemory[name]!==undefined?bShiftMemory[name]:0;
   document.getElementById('b-wlabel').textContent=wlabel(bMon);
-  updateBCurrentBtn();
 
   // Charger les dispos existantes pour cette semaine
   const wk=wkey(bMon);
@@ -1873,7 +1892,6 @@ async function bShift(d){
   const wk=wkey(bMon);
   // Toujours mettre à jour le label de semaine, qu'un nom soit sélectionné ou non
   document.getElementById('b-wlabel').textContent=wlabel(bMon);
-  updateBCurrentBtn();
   await bootVolData(wk);
   if(name){
     restoreWeekState(name, wk);
@@ -1954,7 +1972,6 @@ function renderB(){
     wrap.appendChild(card);
   });
   updateBSummary();
-  updateBCurrentBtn();
   updateBCopyBtn();
 }
 
@@ -1996,27 +2013,6 @@ function applyBPastState(readOnly){
   const submitBtn=document.querySelector('.b-actions .btn-secondary');
   if(submitBtn)submitBtn.style.display=readOnly?'none':'';
   updateBCopyBtn();
-}
-function updateBCurrentBtn(){
-  const btn=document.getElementById('b-today-btn');
-  if(btn)btn.style.display=wkey(bMon)===wkey(getSmartBMon())?'none':'inline-flex';
-}
-async function goToCurrentWeek(){
-  bMon=getSmartBMon();
-  const name=document.getElementById('vol-select').value;
-  saveBVolWeek(name);
-  const wk=wkey(bMon);
-  document.getElementById('b-wlabel').textContent=wlabel(bMon);
-  await bootVolData(wk);
-  if(name){
-    restoreWeekState(name,wk);
-    buildShiftChips();
-    const showWeek=bShiftsDesired!==0;
-    document.getElementById('b-week-section').style.display=showWeek?'block':'none';
-    if(showWeek)renderB();else updateBCurrentBtn();
-  } else {
-    renderB();
-  }
 }
 
 function clearBSel(){bSel[wkey(bMon)]={};renderB();}
