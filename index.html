@@ -875,7 +875,7 @@ let lang=(()=>{try{return localStorage.getItem('tc_lang')||'fr';}catch{return 'f
 const TRANSLATIONS={
   fr:{
     empty_title:'Entrez vos disponibilités',
-    empty_subtitle:'Sélectionnez votre nom pour indiquer vos disponibilités pour la semaine.',
+    empty_subtitle:'Sélectionnez votre nom pour commencer.',
     loading:'Chargement de la liste…',
     recent_or:'— ou —',
     recent_other_label:'Se connecter avec un autre compte',
@@ -915,7 +915,7 @@ const TRANSLATIONS={
   },
   en:{
     empty_title:'Enter your availability',
-    empty_subtitle:'Select your name to indicate your availability for the week.',
+    empty_subtitle:'Select your name to get started.',
     loading:'Loading list…',
     recent_or:'— or —',
     recent_other_label:'Sign in with another account',
@@ -1783,7 +1783,7 @@ async function _afterVolPinSuccess(name, p) {
   bMon=restoreBVolWeek(name)||getSmartBMon();
   document.getElementById('b-empty-state').style.display='none';
   document.getElementById('b-name-section').style.display='block';
-  document.getElementById('b-greeting').textContent=t('greeting')+', '+name.split(' ')[0]+' 👋';
+  document.getElementById('b-greeting').textContent=t('greeting')+', '+name.split(' ')[0];
   document.getElementById('vol-email').value=p?p.email:'';
   bShiftsDesired=bShiftMemory[name]!==undefined?bShiftMemory[name]:0;
   document.getElementById('b-wlabel').textContent=wlabel(bMon);
