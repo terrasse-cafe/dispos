@@ -28,7 +28,7 @@ html,body{height:100%;background:var(--bg);font-family:var(--font);color:var(--t
 .shell{display:flex;flex-direction:column;min-height:100vh}
 header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;gap:0;height:52px;position:sticky;top:0;z-index:100}
 .logo{display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0;margin-right:1.5rem;cursor:default}
-.logo-img{width:32px;height:32px;border-radius:50%;object-fit:cover}
+.logo-img{width:32px;height:32px;object-fit:contain}
 .logo-text{font-size:16px;font-weight:700;letter-spacing:-.02em;color:var(--text)}.logo-text span{color:var(--text)}
 .header-tabs{display:flex;align-items:stretch;gap:0;flex-shrink:0}
 .header-tab{padding:0 14px;border:none;background:transparent;font-family:var(--font);font-size:14px;font-weight:500;cursor:pointer;color:var(--text-3);transition:color .15s;position:relative;height:52px;display:flex;align-items:center}
@@ -331,7 +331,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .pin-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;display:none;align-items:center;justify-content:center}
 .pin-overlay.open{display:flex}
 .pin-box{background:var(--surface);border-radius:16px;box-shadow:var(--shadow-md);padding:2rem 2rem 1.75rem;width:320px;max-width:95vw;text-align:center}
-.pin-logo{width:72px;height:72px;border-radius:50%;object-fit:cover;margin-bottom:1rem}
+.pin-logo{width:72px;height:72px;object-fit:contain;margin-bottom:1rem}
 .pin-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px}
 .pin-sub{font-size:13px;color:var(--text-2);margin-bottom:1.5rem;line-height:1.5}
 .pin-dots{display:flex;justify-content:center;gap:12px;margin-bottom:1.25rem}
@@ -372,7 +372,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 <!-- ═══ ÉCRAN PIN ORGANISATRICE ═══ -->
 <div id="org-pin-overlay" class="pin-overlay" role="dialog" aria-modal="true" aria-label="Connexion organisatrice">
   <div class="pin-box">
-    <img class="pin-logo" src="https://raw.githubusercontent.com/terrasse-cafe/dispos/main/photos/logo-terrasse-cafe.jpg" alt="Logo Terrasse Café"/>
+    <img class="pin-logo" src="photos/logo-terrasse-cafe-transparent.png" alt="Logo Terrasse Café"/>
     <div class="pin-title">Espace organisatrice</div>
     <div class="pin-sub">Entrez votre code PIN à 6 chiffres</div>
     <div class="pin-dots" id="org-pin-dots">
@@ -401,7 +401,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 <div class="shell">
 <header>
   <div class="logo">
-    <img class="logo-img" src="https://raw.githubusercontent.com/terrasse-cafe/dispos/main/photos/logo-terrasse-cafe.jpg" alt="Logo Terrasse Café"/>
+    <img class="logo-img" src="photos/logo-terrasse-cafe-transparent.png" alt="Logo Terrasse Café"/>
     <span class="logo-text">Terrasse Café</span>
   </div>
   <nav class="header-tabs" id="header-tabs" style="display:none">
@@ -426,7 +426,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 
     <!-- EMPTY STATE -->
     <div id="b-empty-state" style="margin-top:3rem;text-align:center;padding:2.5rem 2rem;border:1px solid var(--border);border-radius:16px;background:var(--surface);box-shadow:var(--shadow)">
-      <img src="https://raw.githubusercontent.com/terrasse-cafe/dispos/main/photos/logo-terrasse-cafe.jpg" alt="Terrasse Café" style="width:140px;height:140px;object-fit:contain;margin-bottom:1.25rem;opacity:.9"/>
+      <img src="photos/logo-terrasse-cafe-transparent.png" alt="Terrasse Café" style="width:140px;height:140px;object-fit:contain;margin-bottom:1.25rem;opacity:.9"/>
       <div id="b-empty-title" style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:6px">Entrez vos disponibilités</div>
       <div id="b-empty-subtitle" style="font-size:13px;color:var(--text-2);margin-bottom:1.5rem;line-height:1.6;max-width:340px;margin-left:auto;margin-right:auto">Sélectionnez votre nom pour indiquer vos disponibilités pour la semaine.</div>
       <div id="b-loading" style="font-size:13px;color:var(--text-3);margin-bottom:1rem;display:none">Chargement de la liste…</div>
@@ -453,7 +453,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     <!-- PIN BÉNÉVOLE -->
     <div id="pin-vol-overlay" class="pin-overlay">
       <div class="pin-box">
-        <img class="pin-logo" src="https://raw.githubusercontent.com/terrasse-cafe/dispos/main/photos/logo-terrasse-cafe.jpg" alt="Terrasse Café"/>
+        <img class="pin-logo" src="photos/logo-terrasse-cafe-transparent.png" alt="Terrasse Café"/>
         <div class="pin-title" id="pin-vol-title">Bonjour !</div>
         <div class="pin-sub" id="pin-vol-sub">Entrez votre code PIN à 4 chiffres.</div>
         <div class="pin-dots" id="pin-vol-dots">
@@ -472,7 +472,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     <!-- AFTER NAME SELECTED -->
     <div id="b-name-section" style="display:none">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:1.5rem">
-        <button id="b-change-btn" onclick="resetVolSelect()" style="border:none;background:none;cursor:pointer;padding:0;display:inline-flex;align-items:center;flex-shrink:0"><img src="/photos/arrow.svg" width="20" height="20" alt="Retour"/></button>
+        <button id="b-change-btn" onclick="resetVolSelect()" style="border:none;background:none;cursor:pointer;padding:0;display:inline-flex;align-items:center;flex-shrink:0"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" style="transform:scaleX(-1)"><path d="M3.33317 8.00004H12.6665M7.99984 3.33337L12.6665 8.00004L7.99984 12.6667" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <div style="font-size:15px;font-weight:600;color:var(--text)" id="b-greeting"></div>
       </div>
       <div style="margin-bottom:1.25rem">
