@@ -2021,13 +2021,15 @@ async function submitAvail(){
   const wk=wkey(bMon),sel=bSel[wk]||{};
   if(bShiftsDesired!==0&&!Object.keys(sel).length){alert(t('alert_select_day'));return}
   if(!avail[wk])avail[wk]={};
+  const quota=bShiftsDesired;
   const slots={};
-  DAYS.forEach(day=>{
-    if(!sel[day.id])return;
-    const{from,to}=sel[day.id];
-    for(let m=from;m<to;m+=30){const s=Math.round((m-GSH*60)/30);slots[skey(day.id,s)]=true;}
-  });
-  const quota=bShiftsDesired; // 0=aucun, 1, 2, 3, 99=peu importe
+  if(quota!==0){
+    DAYS.forEach(day=>{
+      if(!sel[day.id])return;
+      const{from,to}=sel[day.id];
+      for(let m=from;m<to;m+=30){const s=Math.round((m-GSH*60)/30);slots[skey(day.id,s)]=true;}
+    });
+  }
   avail[wk][name]={slots,quota};
   await saveAvail(wk,name,slots,quota);
   const toastEl=document.getElementById('b-toast');toastEl.style.display='block';
