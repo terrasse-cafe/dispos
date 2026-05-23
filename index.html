@@ -453,10 +453,9 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     <!-- PIN BÉNÉVOLE -->
     <div id="pin-vol-overlay" class="pin-overlay">
       <div class="pin-box">
-        <img class="pin-logo" src="photos/logo-terrasse-cafe-transparent.png" alt="Terrasse Café"/>
         <div class="pin-title" id="pin-vol-title">Bonjour !</div>
         <div class="pin-sub" id="pin-vol-sub">Entrez votre code PIN à 4 chiffres.</div>
-        <div class="pin-dots" id="pin-vol-dots">
+        <div class="pin-dots" id="pin-vol-dots" style="justify-content:center">
           <div class="pin-dot" id="pvd0"></div>
           <div class="pin-dot" id="pvd1"></div>
           <div class="pin-dot" id="pvd2"></div>
@@ -900,8 +899,7 @@ const TRANSLATIONS={
     greeting:'Bonjour',
     pin_sub_enter:'Entrez votre code PIN à 4 chiffres.',
     pin_sub_existing:pin=>'Votre PIN est : '+pin+'  — entrez-le ci-dessous.',
-    pin_sub_create:'Créez votre code PIN à 4 chiffres. Il vous sera demandé à chaque connexion.',
-    pin_hint_create:'💡 Choisissez un code facile à retenir.',
+    pin_sub_create:'Ce code vous identifie si vous utilisez un autre appareil.',
     pin_error:'PIN incorrect. Réessayez.',
     pin_cancel:'Oups, mauvais nom',
     sync_offline:'Hors-ligne — non sauvegardé',
@@ -940,8 +938,7 @@ const TRANSLATIONS={
     greeting:'Hello',
     pin_sub_enter:'Enter your 4-digit PIN.',
     pin_sub_existing:pin=>'Your PIN is: '+pin+'  — enter it below.',
-    pin_sub_create:'Create your 4-digit PIN. You will be asked for it at each login.',
-    pin_hint_create:'💡 Choose a code that\'s easy to remember.',
+    pin_sub_create:'This code identifies you if you use another device.',
     pin_error:'Incorrect PIN. Try again.',
     pin_cancel:'Oops, wrong name',
     sync_offline:'Offline — not saved',
@@ -1385,7 +1382,7 @@ function openVolPin(name, isNew, onSuccess) {
 
   const overlay = document.getElementById('pin-vol-overlay');
   const firstName = name.split(' ')[0];
-  document.getElementById('pin-vol-title').textContent = t('greeting')+', ' + firstName + ' 👋';
+  document.getElementById('pin-vol-title').textContent = t('greeting')+', ' + firstName;
 
   if (isNew) {
     const p = getPerson(name);
@@ -1395,7 +1392,7 @@ function openVolPin(name, isNew, onSuccess) {
     } else {
       document.getElementById('pin-vol-sub').textContent = t('pin_sub_create');
     }
-    document.getElementById('pin-vol-hint').textContent = isNew && !existingPin ? t('pin_hint_create') : '';
+    document.getElementById('pin-vol-hint').textContent = '';
   } else {
     document.getElementById('pin-vol-sub').textContent = t('pin_sub_enter');
     document.getElementById('pin-vol-hint').textContent = '';
