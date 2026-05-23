@@ -455,7 +455,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <div class="pin-box">
         <div class="pin-title" id="pin-vol-title">Bonjour !</div>
         <div class="pin-sub" id="pin-vol-sub">Entrez votre code PIN à 4 chiffres.</div>
-        <div class="pin-dots" id="pin-vol-dots" style="justify-content:center">
+        <div class="pin-dots" id="pin-vol-dots" style="max-width:220px;margin-left:auto;margin-right:auto">
           <div class="pin-dot" id="pvd0"></div>
           <div class="pin-dot" id="pvd1"></div>
           <div class="pin-dot" id="pvd2"></div>
@@ -899,7 +899,7 @@ const TRANSLATIONS={
     greeting:'Bonjour',
     pin_sub_enter:'Entrez votre code PIN à 4 chiffres.',
     pin_sub_existing:pin=>'Votre PIN est : '+pin+'  — entrez-le ci-dessous.',
-    pin_sub_create:'Ce code vous identifie si vous utilisez un autre appareil.',
+    pin_sub_create:'Créez un code PIN à 4 chiffres pour vous identifier sur d\'autres appareils.',
     pin_error:'PIN incorrect. Réessayez.',
     pin_cancel:'Oups, mauvais nom',
     sync_offline:'Hors-ligne — non sauvegardé',
@@ -938,7 +938,7 @@ const TRANSLATIONS={
     greeting:'Hello',
     pin_sub_enter:'Enter your 4-digit PIN.',
     pin_sub_existing:pin=>'Your PIN is: '+pin+'  — enter it below.',
-    pin_sub_create:'This code identifies you if you use another device.',
+    pin_sub_create:'Create a 4-digit PIN to identify yourself on other devices.',
     pin_error:'Incorrect PIN. Try again.',
     pin_cancel:'Oops, wrong name',
     sync_offline:'Offline — not saved',
