@@ -184,7 +184,6 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 #vol-email.b-past{pointer-events:none;cursor:default;color:var(--text-2)}
 .b-readonly-week{opacity:.5;cursor:not-allowed}
 .b-toggle input:checked~.b-toggle-thumb{transform:translateX(20px)}
-.b-summary{font-size:12px;color:var(--text-2);margin-top:6px;min-height:18px;font-family:var(--mono);max-width:680px}
 .b-actions{display:flex;gap:8px;margin-top:1rem;align-items:center}
 .toast{margin-top:12px;padding:9px 14px;border-radius:var(--radius-sm);background:var(--green-light);border:1px solid #86EFAC;color:var(--green);font-size:13px;display:none}
 
@@ -472,31 +471,33 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 
     <!-- AFTER NAME SELECTED -->
     <div id="b-name-section" style="display:none">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid var(--border-light)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:1.5rem">
+        <button id="b-change-btn" onclick="resetVolSelect()" style="border:none;background:none;cursor:pointer;padding:0;display:inline-flex;align-items:center;flex-shrink:0"><img src="/photos/arrow.svg" width="20" height="20" alt="Retour"/></button>
         <div style="font-size:15px;font-weight:600;color:var(--text)" id="b-greeting"></div>
-        <button id="b-change-btn" class="btn btn-outlined" onclick="resetVolSelect()" style="margin-left:auto">Changer</button>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:1.5rem">
-        <button class="btn btn-subtle btn-icon" onclick="bShift(-1)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-        <span style="font-size:14px;font-weight:500;color:var(--text)" id="b-wlabel">—</span>
-        <button class="btn btn-subtle btn-icon" onclick="bShift(1)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M6 12l4-4-4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-        <button id="b-copy-btn" class="btn btn-outlined btn-sm" onclick="copyPrevWeek()" style="display:none;font-size:13px">Copier la semaine précédente</button>
+      <div style="margin-bottom:1.25rem">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <button class="btn btn-subtle btn-icon" onclick="bShift(-1)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <span style="flex:1;font-size:14px;font-weight:500;color:var(--text);text-align:center" id="b-wlabel">—</span>
+          <button class="btn btn-subtle btn-icon" onclick="bShift(1)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M6 12l4-4-4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        </div>
+        <div style="display:flex;justify-content:flex-end">
+          <button id="b-copy-btn" onclick="copyPrevWeek()" style="display:none;height:32px;font-size:13px;padding:0 12px;border:1px solid var(--border);background:transparent;color:var(--text);border-radius:var(--radius-sm);cursor:pointer;font-family:var(--font)">Copier la semaine précédente</button>
+        </div>
       </div>
       <div id="b-past-notice">Semaine passée — les disponibilités ne sont plus modifiables.</div>
       <div style="margin-bottom:1.5rem">
-        <div id="b-quota-label" style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:10px">Combien de quarts souhaitez-vous faire cette semaine ?</div>
+        <div id="b-quota-label" style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:10px">Quarts souhaités</div>
         <div style="display:flex;gap:8px;flex-wrap:nowrap" id="b-shift-chips"></div>
       </div>
       <div id="b-week-section" style="display:none">
         <div class="b-days-wrap" id="b-days-wrap"></div>
-        <div class="b-summary" id="b-summary"></div>
         <div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border-light)">
           <label id="b-email-label" style="display:block;font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Courriel de notification</label>
           <div style="display:flex;align-items:center;gap:8px">
-            <input type="email" id="vol-email" placeholder="prenom@exemple.com" style="width:260px;font-size:13px" onblur="onVolEmailBlur()"/>
-            <span id="vol-email-saved" style="font-size:11px;color:var(--green);display:none">✓ Enregistré</span>
+            <input type="email" id="vol-email" placeholder="prenom@exemple.com" style="flex:1;font-size:13px" onblur="onVolEmailBlur()"/>
+            <span id="vol-email-saved" style="font-size:11px;color:var(--green);display:none;white-space:nowrap">✓ Enregistré</span>
           </div>
-          <div id="b-email-hint" style="font-size:11px;color:var(--text-3);margin-top:5px">Vous serez notifié(e) quand l'horaire sera disponible.</div>
         </div>
       </div>
       <div class="b-actions">
@@ -886,7 +887,7 @@ const TRANSLATIONS={
     this_week:'Cette semaine',
     copy_prev_week:'Copier la semaine précédente',
     past_notice:'Semaine passée — les disponibilités ne sont plus modifiables.',
-    quota_label:'Combien de quarts souhaitez-vous faire cette semaine ?',
+    quota_label:'Quarts souhaités',
     email_label:'Courriel de notification',
     email_placeholder:'prenom@exemple.com',
     email_saved:'✓ Enregistré',
@@ -926,7 +927,7 @@ const TRANSLATIONS={
     this_week:'This week',
     copy_prev_week:'Copy previous week',
     past_notice:'Past week — availability can no longer be modified.',
-    quota_label:'How many shifts would you like to do this week?',
+    quota_label:'Desired shifts',
     email_label:'Notification email',
     email_placeholder:'firstname@example.com',
     email_saved:'✓ Saved',
@@ -975,13 +976,11 @@ function applyLang(){
   s('b-loading',t('loading'));
   s('b-recent-or',t('recent_or'));
   s('b-recent-other-label',t('recent_other_label'));
-  s('b-change-btn',t('change'));
   s('b-copy-btn',t('copy_prev_week'));
   s('b-past-notice',t('past_notice'));
   s('b-quota-label',t('quota_label'));
   s('b-email-label',t('email_label'));
   s('vol-email-saved',t('email_saved'));
-  s('b-email-hint',t('email_hint'));
   s('b-submit-btn',t('submit'));
   s('b-toast',t('toast'));
   s('pin-vol-cancel-btn',t('pin_cancel'));
@@ -1111,7 +1110,7 @@ function wlabel(mon){
     // same month: "27 – 30 sept. 2026"
     const day1=start.getDate();
     const day2=end.getDate();
-    let monthStr=end.toLocaleDateString(fmtLocale(),{month:'short'});
+    let monthStr=end.toLocaleDateString(fmtLocale(),{month:'long'});
     const year=end.getFullYear();
     return day1+' – '+day2+' '+monthStr+' '+year;
   } else {
@@ -2017,11 +2016,7 @@ function applyBPastState(readOnly){
 
 function clearBSel(){bSel[wkey(bMon)]={};renderB();}
 
-function updateBSummary(){
-  const wk=wkey(bMon),sel=bSel[wk]||{};
-  const parts=DAYS.filter(d=>sel[d.id]).map(d=>{const{from,to}=sel[d.id];return t('day_'+d.id)+': '+mStr(from)+' – '+mStr(to);});
-  document.getElementById('b-summary').textContent=parts.length?parts.join('  ·  '):'';
-}
+function updateBSummary(){}
 
 async function submitAvail(){
   const name=document.getElementById('vol-select').value;
