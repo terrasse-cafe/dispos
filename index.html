@@ -455,14 +455,16 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <div class="pin-box">
         <div class="pin-title" id="pin-vol-title">Bonjour !</div>
         <div class="pin-sub" id="pin-vol-sub">Entrez votre code PIN à 4 chiffres.</div>
-        <div class="pin-dots" id="pin-vol-dots" style="max-width:220px;margin-left:auto;margin-right:auto">
-          <div class="pin-dot" id="pvd0"></div>
-          <div class="pin-dot" id="pvd1"></div>
-          <div class="pin-dot" id="pvd2"></div>
-          <div class="pin-dot" id="pvd3"></div>
+        <div style="max-width:220px;margin:0 auto">
+          <div class="pin-dots" id="pin-vol-dots">
+            <div class="pin-dot" id="pvd0"></div>
+            <div class="pin-dot" id="pvd1"></div>
+            <div class="pin-dot" id="pvd2"></div>
+            <div class="pin-dot" id="pvd3"></div>
+          </div>
+          <div class="pin-error-msg" id="pin-vol-error"></div>
+          <div class="pin-keypad" id="pin-vol-keypad"></div>
         </div>
-        <div class="pin-error-msg" id="pin-vol-error"></div>
-        <div class="pin-keypad" id="pin-vol-keypad"></div>
         <div class="pin-hint" id="pin-vol-hint"></div>
         <button id="pin-vol-cancel-btn" onclick="pinVolCancel()" style="margin-top:1rem;background:none;border:none;cursor:pointer;font-size:12px;color:var(--text-3);font-family:var(--font);padding:4px 8px;border-radius:4px;transition:color .15s" onmouseover="this.style.color='var(--text-2)'" onmouseout="this.style.color='var(--text-3)'">Oups, mauvais nom</button>
       </div>
