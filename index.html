@@ -2019,7 +2019,7 @@ async function submitAvail(){
   const name=document.getElementById('vol-select').value;
   if(!name){alert(t('alert_select_name'));return}
   const wk=wkey(bMon),sel=bSel[wk]||{};
-  if(!Object.keys(sel).length){alert(t('alert_select_day'));return}
+  if(bShiftsDesired!==0&&!Object.keys(sel).length){alert(t('alert_select_day'));return}
   if(!avail[wk])avail[wk]={};
   const slots={};
   DAYS.forEach(day=>{
