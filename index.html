@@ -3118,18 +3118,52 @@ async function savePerson(){
   const active=document.getElementById('pm-active').checked;
   const existingPin=pmCtx?(directory.find(x=>x.id===pmCtx)||{}).pin||'':'';
   const personData={id:pmCtx||null,name,email,type,roles,pin:type==='vol'?existingPin:'',active};
-  if(pmCtx){
-    // Modification — mettre à jour localement immédiatement
-    const p=directory.find(x=>x.id===pmCtx);
-    if(p){p.name=name;p.email=email;p.type=type;p.roles=roles;p.pin=personData.pin;p.active=active;}
+  const existing=pmCtx?directory.find(x=>x.id===pmCtx):null;
+  const oldName=existing?existing.name:'';
+  const nameChanged=!!(pmCtx&&oldName&&oldName!==name);
+
+  // 1. Persist people (must succeed before cascade)
+  if(sb&&pmCtx){
+    const row={name,email,type,role1:roles[0]||'',role2:roles[1]||'',role3:roles[2]||'',role4:roles[3]||'',role5:roles[4]||'',role6:roles[5]||'',pin:personData.pin,active};
+    const {error}=await sb.from('people').update(row).eq('id',pmCtx);
+    if(error){alert('Erreur sauvegarde : '+error.message);return;}
   } else {
-    // Création — ajouter localement
-    directory.push(personData);
+    await upsertPerson(personData);
   }
+
+  // 2. Cascade name change to availabilities + assignments
+  if(nameChanged&&sb){
+    const {error:e1}=await sb.from('availabilities').update({person_name:name}).eq('person_name',oldName);
+    if(e1){alert('Erreur cascade availabilities : '+e1.message);return;}
+    const {error:e2}=await sb.from('assignments').update({person_name:name}).eq('person_name',oldName);
+    if(e2){alert('Erreur cascade assignments : '+e2.message);return;}
+
+    // Mettre à jour avail[] local
+    Object.keys(avail).forEach(wk=>{
+      if(avail[wk]&&oldName in avail[wk]){avail[wk][name]=avail[wk][oldName];delete avail[wk][oldName];}
+    });
+
+    // Mettre à jour assigns[] local (tableaux de noms + clés __t__/__n__/__l__)
+    Object.keys(assigns).forEach(wk=>{
+      const d=assigns[wk];if(!d)return;
+      const keys=Object.keys(d);
+      keys.forEach(k=>{
+        const v=d[k];
+        if(Array.isArray(v)){const i=v.indexOf(oldName);if(i!==-1)v[i]=name;return;}
+        for(const sfx of['__t__','__n__','__l__']){
+          if(k.endsWith(sfx+oldName)){d[k.slice(0,-oldName.length)+name]=v;delete d[k];break;}
+        }
+      });
+    });
+  }
+
+  // 3. Mettre à jour directory local
+  if(existing){existing.name=name;existing.email=email;existing.type=type;existing.roles=roles;existing.pin=personData.pin;existing.active=active;}
+  else{directory.push(personData);}
+
   rebuildVcols();populateVolSelect();renderDir();
   closePersonModal();
-  // Persister avec l'id correct, puis resync
-  await upsertPerson(personData);
+  if(nameChanged){renderB();renderHoraire();}
   await loadPeople();
 }
 
