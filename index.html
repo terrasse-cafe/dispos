@@ -2034,6 +2034,11 @@ async function submitAvail(){
   }
   avail[wk][name]={slots,quota};
   await saveAvail(wk,name,slots,quota);
+  if(quota===0&&sb){
+    sb.from('assignments').delete().eq('week_key',wk).eq('person_name',name).then(({error})=>{
+      if(error)console.error('assignments delete:',error);
+    });
+  }
   const toastEl=document.getElementById('b-toast');toastEl.style.display='block';
   setTimeout(()=>toastEl.style.display='none',3000);
 }
