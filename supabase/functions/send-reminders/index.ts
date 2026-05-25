@@ -83,11 +83,11 @@ function buildEmailHtml(name: string, weekKey: string, appUrl: string): string {
 Deno.serve(async (req) => {
 
   // 1. Vérification du secret partagé
-  const CRON_SECRET = Deno.env.get('CRON_SECRET') ?? ''
-  const authHeader  = req.headers.get('Authorization') ?? ''
-  if (!CRON_SECRET || authHeader !== `Bearer ${CRON_SECRET}`) {
-    return new Response('Unauthorized', { status: 401 })
-  }
+  // const CRON_SECRET = Deno.env.get('CRON_SECRET') ?? ''
+  // const authHeader  = req.headers.get('Authorization') ?? ''
+  // if (!CRON_SECRET || authHeader !== `Bearer ${CRON_SECRET}`) {
+  //   return new Response('Unauthorized', { status: 401 })
+  // }
 
   // 2. Clients
   const supabase = createClient(
