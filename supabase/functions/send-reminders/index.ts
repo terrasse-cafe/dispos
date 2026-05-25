@@ -142,7 +142,7 @@ Deno.serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: 'Terrasse Café <planning@terrasse-cafe.ca>',  // adapter à ton domaine
+          from: 'Terrasse Café <onboarding@resend.dev>',
           to:   v.email,
           subject: `📅 Disponibilités semaine du ${weekKey} — Terrasse Café`,
           html: buildEmailHtml(v.name, weekKey, APP_URL),
