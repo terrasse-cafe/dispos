@@ -2068,8 +2068,10 @@ async function loadSundayReminderState() {
 }
 
 async function toggleSundayReminder(enabled) {
+  console.log('toggleSundayReminder called:', enabled, 'sb:', !!sb);
   if (!sb) return;
-  await sb.from('org_config').upsert({ key: 'sunday_reminder_enabled', value: enabled ? 'true' : 'false' }, { onConflict: 'key' });
+  const result = await sb.from('org_config').upsert({ key: 'sunday_reminder_enabled', value: enabled ? 'true' : 'false' }, { onConflict: 'key' });
+  console.log('upsert result:', result);
 }
 
 async function oShift(d){
