@@ -815,6 +815,8 @@ create table if not exists org_config (
 );
 alter table org_config enable row level security;
 create policy "public_read" on org_config for select using (true);
+create policy "public_insert" on org_config for insert with check (true);
+create policy "public_update" on org_config for update using (true);
 -- Insérer le hash SHA-256 de votre PIN à 6 chiffres :
 -- (générez-le sur https://emn178.github.io/online-tools/sha256.html)
 -- insert into org_config (key, value) values ('org_pin_hash', 'VOTRE_HASH_ICI');
