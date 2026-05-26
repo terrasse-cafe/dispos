@@ -1,4 +1,7 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
+const SERVICE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+const RESEND_KEY   = Deno.env.get('RESEND_API_KEY')!
+const APP_URL      = Deno.env.get('APP_URL')!
 
 function getMondayKey(): string {
   const now = new Date()
@@ -10,117 +13,69 @@ function getMondayKey(): string {
 }
 
 function buildEmailHtml(name: string, weekKey: string, appUrl: string): string {
-  const [year, month, day] = weekKey.split('-')
-  const dateLabel = `${day}/${month}/${year}`
-  return `<!DOCTYPE html>
-<html lang="fr">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#F7F5F2;font-family:'Helvetica Neue',Arial,sans-serif">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F7F5F2;padding:32px 16px">
-    <tr><td align="center">
-      <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:10px;overflow:hidden;border:1px solid #E2DDD8">
-        <tr>
-          <td style="background:#A6C5BD;padding:24px 32px">
-            <p style="margin:0;font-size:20px;font-weight:700;color:#1C1917;letter-spacing:-.02em">☕ Terrasse Café</p>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:32px">
-            <p style="margin:0 0 16px;font-size:16px;color:#1C1917">Bonjour <strong>${name}</strong>,</p>
-            <p style="margin:0 0 16px;font-size:15px;color:#57534E;line-height:1.6">On n'a pas encore reçu tes disponibilités pour la semaine du <strong style="color:#1C1917">${dateLabel}</strong>.</p>
-            <p style="margin:0 0 28px;font-size:15px;color:#57534E;line-height:1.6">Si tu n'es pas disponible cette semaine, tu peux soumettre avec <strong>quota&nbsp;=&nbsp;0</strong> pour nous le faire savoir.</p>
-            <table cellpadding="0" cellspacing="0">
-              <tr>
-                <td style="background:#A6C5BD;border-radius:7px">
-                  <a href="${appUrl}" style="display:inline-block;padding:13px 28px;font-size:15px;font-weight:600;color:#1C1917;text-decoration:none">Soumettre mes disponibilités →</a>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:16px 32px 24px;border-top:1px solid #E2DDD8">
-            <p style="margin:0;font-size:12px;color:#706A65;line-height:1.5">Tu reçois ce message parce que tu es bénévole au Terrasse Café.<br>Merci de ta contribution !</p>
-          </td>
-        </tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`
+  const parts = weekKey.split('-')
+  const dateLabel = parts[2]+'/'+parts[1]+'/'+parts[0]
+  return '<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#F7F5F2;font-family:Arial,sans-serif"><table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px"><tr><td align="center"><table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:10px;border:1px solid #E2DDD8"><tr><td style="background:#A6C5BD;padding:24px 32px"><p style="margin:0;font-size:20px;font-weight:700;color:#1C1917">Terrasse Cafe</p></td></tr><tr><td style="padding:32px"><p style="margin:0 0 16px;font-size:16px;color:#1C1917">Bonjour '+name+',</p><p style="margin:0 0 16px;font-size:15px;color:#57534E;line-height:1.6">On na pas encore recu tes disponibilites pour la semaine du '+dateLabel+'.</p><p style="margin:0 0 28px;font-size:15px;color:#57534E;line-height:1.6">Si tu nes pas disponible, tu peux soumettre avec quota = 0.</p><a href="'+appUrl+'" style="background:#A6C5BD;border-radius:7px;padding:13px 28px;font-size:15px;font-weight:600;color:#1C1917;text-decoration:none">Soumettre mes disponibilites</a></td></tr><tr><td style="padding:16px 32px 24px;border-top:1px solid #E2DDD8"><p style="margin:0;font-size:12px;color:#706A65">Tu recois ce message parce que tu es benevole au Terrasse Cafe.</p></td></tr></table></td></tr></table></body></html>'
+}
+
+function delay(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+async function query(path: string) {
+  const res = await fetch(SUPABASE_URL+'/rest/v1/'+path, {
+    headers: {
+      'apikey': SERVICE_KEY,
+      'Authorization': 'Bearer '+SERVICE_KEY,
+    }
+  })
+  return res.json()
 }
 
 Deno.serve(async (req) => {
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  )
-  const RESEND_KEY = Deno.env.get('RESEND_API_KEY')!
-  const APP_URL    = Deno.env.get('APP_URL')!
-
-  const weekKey = getMondayKey()
-
-  const { data: volunteers, error: volErr } = await supabase
-    .from('people')
-    .select('name, email')
-    .eq('type', 'vol')
-    .eq('active', true)
-    .not('email', 'is', null)
-    .neq('email', '')
-
-  if (volErr) {
-    console.error('Erreur lecture people:', volErr)
-    return new Response(JSON.stringify({ error: volErr.message }), { status: 500 })
+  const CRON_SECRET = Deno.env.get('CRON_SECRET') ?? ''
+  const authHeader  = req.headers.get('Authorization') ?? ''
+  if (!CRON_SECRET || authHeader !== 'Bearer '+CRON_SECRET) {
+    return new Response('Unauthorized', { status: 401 })
   }
 
-  const { data: submitted, error: subErr } = await supabase
-    .from('availabilities')
-    .select('person_name')
-    .eq('week_key', weekKey)
-
-  if (subErr) {
-    console.error('Erreur lecture availabilities:', subErr)
-    return new Response(JSON.stringify({ error: subErr.message }), { status: 500 })
+  try {
+    const weekKey = getMondayKey()
+    console.log('Semaine: '+weekKey)
+    const volunteers = await query('people?type=eq.vol&active=eq.true&email=not.is.null&select=name,email')
+    console.log('Benevoles: '+volunteers.length)
+    const submitted = await query('availabilities?week_key=eq.'+weekKey+'&select=person_name')
+    const submittedNames = new Set(submitted.map((a: any) => a.person_name))
+    const toRemind = volunteers.filter((v: any) => !submittedNames.has(v.name))
+    console.log('A relancer: '+toRemind.length)
+    const results = []
+    for (const v of toRemind) {
+      await delay(300)
+      const result = await (async () => {
+        const res = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer '+RESEND_KEY,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: 'Terrasse Cafe <onboarding@resend.dev>',
+            to: v.email,
+            subject: 'Disponibilites semaine du '+weekKey+' - Terrasse Cafe',
+            html: buildEmailHtml(v.name, weekKey, APP_URL),
+          }),
+        })
+        if (!res.ok) throw new Error(v.name+': '+await res.text())
+        console.log('OK '+v.name)
+        return v.name
+      })().then(val => ({status: 'fulfilled', value: val})).catch(err => ({status: 'rejected', reason: err}))
+      results.push(result)
+    }
+    const sent = results.filter(r => r.status === 'fulfilled').length
+    const failed = results.filter(r => r.status === 'rejected').map((r: any) => r.reason?.message)
+    return new Response(JSON.stringify({weekKey, sent, skipped: submittedNames.size, failed}), {headers: {'Content-Type': 'application/json'}})
+  } catch(err) {
+    console.error('Erreur: '+err)
+    return new Response(JSON.stringify({error: String(err)}), {status: 500})
   }
-
-  const submittedNames = new Set(submitted?.map(a => a.person_name) ?? [])
-  const toRemind = (volunteers ?? []).filter(v => !submittedNames.has(v.name))
-
-  console.log(`Semaine ${weekKey} — ${toRemind.length}/${volunteers?.length} bénévoles à relancer`)
-
-  const results = await Promise.allSettled(
-    toRemind.map(async (v) => {
-      const res = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${RESEND_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: 'Terrasse Café <onboarding@resend.dev>',
-          to:   v.email,
-          subject: `📅 Disponibilités semaine du ${weekKey} — Terrasse Café`,
-          html: buildEmailHtml(v.name, weekKey, APP_URL),
-        }),
-      })
-      if (!res.ok) {
-        const body = await res.text()
-        throw new Error(`${v.name} <${v.email}> → ${res.status}: ${body}`)
-      }
-      console.log(`✓ Rappel envoyé à ${v.name} (${v.email})`)
-      return v.name
-    })
-  )
-
-  const sent   = results.filter(r => r.status === 'fulfilled').length
-  const failed = results
-    .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
-    .map(r => r.reason?.message ?? 'Erreur inconnue')
-
-  if (failed.length) console.error('Échecs:', failed)
-
-  return new Response(
-    JSON.stringify({ weekKey, sent, skipped: submittedNames.size, failed }),
-    { headers: { 'Content-Type': 'application/json' } }
-  )
 })
