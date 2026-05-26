@@ -602,6 +602,13 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
     <div class="dir-toolbar">
       <button class="btn btn-subtle" onclick="openPersonModal(null)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 3.333v9.334M3.333 8h9.334" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Ajouter</button>
       <span class="o-stat-text" id="dir-count">—</span>
+      <div style="display:flex;align-items:center;gap:10px;margin-left:auto">
+        <span style="font-size:13px;color:var(--text-2)">Rappel dimanche</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="sunday-reminder-toggle" onchange="toggleSundayReminder(this.checked)"/>
+          <span class="toggle-track"></span>
+        </label>
+      </div>
     </div>
     <div class="dir-wrap">
       <table>
@@ -2053,6 +2060,18 @@ async function submitAvail(){
 /* ══════════════════════════════════════════════
    ORGANISATRICE
 ══════════════════════════════════════════════ */
+async function loadSundayReminderState() {
+  if (!sb) return;
+  const { data } = await sb.from('org_config').select('value').eq('key', 'sunday_reminder_enabled').maybeSingle();
+  const toggle = document.getElementById('sunday-reminder-toggle');
+  if (toggle && data) toggle.checked = data.value === 'true';
+}
+
+async function toggleSundayReminder(enabled) {
+  if (!sb) return;
+  await sb.from('org_config').upsert({ key: 'sunday_reminder_enabled', value: enabled ? 'true' : 'false' }, { onConflict: 'key' });
+}
+
 async function oShift(d){
   oMon=addWeeks(oMon,d);
   undoStack=[];redoStack=[];updateUndoBtn();updateRedoBtn();
@@ -2996,6 +3015,7 @@ document.addEventListener('click',e=>{
    RÉPERTOIRE
 ══════════════════════════════════════════════ */
 function renderDir(){
+  loadSundayReminderState();
   const tbody=document.getElementById('dir-tbody');tbody.innerHTML='';
   directory.forEach(p=>{
     const inactive=p.active===false;
