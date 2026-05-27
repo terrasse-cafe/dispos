@@ -3943,6 +3943,15 @@ function loadTestData() {
           const wk=wkey(oMon);
           await loadAvail(wk);
           await loadAssignments(wk);
+          const {data:cdRow}=await sb.from('org_config').select('value').eq('key','closed_days').maybeSingle();
+          if(cdRow?.value){
+            try{
+              const parsed=JSON.parse(cdRow.value);
+              Object.entries(parsed).forEach(([week,days])=>{
+                closedDays[week]=new Set(Array.isArray(days)?days:[]);
+              });
+            }catch(e){console.error('boot closed_days parse:',e);}
+          }
           subscribeRealtime(wk);
           renderO();
         }
