@@ -234,6 +234,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .chip-covered-content{position:absolute;top:0;right:0;bottom:0;left:0;overflow:hidden;display:flex;flex-direction:column;justify-content:center;padding:2px}
 .avail-chip-inner{display:flex;align-items:center;gap:5px;width:100%;overflow:hidden;flex:0 0 auto}
 .chip-name{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0}
+.chip-lock{display:inline-flex;align-items:center;flex-shrink:0;opacity:0.45;margin-right:2px}
 .chip-time{font-size:10px;font-family:var(--mono);opacity:.6;white-space:nowrap;flex-shrink:0}
 .chip-spacer{flex:1;min-width:4px}
 .chip-quota{font-size:9px;font-family:var(--mono);font-weight:700;white-space:nowrap;flex-shrink:0;opacity:.8}
@@ -2582,6 +2583,13 @@ function renderHoraire(){
 
           const inner=document.createElement('div');inner.className='avail-chip-inner';
           inner.style.paddingRight='28px';
+          const isLocked=getAssignLocked(wk,shift.id,role,assignedName);
+          if(isLocked){
+            const lockIcon=document.createElement('span');
+            lockIcon.className='chip-lock';
+            lockIcon.innerHTML='<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.66667 7.33337V4.66671C4.66667 3.78265 5.01786 2.93481 5.64298 2.30968C6.2681 1.68456 7.11595 1.33337 8 1.33337C8.88406 1.33337 9.7319 1.68456 10.357 2.30968C10.9821 2.93481 11.3333 3.78265 11.3333 4.66671V7.33337M3.33333 7.33337H12.6667C13.403 7.33337 14 7.93033 14 8.66671V13.3334C14 14.0698 13.403 14.6667 12.6667 14.6667H3.33333C2.59695 14.6667 2 14.0698 2 13.3334V8.66671C2 7.93033 2.59695 7.33337 3.33333 7.33337Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+            inner.appendChild(lockIcon);
+          }
           const nm=document.createElement('span');nm.className='chip-name';nm.textContent=assignedName;inner.appendChild(nm);
           const tm=document.createElement('span');tm.className='chip-time';tm.textContent=mStr(sm)+'–'+mStr(em2);inner.appendChild(tm);
           const spacer=document.createElement('span');spacer.className='chip-spacer';inner.appendChild(spacer);
