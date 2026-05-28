@@ -474,6 +474,10 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:1.5rem">
         <button id="b-change-btn" onclick="resetVolSelect()" style="border:none;background:none;cursor:pointer;padding:0;display:inline-flex;align-items:center;flex-shrink:0"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" style="transform:scaleX(-1)"><path d="M3.33317 8.00004H12.6665M7.99984 3.33337L12.6665 8.00004L7.99984 12.6667" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
         <div style="font-size:15px;font-weight:600;color:var(--text)" id="b-greeting"></div>
+        <button id="b-prefs-btn" onclick="openVolPrefs()" style="border:none;background:none;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:500;color:var(--text-2);font-family:var(--font);padding:4px 8px;border-radius:var(--radius-sm);transition:color .15s;margin-left:auto" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text-2)'">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#clip0_560_818)"><path d="M2 2.66663L6.66667 2.66663M9.33333 2.66663L14 2.66663M2 7.99996L8 7.99996M10.6667 7.99996L14 7.99996M2 13.3333L5.33333 13.3333M8 13.3333L14 13.3333M6.66667 0.666626L6.66667 4.66663M10.6667 5.99996L10.6667 9.99996M5.33333 11.3333L5.33333 15.3333" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></g><defs><clipPath id="clip0_560_818"><rect width="16" height="16" fill="white" transform="translate(16) rotate(90)"/></clipPath></defs></svg>
+          Préférences
+        </button>
       </div>
       <div style="margin-bottom:1.25rem">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
@@ -608,6 +612,36 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
         <thead><tr><th>Nom</th><th>Courriel</th><th>Type</th><th>Rôles préférés</th><th></th></tr></thead>
         <tbody id="dir-tbody"></tbody>
       </table>
+    </div>
+  </div>
+</div>
+
+
+<div class="overlay" id="vol-prefs-overlay" onclick="if(event.target===this)closeVolPrefs()">
+  <div class="modal-box">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:1rem">
+      <div style="font-size:15px;font-weight:600;flex:1">Préférences</div>
+      <button onclick="closeVolPrefs()" style="border:none;background:none;cursor:pointer;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;color:var(--text-3);padding:0" title="Fermer"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M9.79096 1.21967C10.0838 0.926977 10.5587 0.926902 10.8515 1.21967C11.1443 1.5125 11.1442 1.98731 10.8515 2.28022L7.09565 6.0351L10.8515 9.79096C11.1443 10.0839 11.1444 10.5587 10.8515 10.8515C10.5587 11.1444 10.0839 11.1443 9.79096 10.8515L6.0351 7.09565L2.28022 10.8515C1.98732 11.1444 1.51256 11.1444 1.21967 10.8515C0.926842 10.5586 0.926799 10.0838 1.21967 9.79096L4.97455 6.0351L1.21967 2.28022C0.926777 1.98732 0.926777 1.51256 1.21967 1.21967C1.51256 0.926777 1.98732 0.926777 2.28022 1.21967L6.0351 4.97455L9.79096 1.21967Z" fill="currentColor"/></svg></button>
+    </div>
+    <div class="field">
+      <label style="display:flex;align-items:center;gap:6px">
+        Rôles préférés
+        <span id="vp-info-icon" style="display:inline-flex;cursor:pointer;color:var(--text-3);position:relative" title="Indiquez vos rôles du plus au moins préféré. Lors de l'assignation automatique, on essaiera de vous assigner en priorité à votre premier choix.">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 7.5v4M8 5.5v.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </span>
+      </label>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">
+        <select id="vp-r1"></select>
+        <select id="vp-r2"></select>
+        <select id="vp-r3"></select>
+        <select id="vp-r4"></select>
+        <select id="vp-r5"></select>
+        <select id="vp-r6"></select>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-outlined" onclick="closeVolPrefs()">Annuler</button>
+      <button class="btn btn-secondary" onclick="saveVolPrefs()">Enregistrer</button>
     </div>
   </div>
 </div>
@@ -1896,6 +1930,58 @@ async function onVolEmailBlur(){
 /* ══════════════════════════════════════════════
    BÉNÉVOLE — calendrier de disponibilités
 ══════════════════════════════════════════════ */
+function fillVolRoleSelects(vals){
+  const ids=['vp-r1','vp-r2','vp-r3','vp-r4','vp-r5','vp-r6'];
+  const uniqueRoles=[...new Set(ALL_ROLES.map(roleDisplayLabel))];
+  ids.forEach((id,i)=>{
+    const sel=document.getElementById(id);
+    const myVal=vals?vals[i]||'':'';
+    const otherVals=(vals||[]).filter((_,j)=>j!==i).filter(Boolean);
+    sel.innerHTML='<option value="">— Aucun —</option>';
+    uniqueRoles.forEach(role=>{
+      const o=document.createElement('option');
+      o.value=role;o.textContent=role;
+      if(otherVals.includes(role)){o.disabled=true;o.style.color='#706A65';}
+      sel.appendChild(o);
+    });
+    sel.value=myVal;
+  });
+}
+function initVolRoleSelectListeners(){
+  const ids=['vp-r1','vp-r2','vp-r3','vp-r4','vp-r5','vp-r6'];
+  ids.forEach(id=>{document.getElementById(id).addEventListener('change',()=>{
+    const cur=ids.map(i=>document.getElementById(i).value);
+    fillVolRoleSelects(cur);
+  });});
+}
+function openVolPrefs(){
+  const name=document.getElementById('vol-select').value;
+  if(!name)return;
+  const p=directory.find(x=>x.name===name);
+  const vals=p?[(p.roles[0]||''),(p.roles[1]||''),(p.roles[2]||''),(p.roles[3]||''),(p.roles[4]||''),(p.roles[5]||'')]:['','','','','',''];
+  fillVolRoleSelects(vals);
+  initVolRoleSelectListeners();
+  document.getElementById('vol-prefs-overlay').classList.add('open');
+}
+function closeVolPrefs(){
+  document.getElementById('vol-prefs-overlay').classList.remove('open');
+}
+async function saveVolPrefs(){
+  const name=document.getElementById('vol-select').value;
+  if(!name||!sb)return;
+  const ids=['vp-r1','vp-r2','vp-r3','vp-r4','vp-r5','vp-r6'];
+  const roles=ids.map(id=>document.getElementById(id).value);
+  const p=directory.find(x=>x.name===name);
+  if(!p)return;
+  const {error}=await sb.from('people').update({
+    role1:roles[0]||'',role2:roles[1]||'',role3:roles[2]||'',
+    role4:roles[3]||'',role5:roles[4]||'',role6:roles[5]||''
+  }).eq('id',p.id);
+  if(error){alert('Erreur sauvegarde : '+error.message);return;}
+  p.roles=roles;
+  closeVolPrefs();
+}
+
 async function bShift(d){
   bMon=addWeeks(bMon,d);
   const name=document.getElementById('vol-select').value;
