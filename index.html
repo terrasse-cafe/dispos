@@ -484,9 +484,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
           <button class="btn btn-subtle btn-icon" onclick="bShift(-1)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
           <span style="flex:1;font-size:14px;font-weight:500;color:var(--text);text-align:center" id="b-wlabel">—</span>
           <button class="btn btn-subtle btn-icon" onclick="bShift(1)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M6 12l4-4-4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-        </div>
-        <div style="display:flex;justify-content:flex-end">
-          <button id="b-copy-btn" onclick="copyPrevWeek()" style="display:none;height:32px;font-size:13px;font-weight:500;padding:0 12px;border:1px solid var(--border);background:transparent;color:var(--text);border-radius:var(--radius-sm);cursor:pointer;font-family:var(--font);align-items:center;justify-content:center">Copier la semaine précédente</button>
+          <button id="b-copy-btn" onclick="copyPrevWeek()" style="height:32px;font-size:13px;font-weight:500;padding:0 12px;border:1px solid var(--border);background:transparent;color:var(--text);border-radius:var(--radius-sm);cursor:pointer;font-family:var(--font);display:inline-flex;align-items:center;justify-content:center;transition:opacity .15s" title="Répéter les disponibilités de la semaine précédente">Répéter</button>
         </div>
       </div>
       <div id="b-past-notice">Semaine passée — les disponibilités ne sont plus modifiables.</div>
@@ -924,7 +922,7 @@ const TRANSLATIONS={
     remove:'Retirer',
     change:'Changer',
     this_week:'Cette semaine',
-    copy_prev_week:'Copier la semaine précédente',
+    copy_prev_week:'Répéter',
     past_notice:'Semaine passée — les disponibilités ne sont plus modifiables.',
     quota_label:'Quarts souhaités',
     email_label:'Courriel de notification',
@@ -963,7 +961,7 @@ const TRANSLATIONS={
     remove:'Remove',
     change:'Change',
     this_week:'This week',
-    copy_prev_week:'Copy previous week',
+    copy_prev_week:'Repeat',
     past_notice:'Past week — availability can no longer be modified.',
     quota_label:'Desired shifts',
     email_label:'Notification email',
@@ -2076,10 +2074,14 @@ function updateBCopyBtn(){
   const btn=document.getElementById('b-copy-btn');
   if(!btn)return;
   const name=document.getElementById('vol-select').value;
-  if(!name){btn.style.display='none';return;}
-  if(isWeekReadOnly(wkey(bMon))){btn.style.display='none';return;}
+  if(!name||isWeekReadOnly(wkey(bMon))){btn.style.display='none';return;}
+  btn.style.display='inline-flex';
   const prevWk=wkey(addWeeks(bMon,-1));
-  btn.style.display=(avail[prevWk]&&avail[prevWk][name])?'inline-flex':'none';
+  const hasPrev=!!(avail[prevWk]&&avail[prevWk][name]);
+  btn.disabled=!hasPrev;
+  btn.style.opacity=hasPrev?'1':'0.4';
+  btn.style.cursor=hasPrev?'pointer':'not-allowed';
+  btn.title=hasPrev?'Répéter les disponibilités de la semaine précédente':'Aucune disponibilité la semaine précédente';
 }
 async function copyPrevWeek(){
   const name=document.getElementById('vol-select').value;
