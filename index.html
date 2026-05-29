@@ -1607,9 +1607,14 @@ function unlockOrg() {
   if (headerTabs) headerTabs.style.display = 'flex';
   const vueBtn = document.getElementById('btn-vue-benevole');
   if (vueBtn) vueBtn.style.display = '';
-  switchMain._orgLoaded = true;
-  switchMain('organisatrice', null);
-  if (!sb) {
+  if (sb) {
+    bootOrgData().then(() => {
+      switchMain._orgLoaded = true;
+      switchMain('organisatrice', null);
+    });
+  } else {
+    switchMain._orgLoaded = true;
+    switchMain('organisatrice', null);
     document.getElementById('setup-banner').style.display = 'block';
     document.getElementById('setup-sql').textContent = SETUP_SQL;
   }
@@ -4047,23 +4052,6 @@ function loadTestData() {
       await loadPeople();
       if(ORG_MODE){
         await initOrgPinScreen();
-        if(orgUnlocked){
-          const wk=wkey(oMon);
-          await loadAvail(wk);
-          await loadAssignments(wk);
-          const {data:cdRow}=await sb.from('org_config').select('value').eq('key','closed_days').maybeSingle();
-          if(cdRow?.value){
-            try{
-              const parsed=JSON.parse(cdRow.value);
-              Object.entries(parsed).forEach(([week,days])=>{
-                closedDays[week]=new Set(Array.isArray(days)?days:[]);
-              });
-            }catch(e){console.error('boot closed_days parse:',e);}
-          }
-          subscribeRealtime(wk);
-          renderO();
-          setTimeout(()=>{ renderHoraire._retries=0; renderHoraire(); }, 150);
-        }
       }
     }
   } else {
