@@ -1387,6 +1387,7 @@ async function bootOrgData() {
   }
   subscribeRealtime(wk);
   renderO();
+  setTimeout(()=>{ renderHoraire._retries=0; renderHoraire(); }, 150);
 }
 
 async function bootVolData(wk) {
@@ -1650,9 +1651,11 @@ function switchMain(id,btn){
       const wk=wkey(oMon);
       Promise.all([loadAvail(wk),loadAssignments(wk)]).then(()=>{
         subscribeRealtime(wk);renderO();
+        setTimeout(()=>{ renderHoraire._retries=0; renderHoraire(); }, 150);
       });
     } else {
       renderO();
+      setTimeout(()=>{ renderHoraire._retries=0; renderHoraire(); }, 150);
     }
   }
 }
@@ -2512,7 +2515,15 @@ function hoverHighlightDZs(wk,shifts,name,freeIvs){
 function renderHoraire(){
   // Si le conteneur n'est pas encore dimensionné, attendre le prochain frame
   const hScrollEarly=document.querySelector('.h-scroll');
-  if(hScrollEarly&&hScrollEarly.clientWidth===0){requestAnimationFrame(renderHoraire);return;}
+  if(hScrollEarly&&hScrollEarly.clientWidth===0){
+    if((renderHoraire._retries=(renderHoraire._retries||0)+1)<30){
+      requestAnimationFrame(renderHoraire);
+    } else {
+      renderHoraire._retries=0;
+    }
+    return;
+  }
+  renderHoraire._retries=0;
   const wk=wkey(oMon),wkData=avail[wk]||{};
   const day=DAYS.find(d=>d.id===curDay);
   const shifts=SHIFTS[curDay]||[];
@@ -4051,6 +4062,7 @@ function loadTestData() {
           }
           subscribeRealtime(wk);
           renderO();
+          setTimeout(()=>{ renderHoraire._retries=0; renderHoraire(); }, 150);
         }
       }
     }
