@@ -282,7 +282,13 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 
 /* ── SEMAINE PASSÉE ── */
 #past-week-banner{display:none;font-size:12px;font-style:italic;color:var(--text-3);text-align:center;padding:3px 0 6px;letter-spacing:.02em}
-.vol-panel.wk-past .vol-card{opacity:0.42;cursor:default!important;pointer-events:none}
+.vol-panel.wk-past .vol-card,
+.vol-panel.wk-past .emp-card{cursor:default;opacity:0.65;pointer-events:none}
+.avail-chip.past{cursor:default;opacity:0.72}
+.avail-chip.past:hover{filter:none}
+.avail-chip.past .chip-x{display:none}
+.status-btn.past-readonly{cursor:default;pointer-events:none;opacity:0.55}
+button:disabled{opacity:0.4;cursor:default}
 
 /* ── RÉPERTOIRE ── */
 .dir-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:1rem}
@@ -2232,11 +2238,11 @@ function pushUndo(entries){
 }
 function updateUndoBtn(){
   const btn=document.getElementById('undo-btn');
-  if(btn){const off=undoStack.length===0||isPastWeek();btn.disabled=off;btn.style.opacity=off?'0.4':'1';}
+  if(btn){const off=undoStack.length===0||isPastWeek();btn.disabled=off;}
 }
 function updateRedoBtn(){
   const btn=document.getElementById('redo-btn');
-  if(btn){const off=redoStack.length===0||isPastWeek();btn.disabled=off;btn.style.opacity=off?'0.4':'1';}
+  if(btn){const off=redoStack.length===0||isPastWeek();btn.disabled=off;}
 }
 async function undoLast(){
   if(!undoStack.length)return;
@@ -2342,6 +2348,9 @@ function renderStatusToggle(){
   // Les deux utilisent filled primary (active-open), seul le bouton actif est coloré
   btnOpen.className='status-btn'+(isClosed?'':' active-open');
   btnClosed.className='status-btn'+(isClosed?' active-open':'');
+  const dayPast=isPastDay();
+  btnOpen.classList.toggle('past-readonly',dayPast);
+  btnClosed.classList.toggle('past-readonly',dayPast);
 }
 
 function setDayOpen(open){
@@ -2552,7 +2561,7 @@ function renderHoraire(){
   const past=isPastDay();
   const wkPast=isPastWeek();
   const autoBtn=document.getElementById('auto-btn');
-  if(autoBtn){autoBtn.disabled=wkPast;autoBtn.style.opacity=wkPast?'0.4':'1';}
+  if(autoBtn){autoBtn.disabled=wkPast;}
   const banner=document.getElementById('past-week-banner');
   if(banner)banner.style.display=wkPast?'block':'none';
   const volPanel=document.querySelector('.vol-panel');
@@ -2682,6 +2691,7 @@ function renderHoraire(){
           const chipWidth=(hGapL+hGapR)?`calc(${wPct}% - ${hGapL+hGapR}px)`:`${wPct}%`;
 
           const chip=document.createElement('div');chip.className='avail-chip';
+          if(past)chip.classList.add('past');
           chip.style.top=chipTopCur+'px';
           chip.style.height=chipH+'px';
           chip.style.bottom='auto';
