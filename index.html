@@ -2659,6 +2659,17 @@ function renderHoraire(){
         // Trier par heure de début
         chipData.sort((a,b)=>a.aSH-b.aSH);
 
+        // Débordements : étendre la dz si des chips sortent des bornes du shift
+        const earlyStart=Math.min(dzFromH,...chipData.map(cd=>cd.aSH));
+        const lateEnd=Math.max(shift.toH,...chipData.map(cd=>cd.aEH));
+        const dzOrigin=earlyStart;
+        const dzEnd=lateEnd;
+
+        if(earlyStart<dzFromH||lateEnd>shift.toH){
+          dz.style.left=toPx(earlyStart)+'px';
+          dz.style.width=(toPx(lateEnd)-toPx(earlyStart))+'px';
+        }
+
         const totalH=chipData.reduce((s,cd)=>s+cd.chipH,0)+Math.max(0,chipData.length-1)*2;
         const rowH=Math.max(40,totalH+14);
 
@@ -2674,13 +2685,13 @@ function renderHoraire(){
           if(covUnion.length&&iv.s<=covUnion[covUnion.length-1].e)covUnion[covUnion.length-1].e=Math.max(covUnion[covUnion.length-1].e,iv.e);
           else covUnion.push({s:iv.s,e:iv.e});
         }
-        const uncovIvs=[];let ucCur=dzFromH;
+        const uncovIvs=[];let ucCur=earlyStart;
         for(const iv of covUnion){if(iv.s>ucCur)uncovIvs.push({s:ucCur,e:iv.s});ucCur=Math.max(ucCur,iv.e);}
-        if(ucCur<shift.toH)uncovIvs.push({s:ucCur,e:shift.toH});
+        if(ucCur<lateEnd)uncovIvs.push({s:ucCur,e:lateEnd});
         if(uncovIvs.length>0){
           dz.style.backgroundImage=uncovIvs.map(()=>hatchPat).join(',');
           dz.style.backgroundSize=uncovIvs.map(u=>`${Math.round(toPx(u.e)-toPx(u.s))}px 100%`).join(',');
-          dz.style.backgroundPosition=uncovIvs.map(u=>`${Math.round(toPx(u.s)-toPx(dzFromH))}px 0`).join(',');
+          dz.style.backgroundPosition=uncovIvs.map(u=>`${Math.round(toPx(u.s)-toPx(earlyStart))}px 0`).join(',');
           dz.style.backgroundRepeat=uncovIvs.map(()=>'no-repeat').join(',');
         }
 
@@ -2690,11 +2701,11 @@ function renderHoraire(){
           const chipBorderColor=isOverQuota?'#DC2626':'#CEC9C4';
           const chipBorderWidth=isOverQuota?'2px':'1.5px';
 
-          const shiftDur=shift.toH-dzFromH;
-          const leftPct=((aSH-dzFromH)/shiftDur*100).toFixed(3);
+          const shiftDur=dzEnd-dzOrigin;
+          const leftPct=((aSH-dzOrigin)/shiftDur*100).toFixed(3);
           const wPct=((aEH-aSH)/shiftDur*100).toFixed(3);
-          const hGapL=(aSH<=dzFromH+0.001)?3:0;
-          const hGapR=(aEH>=shift.toH-0.001)?3:0;
+          const hGapL=(aSH<=dzOrigin+0.001)?3:0;
+          const hGapR=(aEH>=dzEnd-0.001)?3:0;
           const chipLeft=hGapL?`calc(${leftPct}% + ${hGapL}px)`:`${leftPct}%`;
           const chipWidth=(hGapL+hGapR)?`calc(${wPct}% - ${hGapL+hGapR}px)`:`${wPct}%`;
 
@@ -2707,6 +2718,7 @@ function renderHoraire(){
           chip.style.width=chipWidth;
           chip.style.background='var(--surface)';
           chip.style.border=`${chipBorderWidth} solid ${chipBorderColor}`;
+          if(aSH<dzFromH||aEH>shift.toH){chip.style.borderStyle='dashed';chip.style.opacity='0.85';}
 
           const covWrap=document.createElement('div');covWrap.className='chip-covered-content';
 
