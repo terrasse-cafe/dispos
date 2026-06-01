@@ -208,8 +208,17 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .h-role-row.has-note{min-height:54px}
 .h-role-row:last-child{border-bottom:none}
 .h-role-row.row-hover .h-role-name{font-weight:700;color:var(--text)}
-.h-role-name{width:var(--role-col);min-width:var(--role-col);flex-shrink:0;border-right:1px solid var(--border);padding:0 8px;display:flex;align-items:center;font-size:11px;color:var(--text-2);background:var(--surface);line-height:1.3;transition:font-weight .1s,color .1s}
+.h-role-name{flex:1;padding:0 8px;display:flex;align-items:center;font-size:11px;color:var(--text-2);line-height:1.3;transition:font-weight .1s,color .1s;overflow:hidden}
 .h-role-name.opt{color:var(--text-3);font-style:italic}
+.h-role-name-wrap{position:relative;display:flex;align-items:center;justify-content:space-between;padding-right:4px;width:var(--role-col);min-width:var(--role-col);flex-shrink:0;border-right:1px solid var(--border);background:var(--surface)}
+.btn-role-edit{display:none;background:none;border:none;padding:3px;border-radius:4px;cursor:pointer;color:var(--text-3);flex-shrink:0}
+.btn-role-edit:hover{color:var(--text);background:var(--border)}
+.h-role-name-wrap:hover .btn-role-edit{display:flex}
+.slot-edit-popover{position:fixed;z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;width:220px;box-shadow:0 4px 24px rgba(0,0,0,.13)}
+.slot-edit-title{font-weight:600;font-size:13px;margin-bottom:12px;color:var(--text)}
+.slot-edit-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;font-size:13px;color:var(--text-2)}
+.slot-edit-row select{font-size:13px;border:1px solid var(--border);border-radius:6px;padding:3px 6px;background:var(--bg);color:var(--text)}
+.slot-edit-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:4px}
 .h-timeline{flex:1;position:relative;background:var(--bg);overflow:visible}
 .h-dz{position:absolute;top:3px;bottom:3px;border:2px dashed var(--border);border-radius:6px;display:flex;align-items:center;padding:0 10px;transition:border-color .1s,background .1s;cursor:default;overflow:hidden}
 .h-dz.empty{background:transparent}.h-dz.filled{border-style:solid}
@@ -1120,6 +1129,7 @@ function getSmartBMon(){
 }
 let bMon=getSmartBMon();
 let closedDays={}; // {wk: Set<dayId>} jours fermés (météo etc.)
+let slotOverrides={}; // { "shift_id__role": { fromH, toH } }
 let bSel={},avail={},assigns={},vcols={};
 let curDay='vendredi';
 let draggingVol=null;
@@ -1304,6 +1314,37 @@ async function loadAssignments(wk) {
   });
 }
 
+async function loadSlotOverrides() {
+  if (!sb) return;
+  const { data, error } = await sb.from('org_config').select('value').eq('key', 'slot_overrides').single();
+  if (error || !data) return;
+  try {
+    slotOverrides = JSON.parse(data.value) || {};
+    applySlotOverrides();
+  } catch(e) { slotOverrides = {}; }
+}
+
+async function saveSlotOverrides() {
+  if (!sb) return;
+  await sb.from('org_config').upsert(
+    { key: 'slot_overrides', value: JSON.stringify(slotOverrides) },
+    { onConflict: 'key' }
+  );
+}
+
+function applySlotOverrides() {
+  Object.entries(slotOverrides).forEach(([key, val]) => {
+    const [sid, ...roleParts] = key.split('__');
+    const roleLabel = roleParts.join('__');
+    const shift = Object.values(SHIFTS).flat().find(s => s.id === sid);
+    if (!shift) return;
+    if (!shift.slotFromH) shift.slotFromH = {};
+    if (!shift.slotToH) shift.slotToH = {};
+    shift.slotFromH[roleLabel] = val.fromH;
+    shift.slotToH[roleLabel] = val.toH;
+  });
+}
+
 async function saveAssignment(wk, shiftId, role, name, startMins, endMins, note=null, locked=false) {
   if (!sb) return;
   const row = {
@@ -1390,6 +1431,7 @@ async function bootOrgData() {
   await loadPeople();
   await loadAvail(wk);
   await loadAssignments(wk);
+  await loadSlotOverrides();
   const {data:cdRow}=await sb.from('org_config').select('value').eq('key','closed_days').maybeSingle();
   if(cdRow?.value){
     try{
@@ -2534,6 +2576,69 @@ function hoverHighlightDZs(wk,shifts,name,freeIvs){
 /* ══════════════════════════════════════════════
    RENDER HORAIRE
 ══════════════════════════════════════════════ */
+function openSlotEditPopover(e,shift,role,dzFromH,dzToH){
+  document.querySelectorAll('.slot-edit-popover').forEach(p=>p.remove());
+  const day=DAYS.find(d=>d.id===curDay);
+  const minH=day.oH;
+  const maxH=day.cH+(day.cM||0)/60;
+  const step=0.5;
+  const pop=document.createElement('div');
+  pop.className='slot-edit-popover';
+  const roleLabel=roleDisplayLabel(role);
+  const slotKey=shift.id+'__'+roleLabel;
+  function timeOptions(selectedH){
+    let opts='';
+    for(let h=minH;h<=maxH;h+=step){
+      const label=mStr(h*60);
+      const sel=Math.abs(h-selectedH)<0.01?' selected':'';
+      opts+=`<option value="${h}"${sel}>${label}</option>`;
+    }
+    return opts;
+  }
+  pop.innerHTML=`
+    <div class="slot-edit-title">${roleLabel}</div>
+    <div class="slot-edit-row">
+      <label>Début</label>
+      <select id="sep-from">${timeOptions(dzFromH)}</select>
+    </div>
+    <div class="slot-edit-row">
+      <label>Fin</label>
+      <select id="sep-to">${timeOptions(dzToH)}</select>
+    </div>
+    <div class="slot-edit-actions">
+      <button class="btn btn-subtle btn-sm" id="sep-cancel">Annuler</button>
+      <button class="btn btn-primary btn-sm" id="sep-save">Enregistrer</button>
+    </div>
+  `;
+  document.body.appendChild(pop);
+  const rect=e.target.getBoundingClientRect();
+  const popW=220,popH=160;
+  let top=rect.bottom+6;
+  let left=rect.left;
+  if(left+popW>window.innerWidth-8)left=window.innerWidth-popW-8;
+  if(top+popH>window.innerHeight-8)top=rect.top-popH-6;
+  pop.style.top=top+'px';
+  pop.style.left=left+'px';
+  pop.querySelector('#sep-cancel').onclick=()=>pop.remove();
+  pop.querySelector('#sep-save').onclick=async()=>{
+    const newFrom=parseFloat(pop.querySelector('#sep-from').value);
+    const newTo=parseFloat(pop.querySelector('#sep-to').value);
+    if(newFrom>=newTo){alert('L\'heure de début doit être avant l\'heure de fin.');return;}
+    if(!slotOverrides[slotKey])slotOverrides[slotKey]={};
+    slotOverrides[slotKey].fromH=newFrom;
+    slotOverrides[slotKey].toH=newTo;
+    applySlotOverrides();
+    await saveSlotOverrides();
+    pop.remove();
+    renderHoraire();
+  };
+  setTimeout(()=>{
+    document.addEventListener('click',function handler(ev){
+      if(!pop.contains(ev.target)){pop.remove();document.removeEventListener('click',handler);}
+    });
+  },0);
+}
+
 function renderHoraire(){
   // Si le conteneur n'est pas encore dimensionné, attendre le prochain frame
   const hScrollEarly=document.querySelector('.h-scroll');
@@ -2616,11 +2721,23 @@ function renderHoraire(){
       row.addEventListener('dragleave',e=>{if(!row.contains(e.relatedTarget))row.classList.remove('row-hover');});
       row.addEventListener('drop',()=>row.classList.remove('row-hover'));
       const nc=document.createElement('div');nc.className='h-role-name'+(isOpt?' opt':'');
-      nc.textContent=roleDisplayLabel(role)+(isOpt?' ★':'');row.appendChild(nc);
+      nc.textContent=roleDisplayLabel(role)+(isOpt?' ★':'');
+      const ncWrap=document.createElement('div');ncWrap.className='h-role-name-wrap';
+      ncWrap.appendChild(nc);
+      if(!isPastDay()){
+        const editBtn=document.createElement('button');
+        editBtn.className='btn-role-edit';
+        editBtn.title='Modifier les heures du rôle';
+        editBtn.innerHTML='<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M11.333 2a1.886 1.886 0 0 1 2.667 2.667L4.667 14H2v-2.667L11.333 2Z" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        editBtn.onclick=(e)=>{e.stopPropagation();openSlotEditPopover(e,shift,role,dzFromH,dzToH);};
+        ncWrap.appendChild(editBtn);
+      }
+      row.appendChild(ncWrap);
       const tl=document.createElement('div');tl.className='h-timeline';tl.style.width=tl.style.minWidth=TW+'px';
       const dz=document.createElement('div');dz.className='h-dz';
       const dzFromH=(shift.slotFromH&&shift.slotFromH[roleDisplayLabel(role)]!=null)?shift.slotFromH[roleDisplayLabel(role)]:shift.fromH;
-      dz.style.left=toPx(dzFromH)+'px';dz.style.width=(toPx(shift.toH)-toPx(dzFromH))+'px';
+      const dzToH=(shift.slotToH&&shift.slotToH[roleDisplayLabel(role)]!=null)?shift.slotToH[roleDisplayLabel(role)]:shift.toH;
+      dz.style.left=toPx(dzFromH)+'px';dz.style.width=(toPx(dzToH)-toPx(dzFromH))+'px';
       dz.id='dz-'+shift.id+'-'+role.replace(/[^a-z0-9]/gi,'_');
 
       // ── Multi-bénévoles : tableau des assignés pour ce rôle ──
@@ -2643,16 +2760,16 @@ function renderHoraire(){
           const rng=emp?null:volDayRange(wk,assignedName);
           let aSH,aEH;
           if(ct){aSH=ct.s/60;aEH=ct.e/60;}
-          else if(emp){aSH=dzFromH;aEH=shift.toH;}
+          else if(emp){aSH=dzFromH;aEH=dzToH;}
           else if(rng){aSH=rng.startMins/60;aEH=rng.endMins/60;}
-          else{aSH=dzFromH;aEH=shift.toH;}
+          else{aSH=dzFromH;aEH=dzToH;}
           const noteVal=getAssignNote(wk,shift.id,role,assignedName);
           const chipH=noteVal?CHIP_H_NOTE:CHIP_H_BASE;
           const assignedQuota=emp?null:volQuota(wk,assignedName);
           const assignedUsed=emp?0:volWeekShiftCount(wk,assignedName);
           const isOverQuota=!emp&&assignedQuota!==99&&assignedUsed>assignedQuota;
           const sm=ct?ct.s:(rng?Math.max(rng.startMins,dzFromH*60):dzFromH*60);
-          const em2=ct?ct.e:(rng?Math.min(rng.endMins,shift.toH*60):shift.toH*60);
+          const em2=ct?ct.e:(rng?Math.min(rng.endMins,dzToH*60):dzToH*60);
           return {assignedName,emp,col,aSH,aEH,noteVal,chipH,isOverQuota,sm,em2};
         });
 
@@ -2661,11 +2778,11 @@ function renderHoraire(){
 
         // Débordements : étendre la dz si des chips sortent des bornes du shift
         const earlyStart=Math.min(dzFromH,...chipData.map(cd=>cd.aSH));
-        const lateEnd=Math.max(shift.toH,...chipData.map(cd=>cd.aEH));
+        const lateEnd=Math.max(dzToH,...chipData.map(cd=>cd.aEH));
         const dzOrigin=earlyStart;
         const dzEnd=lateEnd;
 
-        if(earlyStart<dzFromH||lateEnd>shift.toH){
+        if(earlyStart<dzFromH||lateEnd>dzToH){
           dz.style.left=toPx(earlyStart)+'px';
           dz.style.width=(toPx(lateEnd)-toPx(earlyStart))+'px';
         }
@@ -2718,7 +2835,7 @@ function renderHoraire(){
           chip.style.width=chipWidth;
           chip.style.background='var(--surface)';
           chip.style.border=`${chipBorderWidth} solid ${chipBorderColor}`;
-          if(aSH<dzFromH||aEH>shift.toH){chip.style.borderStyle='dashed';chip.style.opacity='0.85';}
+          if(aSH<dzFromH||aEH>dzToH){chip.style.borderStyle='dashed';chip.style.opacity='0.85';}
 
           const covWrap=document.createElement('div');covWrap.className='chip-covered-content';
 
