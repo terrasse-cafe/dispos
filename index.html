@@ -3801,8 +3801,15 @@ async function openAutoAssign(){
     });
   });
 
-  // Requis avant optionnels
-  rolesQueue.sort((a,b)=>a.isOpt===b.isOpt?0:a.isOpt?1:-1);
+  // Requis avant optionnels, puis par score de préférence max disponible (décroissant)
+  // — évite qu'un bénévole soit assigné à un rôle mineur avant son rôle préféré
+  rolesQueue.sort((a, b) => {
+    if (a.isOpt !== b.isOpt) return a.isOpt ? 1 : -1;
+    const maxScore = ({sh, role, dayId}) => Math.max(0, ...Object.keys(wkData)
+      .filter(n => !isEmp(n) && volCoversShiftFor(wk, n, sh, dayId))
+      .map(n => prefScore(n, role)));
+    return maxScore(b) - maxScore(a);
+  });
 
   const toSave=[];
 
