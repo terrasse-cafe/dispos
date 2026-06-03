@@ -3836,20 +3836,22 @@ async function openAutoAssign(){
     if(!candidates.length)return;
 
     // Exclure les candidats qui ont un rôle de préférence plus haute encore disponible
-    // sur ce même shift — les garder pour ce meilleur rôle
+    // n'importe où dans la semaine (même shift ou autre shift)
     const eligible = candidates.filter(n => {
       const myPref = prefScore(n, role);
-      const allRoles = [...(sh._slots||sh.roles), ...(sh._optSlots||[])];
-      const hasBetterRoleOpen = allRoles.some(r => {
-        if (r === role) return false;
-        if (prefScore(n, r) <= myPref) return false;
-        // Ce rôle meilleur est-il encore vide (aucun assigné) ?
-        return getAssigns(wk, sh.id, r).length === 0;
+      // Chercher dans toute la rolesQueue un rôle encore non pourvu où n aurait un meilleur score
+      const hasBetterRoleOpen = rolesQueue.some(item => {
+        if (item.sh.id === sh.id && item.role === role) return false; // même slot, ignorer
+        if (prefScore(n, item.role) <= myPref) return false;         // pas meilleur
+        if (alreadyOnShift(n, item.dayId, item.sh.id)) return false; // déjà sur ce shift
+        if (!overlapFor(wk, n, item.sh, item.dayId)) return false;   // pas disponible
+        // Ce rôle meilleur est-il encore vide ?
+        return getAssigns(wk, item.sh.id, item.role).length === 0;
       });
       return !hasBetterRoleOpen;
     });
 
-    // Si tous les candidats ont un meilleur rôle en attente, sauter ce rôle pour l'instant
+    // Si tous les candidats ont un meilleur rôle en attente ailleurs, sauter ce rôle
     if(eligible.length === 0) return;
 
     eligible.sort((a,b)=>compare(b,a,role,sh,dayId));
