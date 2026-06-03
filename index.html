@@ -2681,6 +2681,8 @@ function renderHoraire(){
   if(volPanel){if(wkPast)volPanel.classList.add('wk-past');else volPanel.classList.remove('wk-past');}
   const grid=document.getElementById('h-grid');grid.innerHTML='';
 
+  // Cacher le tooltip de préférences si visible (ex: chip supprimé pendant hover)
+  {const tt=document.getElementById('chip-pref-tooltip');if(tt){tt.classList.remove('visible');}}
   const hRow=document.createElement('div');hRow.className='h-head-row';
   const corn=document.createElement('div');corn.className='h-corner';corn.textContent='Rôle';hRow.appendChild(corn);
   const times=document.createElement('div');times.className='h-times';times.style.width=times.style.minWidth=TW+'px';
@@ -2897,6 +2899,8 @@ function renderHoraire(){
             chip.addEventListener('dragend',()=>{
               chip.style.opacity='';
               draggingVol=null;draggingFromRole=null;draggingVolFreeIvs=null;clearDZHighlights();
+              const tt=document.getElementById('chip-pref-tooltip');
+              if(tt){clearTimeout(chip._ttTimer);tt.classList.remove('visible');}
             });
           }
           {
