@@ -3845,12 +3845,12 @@ async function openAutoAssign(){
       return !hasBetterRoleOpen;
     });
 
-    const pool = eligible.length > 0 ? eligible : candidates;
+    // Si tous les candidats ont un meilleur rôle en attente, sauter ce rôle pour l'instant
+    if(eligible.length === 0) return;
 
-    candidates.sort((a,b)=>compare(b,a,role,sh,dayId));
+    eligible.sort((a,b)=>compare(b,a,role,sh,dayId));
 
-    for(const cand of candidates){
-      if(!pool.includes(cand))continue;
+    for(const cand of eligible){
       const ov=overlapFor(wk,cand,sh,dayId);if(!ov)continue;
 
       const existingIvs=getAssigns(wk,sh.id,role).filter(n=>n!==cand).map(n=>{
