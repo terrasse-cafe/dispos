@@ -3801,20 +3801,27 @@ async function openAutoAssign(){
     });
   });
 
-  // Requis avant optionnels, puis par score de préférence max disponible (décroissant)
-  // — évite qu'un bénévole soit assigné à un rôle mineur avant son rôle préféré
-  rolesQueue.sort((a, b) => {
-    if (a.isOpt !== b.isOpt) return a.isOpt ? 1 : -1;
-    const maxScore = ({sh, role, dayId}) => Math.max(0, ...Object.keys(wkData)
-      .filter(n => !isEmp(n) && volCoversShiftFor(wk, n, sh, dayId))
-      .map(n => prefScore(n, role)));
-    return maxScore(b) - maxScore(a);
-  });
+  // Requis avant optionnels — l'ordre intra-shift est géré par la logique de skip ci-dessous
+  rolesQueue.sort((a,b)=>a.isOpt===b.isOpt?0:a.isOpt?1:-1);
 
   const toSave=[];
 
-  rolesQueue.forEach(({sh,role,dayId,isOpt})=>{
-    // Bénévoles disponibles ce jour, quota non atteint, pas déjà dans ce shift, préférence requise
+  // Pass 1 — pour chaque bénévole, identifier son meilleur rôle disponible sur chaque shift
+  // et le réserver pour éviter qu'il soit gaspillé sur un rôle de moindre préférence.
+  // bestRoleForVolOnShift[name+'|'+shiftId] = role avec le prefScore le plus élevé encore libre
+  function getBestAvailableRole(name, sh, dayId) {
+    const allRoles = [...(sh._slots||sh.roles), ...(sh._optSlots||[])];
+    let best = null, bestPref = 0;
+    for (const r of allRoles) {
+      const ps = prefScore(name, r);
+      if (ps > bestPref && volCoversShiftFor(wk, name, sh, dayId)) {
+        best = r; bestPref = ps;
+      }
+    }
+    return { role: best, score: bestPref };
+  }
+
+  rolesQueue.forEach(({sh, role, dayId, isOpt})=>{
     const candidates=Object.keys(wkData).filter(n=>
       !isEmp(n)&&
       !quotaReached(n)&&
@@ -3824,29 +3831,39 @@ async function openAutoAssign(){
     );
     if(!candidates.length)return;
 
-    // Trier par score décroissant, essayer chacun jusqu'au premier valide
+    // Exclure les candidats qui ont un rôle de préférence plus haute encore disponible
+    // sur ce même shift — les garder pour ce meilleur rôle
+    const eligible = candidates.filter(n => {
+      const myPref = prefScore(n, role);
+      const allRoles = [...(sh._slots||sh.roles), ...(sh._optSlots||[])];
+      const hasBetterRoleOpen = allRoles.some(r => {
+        if (r === role) return false;
+        if (prefScore(n, r) <= myPref) return false;
+        // Ce rôle meilleur est-il encore vide (aucun assigné) ?
+        return getAssigns(wk, sh.id, r).length === 0;
+      });
+      return !hasBetterRoleOpen;
+    });
+
+    const pool = eligible.length > 0 ? eligible : candidates;
+
     candidates.sort((a,b)=>compare(b,a,role,sh,dayId));
 
     for(const cand of candidates){
+      if(!pool.includes(cand))continue;
       const ov=overlapFor(wk,cand,sh,dayId);if(!ov)continue;
 
       const existingIvs=getAssigns(wk,sh.id,role).filter(n=>n!==cand).map(n=>{
         const ct=getAssignTimes(wk,sh.id,role,n);
         if(ct)return{s:ct.s,e:ct.e};
         const r=volDayRangeFor(wk,n,dayId);
-        return r?{s:Math.max(r.startMins,sh.fromH*60),e:Math.min(r.endMins,sh.toH*60)}:{s:sh.fromH*60,e:sh.toH*60};
-      }).filter(iv=>iv.e>iv.s);
+        return r?{s:r.startMins,e:r.endMins}:{s:sh.fromH*60,e:sh.toH*60};
+      });
 
-      // Plage déjà entièrement couverte → ce slot n'a pas besoin de plus
-      if(isCovered(ov.s,ov.e,existingIvs))return;
-
-      // Chevauchement horaire avec une assignation existante → essayer le suivant
-      if(existingIvs.some(iv=>ov.s<iv.e&&iv.s<ov.e))continue;
+      if(existingIvs.length>0&&isCovered(ov.s,ov.e,existingIvs))continue;
 
       addAssign(wk,sh.id,role,cand);
       setAssignTimes(wk,sh.id,role,ov.s,ov.e,cand);
-      setAssignNote(wk,sh.id,role,null,cand);
-      setAssignLocked(wk,sh.id,role,false,cand);
       markAssigned(cand,dayId,sh.id);
       toSave.push({wk,shiftId:sh.id,role,name:cand,s:ov.s,e:ov.e});
       break;
