@@ -3767,7 +3767,7 @@ async function openAutoAssign(){
     const p=getPerson(name);if(!p||!p.roles)return 0;
     const dr=roleDisplayLabel(role);
     const idx=p.roles.findIndex(r=>r&&(r===role||r===dr||roleDisplayLabel(r)===dr));
-    if(idx===0)return 3;if(idx===1)return 2;if(idx===2)return 1;return 0;
+    if(idx===0)return 6;if(idx===1)return 5;if(idx===2)return 4;if(idx===3)return 3;if(idx===4)return 2;if(idx===5)return 1;return 0;
   }
   function versatility(name){const p=getPerson(name);return p?p.roles.filter(Boolean).length:0;}
   function coverRatio(name,sh,dayId){
