@@ -387,6 +387,20 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
   .pin-keypad{gap:6px;max-width:200px;margin-bottom:.5rem}
   .pin-key{height:46px;font-size:18px}
 }
+/* ── Répertoire : barre de recherche ── */
+.dir-search-wrap{display:flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:0 10px;height:32px;min-width:200px}
+.dir-search-wrap input{border:none;background:none;outline:none;font-size:13px;color:var(--text);width:160px}
+.dir-search-wrap input::placeholder{color:var(--text-3)}
+/* ── Dialog Rappels ── */
+.rappel-accordion{border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.rappel-acc-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;background:var(--surface);user-select:none}
+.rappel-acc-header:hover{background:var(--bg)}
+.rappel-acc-body{padding:0 14px 14px;background:var(--bg);display:none}
+.rappel-acc-body.open{display:block}
+.rappel-acc-chevron{color:var(--text-3);transition:transform .2s}
+.rappel-acc-chevron.open{transform:rotate(180deg)}
+.rappel-textarea{width:100%;box-sizing:border-box;margin-top:10px;padding:10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:13px;font-family:inherit;resize:vertical;line-height:1.5}
+.rappel-textarea:focus{outline:none;border-color:var(--accent)}
 </style>
 </head>
 <body>
@@ -618,14 +632,20 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
   <!-- RÉPERTOIRE -->
   <div id="org-repertoire" class="pane">
     <div class="dir-toolbar">
-      <button class="btn btn-subtle" onclick="openPersonModal(null)"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 3.333v9.334M3.333 8h9.334" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg> Ajouter</button>
+      <div class="dir-search-wrap">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="color:var(--text-3);flex-shrink:0"><circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.6"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <input type="text" id="dir-search" placeholder="Rechercher" oninput="filterDirectory(this.value)" autocomplete="off"/>
+      </div>
       <span class="o-stat-text" id="dir-count">—</span>
-      <div style="display:flex;align-items:center;gap:10px;margin-left:auto">
-        <span style="font-size:13px;color:var(--text-2)">Rappel dimanche</span>
-        <label class="toggle-switch">
-          <input type="checkbox" id="sunday-reminder-toggle" onchange="toggleSundayReminder(this.checked)"/>
-          <span class="toggle-track"></span>
-        </label>
+      <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
+        <button class="btn btn-subtle" onclick="openRappels()">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1a5.5 5.5 0 0 1 5.5 5.5c0 2.42-.98 4.04-1.97 5.09A6.7 6.7 0 0 1 10 13H6a6.7 6.7 0 0 1-1.53-1.41C3.48 10.54 2.5 8.92 2.5 6.5A5.5 5.5 0 0 1 8 1Z" stroke="currentColor" stroke-width="1.5"/><path d="M6 13v.5a2 2 0 0 0 4 0V13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Rappels
+        </button>
+        <button class="btn btn-subtle" onclick="openPersonModal(null)">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 3.333v9.334M3.333 8h9.334" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Ajouter
+        </button>
       </div>
     </div>
     <div class="dir-wrap">
@@ -637,6 +657,52 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
   </div>
 </div>
 
+
+<!-- DIALOG RAPPELS -->
+<div class="overlay" id="rappels-overlay" onclick="if(event.target===this)closeRappels()">
+  <div class="modal-box" style="width:480px;max-width:95vw">
+    <div style="display:flex;align-items:center;margin-bottom:1.2rem">
+      <div style="font-size:15px;font-weight:600;flex:1">Rappels</div>
+      <button onclick="closeRappels()" style="border:none;background:none;cursor:pointer;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;color:var(--text-3);padding:0">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M9.79096 1.21967C10.0838 0.926977 10.5587 0.926902 10.8515 1.21967C11.1443 1.5125 11.1442 1.98731 10.8515 2.28022L7.09565 6.0351L10.8515 9.79096C11.1443 10.0839 11.1444 10.5587 10.8515 10.8515C10.5587 11.1444 10.0839 11.1443 9.79096 10.8515L6.0351 7.09565L2.28022 10.8515C1.98732 11.1444 1.51256 11.1444 1.21967 10.8515C0.926842 10.5586 0.926799 10.0838 1.21967 9.79096L4.97455 6.0351L1.21967 2.28022C0.926777 1.98732 0.926777 1.51256 1.21967 1.21967C1.51256 0.926777 1.98732 0.926777 2.28022 1.21967L6.0351 4.97455L9.79096 1.21967Z" fill="currentColor"/></svg>
+      </button>
+    </div>
+    <div class="rappel-accordion" id="rappel-acc-sun">
+      <div class="rappel-acc-header" onclick="toggleRappelAcc('sun')">
+        <span style="font-weight:600;font-size:14px">Dimanche</span>
+        <div style="display:flex;align-items:center;gap:10px">
+          <label class="toggle-switch" onclick="event.stopPropagation()">
+            <input type="checkbox" id="rappel-toggle-sun" onchange="syncRappelToggle('sun',this.checked)"/>
+            <span class="toggle-track"></span>
+          </label>
+          <svg class="rappel-acc-chevron" id="rappel-chev-sun" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+      </div>
+      <div class="rappel-acc-body" id="rappel-body-sun">
+        <textarea id="rappel-text-sun" class="rappel-textarea" rows="7" placeholder="Texte du courriel…"></textarea>
+      </div>
+    </div>
+    <div class="rappel-accordion" id="rappel-acc-tue" style="margin-top:8px">
+      <div class="rappel-acc-header" onclick="toggleRappelAcc('tue')">
+        <span style="font-weight:600;font-size:14px">Mardi</span>
+        <div style="display:flex;align-items:center;gap:10px">
+          <label class="toggle-switch" onclick="event.stopPropagation()">
+            <input type="checkbox" id="rappel-toggle-tue" onchange="syncRappelToggle('tue',this.checked)"/>
+            <span class="toggle-track"></span>
+          </label>
+          <svg class="rappel-acc-chevron" id="rappel-chev-tue" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+      </div>
+      <div class="rappel-acc-body" id="rappel-body-tue">
+        <textarea id="rappel-text-tue" class="rappel-textarea" rows="7" placeholder="Texte du courriel…"></textarea>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:1.2rem">
+      <button class="btn btn-subtle" onclick="closeRappels()">Annuler</button>
+      <button class="btn btn-primary" onclick="saveRappels()">Enregistrer</button>
+    </div>
+  </div>
+</div>
 
 <div class="overlay" id="vol-prefs-overlay" onclick="if(event.target===this)closeVolPrefs()">
   <div class="modal-box">
@@ -2224,18 +2290,70 @@ async function submitAvail(){
 /* ══════════════════════════════════════════════
    ORGANISATRICE
 ══════════════════════════════════════════════ */
-async function loadSundayReminderState() {
+const RAPPEL_DEFAULTS = {
+  sun: `Bonjour à tous,\n\nLa semaine prochaine au Terrasse Café approche ! Merci de remplir vos disponibilités ici :\nhttps://terrasse-cafe.github.io/dispos/\n\nBonne semaine,\nL'équipe organisatrice`,
+  tue: `Bonjour à tous,\n\nUn petit rappel pour remplir vos disponibilités pour la semaine prochaine :\nhttps://terrasse-cafe.github.io/dispos/\n\nMerci et à bientôt,\nL'équipe organisatrice`
+};
+
+async function loadRappelsState() {
   if (!sb) return;
-  const { data } = await sb.from('org_config').select('value').eq('key', 'sunday_reminder_enabled').maybeSingle();
-  const toggle = document.getElementById('sunday-reminder-toggle');
-  if (toggle && data) toggle.checked = data.value === 'true';
+  const keys = ['sunday_reminder_enabled','sunday_reminder_text','tuesday_reminder_enabled','tuesday_reminder_text'];
+  const { data } = await sb.from('org_config').select('key,value').in('key', keys);
+  const map = {};
+  (data||[]).forEach(r => map[r.key] = r.value);
+  const sunToggle = document.getElementById('rappel-toggle-sun');
+  if (sunToggle) sunToggle.checked = (map['sunday_reminder_enabled'] ?? 'true') === 'true';
+  const sunText = document.getElementById('rappel-text-sun');
+  if (sunText) sunText.value = map['sunday_reminder_text'] ?? RAPPEL_DEFAULTS.sun;
+  const tueToggle = document.getElementById('rappel-toggle-tue');
+  if (tueToggle) tueToggle.checked = (map['tuesday_reminder_enabled'] ?? 'false') === 'true';
+  const tueText = document.getElementById('rappel-text-tue');
+  if (tueText) tueText.value = map['tuesday_reminder_text'] ?? RAPPEL_DEFAULTS.tue;
 }
 
-async function toggleSundayReminder(enabled) {
-  console.log('toggleSundayReminder called:', enabled, 'sb:', !!sb);
+function openRappels() {
+  loadRappelsState();
+  document.getElementById('rappels-overlay').classList.add('active');
+}
+
+function closeRappels() {
+  document.getElementById('rappels-overlay').classList.remove('active');
+}
+
+function toggleRappelAcc(day) {
+  const body = document.getElementById('rappel-body-' + day);
+  const chev = document.getElementById('rappel-chev-' + day);
+  body.classList.toggle('open');
+  chev.classList.toggle('open');
+}
+
+function syncRappelToggle(day, checked) {
+  if (checked) {
+    const body = document.getElementById('rappel-body-' + day);
+    const chev = document.getElementById('rappel-chev-' + day);
+    body.classList.add('open');
+    chev.classList.add('open');
+  }
+}
+
+async function saveRappels() {
   if (!sb) return;
-  const result = await sb.from('org_config').upsert({ key: 'sunday_reminder_enabled', value: enabled ? 'true' : 'false' }, { onConflict: 'key' });
-  console.log('upsert result:', result);
+  const rows = [
+    { key: 'sunday_reminder_enabled',  value: document.getElementById('rappel-toggle-sun').checked ? 'true' : 'false' },
+    { key: 'sunday_reminder_text',     value: document.getElementById('rappel-text-sun').value },
+    { key: 'tuesday_reminder_enabled', value: document.getElementById('rappel-toggle-tue').checked ? 'true' : 'false' },
+    { key: 'tuesday_reminder_text',    value: document.getElementById('rappel-text-tue').value },
+  ];
+  await sb.from('org_config').upsert(rows, { onConflict: 'key' });
+  closeRappels();
+}
+
+function filterDirectory(query) {
+  const q = query.trim().toLowerCase();
+  document.querySelectorAll('#dir-tbody tr').forEach(row => {
+    const text = row.textContent.toLowerCase();
+    row.style.display = (!q || text.includes(q)) ? '' : 'none';
+  });
 }
 
 async function oShift(d){
@@ -3300,7 +3418,7 @@ document.addEventListener('click',()=>{
    RÉPERTOIRE
 ══════════════════════════════════════════════ */
 function renderDir(){
-  loadSundayReminderState();
+  loadRappelsState();
   const tbody=document.getElementById('dir-tbody');tbody.innerHTML='';
   directory.forEach(p=>{
     const inactive=p.active===false;
