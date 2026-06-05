@@ -2312,12 +2312,13 @@ async function loadRappelsState() {
 }
 
 function openRappels() {
-  loadRappelsState();
-  document.getElementById('rappels-overlay').classList.add('active');
+  loadRappelsState().then(() => {
+    document.getElementById('rappels-overlay').classList.add('open');
+  });
 }
 
 function closeRappels() {
-  document.getElementById('rappels-overlay').classList.remove('active');
+  document.getElementById('rappels-overlay').classList.remove('open');
 }
 
 function toggleRappelAcc(day) {
