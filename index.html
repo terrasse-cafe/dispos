@@ -1958,7 +1958,7 @@ async function _afterVolPinSuccess(name, p) {
   bMon=restoreBVolWeek(name)||getSmartBMon();
   document.getElementById('b-empty-state').style.display='none';
   document.getElementById('b-name-section').style.display='block';
-  document.getElementById('b-greeting').textContent=t('greeting')+', '+name.split(' ')[0];
+  document.getElementById('b-greeting').textContent=t('greeting')+', '+name+',';
   document.getElementById('vol-email').value=p?p.email:'';
   bShiftsDesired=bShiftMemory[name]!==undefined?bShiftMemory[name]:0;
   document.getElementById('b-wlabel').textContent=wlabel(bMon);
