@@ -771,7 +771,8 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
       </div>
       <button onclick="closePersonModal()" style="border:none;background:none;cursor:pointer;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text-3);transition:color .1s;padding:0" title="Fermer" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text-3)'"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M9.79096 1.21967C10.0838 0.926977 10.5587 0.926902 10.8515 1.21967C11.1443 1.5125 11.1442 1.98731 10.8515 2.28022L7.09565 6.0351L10.8515 9.79096C11.1443 10.0839 11.1444 10.5587 10.8515 10.8515C10.5587 11.1444 10.0839 11.1443 9.79096 10.8515L6.0351 7.09565L2.28022 10.8515C1.98732 11.1444 1.51256 11.1444 1.21967 10.8515C0.926842 10.5586 0.926799 10.0838 1.21967 9.79096L4.97455 6.0351L1.21967 2.28022C0.926777 1.98732 0.926777 1.51256 1.21967 1.21967C1.51256 0.926777 1.98732 0.926777 2.28022 1.21967L6.0351 4.97455L9.79096 1.21967Z" fill="currentColor"/></svg></button>
     </div>
-    <div class="field"><label>Nom <span style="color:#DC2626">*</span></label><input type="text" id="pm-name" placeholder="Prénom Nom"/></div>
+    <div class="field"><label>Prénom <span style="color:#DC2626">*</span></label><input type="text" id="pm-first-name" placeholder="Prénom"/></div>
+    <div class="field"><label>Nom de famille</label><input type="text" id="pm-last-name" placeholder="Nom de famille"/></div>
     <div class="field"><label>Courriel</label><input type="email" id="pm-email" placeholder="prenom@exemple.com"/></div>
     <div class="field"><label>Type</label>
       <div style="display:flex;gap:6px">
@@ -1217,6 +1218,10 @@ const bShiftMemory={};
 function getMonday(d){const dt=new Date(d),dy=dt.getDay();dt.setDate(dt.getDate()-dy+(dy===0?-6:1));dt.setHours(0,0,0,0);return dt}
 function addWeeks(d,n){const r=new Date(d);r.setDate(r.getDate()+n*7);return r}
 function wkey(m){return m.toISOString().split('T')[0]}
+function fullName(p){ return (p.first_name+' '+(p.last_name||'')).trim(); }
+function displayName(p){ return p.last_name?(p.last_name+', '+p.first_name):p.first_name; }
+function initials(p){ const f=p.first_name?.[0]||''; const l=p.last_name?.[0]||''; return (f+l).toUpperCase(); }
+function personKey(p){ return displayName(p); }
 function dayDate(mon,dow){const d=new Date(mon);d.setDate(mon.getDate()+dow);d.setHours(0,0,0,0);return d}
 function fmtLocale(){return lang==='en'?'en-CA':'fr-CA';}
 function fmt(d){return d.toLocaleDateString(fmtLocale(),{day:'numeric',month:'short'})}
@@ -1278,17 +1283,22 @@ function rebuildVcols(){
 ══════════════════════════════════════════════ */
 async function loadPeople() {
   if (!sb) return;
-  const { data, error } = await sb.from('people').select('*').order('name');
+  const { data, error } = await sb.from('people').select('*').order('last_name').order('first_name');
   if (error) { console.error('loadPeople:', error); return; }
-  directory = data.map(r => ({
-    id: r.id,
-    name: r.name,
-    email: r.email || '',
-    type: r.type,
-    roles: [r.role1||'', r.role2||'', r.role3||'', r.role4||'', r.role5||'', r.role6||''],
-    pin: r.pin || '',
-    active: r.active !== false
-  }));
+  directory = data.map(r => {
+    const obj = {
+      id: r.id,
+      first_name: r.first_name || '',
+      last_name: r.last_name || '',
+      email: r.email || '',
+      type: r.type,
+      roles: [r.role1||'', r.role2||'', r.role3||'', r.role4||'', r.role5||'', r.role6||''],
+      pin: r.pin || '',
+      active: r.active !== false
+    };
+    obj.name = displayName(obj);
+    return obj;
+  });
   nextId = Math.max(0, ...directory.map(p=>p.id)) + 1;
   rebuildVcols();
   populateVolSelect();
@@ -1297,7 +1307,7 @@ async function loadPeople() {
 
 async function upsertPerson(p) {
   if (!sb) return;
-  const row = {name:p.name, email:p.email, type:p.type, role1:p.roles[0]||'', role2:p.roles[1]||'', role3:p.roles[2]||'', role4:p.roles[3]||'', role5:p.roles[4]||'', role6:p.roles[5]||'', pin:p.pin||'', active:p.active!==false};
+  const row = {first_name:p.first_name||'', last_name:p.last_name||'', email:p.email, type:p.type, role1:p.roles[0]||'', role2:p.roles[1]||'', role3:p.roles[2]||'', role4:p.roles[3]||'', role5:p.roles[4]||'', role6:p.roles[5]||'', pin:p.pin||'', active:p.active!==false};
   let error;
   if (p.id) {
     // Modification — update par id
@@ -1853,10 +1863,11 @@ function renderRecentProfiles(){
   manageWrap.style.display='block';
   cards.innerHTML='';
   profiles.forEach(name=>{
-    const initials=name.trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+    const _prp=getPerson(name);
+    const avatarLetters=_prp?initials(_prp):(name.trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase());
     const card=document.createElement('button');
     card.className='b-profile-card';
-    card.innerHTML='<div class="b-profile-avatar">'+initials+'</div><div class="b-profile-name">'+name+'</div>';
+    card.innerHTML='<div class="b-profile-avatar">'+avatarLetters+'</div><div class="b-profile-name">'+name+'</div>';
     card.onclick=()=>connectAsRecentProfile(name);
     cards.appendChild(card);
   });
@@ -1905,10 +1916,12 @@ async function connectAsRecentProfile(name){
 function populateVolSelect(){
   const sel=document.getElementById('vol-select'),cur=sel.value;
   sel.innerHTML='<option value="">— Mon nom —</option>';
-  directory.filter(p=>p.type==='vol'&&p.active!==false).forEach(p=>{
-    const o=document.createElement('option');o.value=p.name;
-    o.textContent=p.name;sel.appendChild(o);
-  });
+  directory.filter(p=>p.type==='vol'&&p.active!==false)
+    .sort((a,b)=>(a.last_name||'').localeCompare(b.last_name||'')||(a.first_name||'').localeCompare(b.first_name||''))
+    .forEach(p=>{
+      const o=document.createElement('option');o.value=p.name;
+      o.textContent=displayName(p);sel.appendChild(o);
+    });
   if(cur)sel.value=cur;
   renderRecentProfiles();
 }
@@ -1958,7 +1971,8 @@ async function _afterVolPinSuccess(name, p) {
   bMon=restoreBVolWeek(name)||getSmartBMon();
   document.getElementById('b-empty-state').style.display='none';
   document.getElementById('b-name-section').style.display='block';
-  document.getElementById('b-greeting').textContent=t('greeting')+', '+name+',';
+  const _p=getPerson(name);
+  document.getElementById('b-greeting').textContent=t('greeting')+', '+(_p?_p.first_name:name)+',';
   document.getElementById('vol-email').value=p?p.email:'';
   bShiftsDesired=bShiftMemory[name]!==undefined?bShiftMemory[name]:0;
   document.getElementById('b-wlabel').textContent=wlabel(bMon);
@@ -2388,8 +2402,8 @@ function renderO(){
   const labelEl=document.getElementById('o-stat-tooltip-label');
   const showResponded=nbResp>0&&nbResp<total/2;
   const listNames=showResponded
-    ?allVols.filter(p=>responded.has(p.name)).map(p=>p.name)
-    :allVols.filter(p=>!responded.has(p.name)).map(p=>p.name);
+    ?allVols.filter(p=>responded.has(p.name)).map(p=>fullName(p))
+    :allVols.filter(p=>!responded.has(p.name)).map(p=>fullName(p));
   const hasInfo=listNames.length>0&&nbResp<total;
   if(statWrap)statWrap.classList.toggle('has-info',hasInfo);
   if(labelEl)labelEl.textContent=showResponded?'A répondu :':'En attente de la réponse de :';
@@ -2969,7 +2983,7 @@ function renderHoraire(){
             lockIcon.innerHTML='<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.66667 7.33337V4.66671C4.66667 3.78265 5.01786 2.93481 5.64298 2.30968C6.2681 1.68456 7.11595 1.33337 8 1.33337C8.88406 1.33337 9.7319 1.68456 10.357 2.30968C10.9821 2.93481 11.3333 3.78265 11.3333 4.66671V7.33337M3.33333 7.33337H12.6667C13.403 7.33337 14 7.93033 14 8.66671V13.3334C14 14.0698 13.403 14.6667 12.6667 14.6667H3.33333C2.59695 14.6667 2 14.0698 2 13.3334V8.66671C2 7.93033 2.59695 7.33337 3.33333 7.33337Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
             inner.appendChild(lockIcon);
           }
-          const nm=document.createElement('span');nm.className='chip-name';nm.textContent=assignedName;inner.appendChild(nm);
+          const nm=document.createElement('span');nm.className='chip-name';const _pch=getPerson(assignedName);nm.textContent=_pch?fullName(_pch):assignedName;inner.appendChild(nm);
           const tm=document.createElement('span');tm.className='chip-time';tm.textContent=mStr(sm)+'–'+mStr(em2);inner.appendChild(tm);
           const spacer=document.createElement('span');spacer.className='chip-spacer';inner.appendChild(spacer);
           if(emp){
@@ -3223,8 +3237,9 @@ function buildCards(wk,shifts){
     // Ligne 1 : nom (gauche) + indicateur quota (droite)
     const row1=document.createElement('div');row1.className='vc-row1';
     const nm=document.createElement('div');nm.className='vc-name';
-    if(emp){nm.innerHTML='<span class="emp-badge" style="margin-right:5px">EMP</span>'+name;}
-    else nm.textContent=name;
+    const _pc=getPerson(name);const dispN=_pc?fullName(_pc):name;
+    if(emp){nm.innerHTML='<span class="emp-badge" style="margin-right:5px">EMP</span>'+dispN;}
+    else nm.textContent=dispN;
     row1.appendChild(nm);
     let freeIvs=null;
     const t=document.createElement('div');t.className='vc-time';
@@ -3345,7 +3360,8 @@ function doAssign(wk,shift,role,name){
 function openTP(e,name,sid,role,shift,wk){
   tpCtx={name,sid,role,shift,wk};
   const emp=isEmp(name);
-  document.getElementById('tp-name').textContent=name+(emp?' (employé)':'');
+  const _ptp=getPerson(name);
+  document.getElementById('tp-name').textContent=(_ptp?fullName(_ptp):name)+(emp?' (employé)':'');
   document.getElementById('tp-role').textContent=roleDisplayLabel(role)+' · '+shift.label;
   const ct=getAssignTimes(wk,sid,role,name);
   const rng=emp?null:volDayRange(wk,name);
@@ -3473,8 +3489,9 @@ async function openPersonModal(id){
   await loadPeople();
   pmCtx=id||null;
   const p=id?directory.find(x=>x.id===id):null;
-  document.getElementById('pm-title').textContent=p?p.name:'Ajouter une personne';
-  document.getElementById('pm-name').value=p?p.name:'';
+  document.getElementById('pm-title').textContent=p?displayName(p):'Ajouter une personne';
+  document.getElementById('pm-first-name').value=p?p.first_name:'';
+  document.getElementById('pm-last-name').value=p?(p.last_name||''):'';
   document.getElementById('pm-email').value=p?p.email:'';
   document.getElementById('pm-active').checked=p?(p.active!==false):true;
   document.getElementById('pm-active-wrap').style.display=p?'flex':'none';
@@ -3541,21 +3558,24 @@ async function resetPersonPin(){
   document.getElementById('pm-reset-pin').style.display='none';
 }
 async function savePerson(){
-  const name=document.getElementById('pm-name').value.trim();
-  if(!name){alert('Le nom est requis.');return}
+  const first_name=document.getElementById('pm-first-name').value.trim();
+  if(!first_name){alert('Le prénom est requis.');return}
+  const last_name=document.getElementById('pm-last-name').value.trim();
   const email=document.getElementById('pm-email').value.trim();
   const type=document.getElementById('pm-type').value;
   const roles=[document.getElementById('pm-r1').value,document.getElementById('pm-r2').value,document.getElementById('pm-r3').value,document.getElementById('pm-r4').value,document.getElementById('pm-r5').value,document.getElementById('pm-r6').value];
   const active=document.getElementById('pm-active').checked;
   const existingPin=pmCtx?(directory.find(x=>x.id===pmCtx)||{}).pin||'':'';
-  const personData={id:pmCtx||null,name,email,type,roles,pin:type==='vol'?existingPin:'',active};
+  const personData={id:pmCtx||null,first_name,last_name,email,type,roles,pin:type==='vol'?existingPin:'',active};
+  personData.name=displayName(personData);
   const existing=pmCtx?directory.find(x=>x.id===pmCtx):null;
   const oldName=existing?existing.name:'';
-  const nameChanged=!!(pmCtx&&oldName&&oldName!==name);
+  const newName=personData.name;
+  const nameChanged=!!(pmCtx&&oldName&&oldName!==newName);
 
   // 1. Persist people (must succeed before cascade)
   if(sb&&pmCtx){
-    const row={name,email,type,role1:roles[0]||'',role2:roles[1]||'',role3:roles[2]||'',role4:roles[3]||'',role5:roles[4]||'',role6:roles[5]||'',pin:personData.pin,active};
+    const row={first_name,last_name,email,type,role1:roles[0]||'',role2:roles[1]||'',role3:roles[2]||'',role4:roles[3]||'',role5:roles[4]||'',role6:roles[5]||'',pin:personData.pin,active};
     const {error}=await sb.from('people').update(row).eq('id',pmCtx);
     if(error){alert('Erreur sauvegarde : '+error.message);return;}
   } else {
@@ -3564,32 +3584,30 @@ async function savePerson(){
 
   // 2. Cascade name change to availabilities + assignments
   if(nameChanged&&sb){
-    const {error:e1}=await sb.from('availabilities').update({person_name:name}).eq('person_name',oldName);
+    const {error:e1}=await sb.from('availabilities').update({person_name:newName}).eq('person_name',oldName);
     if(e1){alert('Erreur cascade availabilities : '+e1.message);return;}
-    const {error:e2}=await sb.from('assignments').update({person_name:name}).eq('person_name',oldName);
+    const {error:e2}=await sb.from('assignments').update({person_name:newName}).eq('person_name',oldName);
     if(e2){alert('Erreur cascade assignments : '+e2.message);return;}
 
-    // Mettre à jour avail[] local
     Object.keys(avail).forEach(wk=>{
-      if(avail[wk]&&oldName in avail[wk]){avail[wk][name]=avail[wk][oldName];delete avail[wk][oldName];}
+      if(avail[wk]&&oldName in avail[wk]){avail[wk][newName]=avail[wk][oldName];delete avail[wk][oldName];}
     });
 
-    // Mettre à jour assigns[] local (tableaux de noms + clés __t__/__n__/__l__)
     Object.keys(assigns).forEach(wk=>{
       const d=assigns[wk];if(!d)return;
       const keys=Object.keys(d);
       keys.forEach(k=>{
         const v=d[k];
-        if(Array.isArray(v)){const i=v.indexOf(oldName);if(i!==-1)v[i]=name;return;}
+        if(Array.isArray(v)){const i=v.indexOf(oldName);if(i!==-1)v[i]=newName;return;}
         for(const sfx of['__t__','__n__','__l__']){
-          if(k.endsWith(sfx+oldName)){d[k.slice(0,-oldName.length)+name]=v;delete d[k];break;}
+          if(k.endsWith(sfx+oldName)){d[k.slice(0,-oldName.length)+newName]=v;delete d[k];break;}
         }
       });
     });
   }
 
   // 3. Mettre à jour directory local
-  if(existing){existing.name=name;existing.email=email;existing.type=type;existing.roles=roles;existing.pin=personData.pin;existing.active=active;}
+  if(existing){existing.first_name=first_name;existing.last_name=last_name;existing.name=newName;existing.email=email;existing.type=type;existing.roles=roles;existing.pin=personData.pin;existing.active=active;}
   else{directory.push(personData);}
 
   rebuildVcols();populateVolSelect();renderDir();
@@ -4111,7 +4129,8 @@ function buildPdfBlob(){
             if(ct){ timeStr=mStr(ct.s)+' – '+mStr(ct.e); }
             else if(isEmp(name)){ timeStr=mStr(shift.fromH*60)+' – '+mStr(shift.toH*60); }
             else if(rng){ timeStr=mStr(Math.max(rng.startMins,shift.fromH*60))+' – '+mStr(Math.min(rng.endMins,shift.toH*60)); }
-            return {name, timeStr, note:getAssignNote(wk,shift.id,role,name)||''};
+            const _ppdf=getPerson(name);
+            return {name:_ppdf?fullName(_ppdf):name, timeStr, note:getAssignNote(wk,shift.id,role,name)||''};
           });
         }
         rows.push({shift, role, isOpt, entries});
