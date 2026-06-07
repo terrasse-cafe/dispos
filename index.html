@@ -3056,8 +3056,9 @@ function renderHoraire(){
           if(emp){
             const es=empSchedule(assignedName,curDay);
             const rct=rawCt;
-            console.log('[chip emp]',assignedName,'shift:',shift.id,'fromH:',shift.fromH,'rct:',rct,'es:',empSchedule(assignedName,curDay));
-            tmS=(es&&es.s<shift.fromH*60&&rct&&rct.s===shift.fromH*60)?es.s:(rct?rct.s:sm);
+            const dayObj_=DAYS.find(d=>d.id===curDay);
+            const cafeOpenMins_=dayObj_?(dayObj_.oH*60+dayObj_.oM):660;
+            tmS=(es&&es.s<cafeOpenMins_&&rct&&rct.s===cafeOpenMins_)?es.s:(rct?rct.s:sm);
             tmE=rct?rct.e:(es?Math.min(es.e,shift.toH*60):em2);
           }
           tm.textContent=mStr(tmS)+'–'+mStr(tmE);inner.appendChild(tm);
@@ -3444,7 +3445,6 @@ function doAssign(wk,shift,role,name){
     if(es){
       const s=Math.max(es.s,shift.fromH*60);
       const e=Math.min(es.e,shift.toH*60);
-      console.log('[doAssign emp]',name,'shift:',shift.id,'fromH:',shift.fromH,'es.s:',es.s,'es.e:',es.e,'→ s:',s,'e:',e);
       setAssignTimes(wk,shift.id,role,s,e,name);
       saveAssignment(wk,shift.id,role,name,s,e,null,true);
     } else {
@@ -4302,7 +4302,9 @@ function buildPdfBlob(){
               let dispS=ct.s, dispE=ct.e;
               if(isEmp(name)){
                 const es=empSchedule(name,day.id);
-                dispS=(es&&es.s<shift.fromH*60&&ct.s===shift.fromH*60)?es.s:ct.s;
+                const dayObj__=DAYS.find(d=>(SHIFTS[d.id]||[]).some(s=>s.id===shift.id));
+                const cafeOpenMins__=dayObj__?(dayObj__.oH*60+dayObj__.oM):660;
+                dispS=(es&&es.s<cafeOpenMins__&&ct.s===cafeOpenMins__)?es.s:ct.s;
                 dispE=ct.e;
               }
               timeStr=mStr(dispS)+' – '+mStr(dispE);
