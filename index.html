@@ -3108,8 +3108,8 @@ function renderHoraire(){
             const es=empSchedule(assignedName,curDay);
             const rct=rawCt;
             const dayObj_=DAYS.find(d=>d.id===curDay);
-            const cafeOpenMins_=dayObj_?(dayObj_.oH*60+dayObj_.oM):660;
-            tmS=(es&&es.s<cafeOpenMins_&&rct&&rct.s===cafeOpenMins_)?es.s:(rct?rct.s:sm);
+            const gridStartMins_=dayObj_?((day.gridH!==undefined?day.gridH:dayObj_.oH)*60+dayObj_.oM):600;
+            tmS=(es&&es.s<gridStartMins_&&rct&&rct.s===gridStartMins_)?es.s:(rct?rct.s:sm);
             tmE=rct?rct.e:(es?Math.min(es.e,shift.toH*60):em2);
           }
           tm.textContent=mStr(tmS)+'–'+mStr(tmE);inner.appendChild(tm);
@@ -4394,8 +4394,8 @@ function buildPdfBlob(){
               if(isEmp(name)){
                 const es=empSchedule(name,day.id);
                 const dayObj__=DAYS.find(d=>(SHIFTS[d.id]||[]).some(s=>s.id===shift.id));
-                const cafeOpenMins__=dayObj__?(dayObj__.oH*60+dayObj__.oM):660;
-                dispS=(es&&es.s<cafeOpenMins__&&ct.s===cafeOpenMins__)?es.s:ct.s;
+                const gridStartMins__=dayObj__?((dayObj__.gridH!==undefined?dayObj__.gridH:dayObj__.oH)*60+dayObj__.oM):600;
+                dispS=(es&&es.s<gridStartMins__&&ct.s===gridStartMins__)?es.s:ct.s;
                 dispE=ct.e;
               }
               timeStr=mStr(dispS)+' – '+mStr(dispE);
