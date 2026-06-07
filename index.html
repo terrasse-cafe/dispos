@@ -257,7 +257,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .vol-cards{padding:4px;display:flex;flex-direction:column;gap:3px;overflow-y:auto;flex:1;min-height:0}
 .emp-section{border-top:1px solid var(--border);flex-shrink:0}
 .emp-sec-lbl{padding:5px 10px 3px;font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;background:var(--bg)}
-.emp-cards{padding:4px;display:flex;flex-direction:column;gap:3px;max-height:160px;overflow-y:auto}
+.emp-cards{padding:4px;display:flex;flex-direction:column;gap:3px;}
 .vol-card{border-radius:var(--radius-sm);padding:5px 8px;cursor:grab;border:1.5px solid var(--border);user-select:none;transition:transform .1s,box-shadow .1s,opacity .15s}
 .vol-card:hover{transform:translateY(-1px);box-shadow:var(--shadow-md)}
 .vol-card:active{cursor:grabbing;transform:scale(.97)}
@@ -2975,9 +2975,11 @@ function renderHoraire(){
         const dzOrigin=earlyStart;
         const dzEnd=lateEnd;
 
+        const dzVisualLeft=Math.max(earlyStart,dSH);
+        const dzVisualRight=Math.min(lateEnd,dEH);
         if(earlyStart<dzFromH||lateEnd>dzToH){
-          dz.style.left=toPx(earlyStart)+'px';
-          dz.style.width=(toPx(lateEnd)-toPx(earlyStart))+'px';
+          dz.style.left=toPx(dzVisualLeft)+'px';
+          dz.style.width=(toPx(dzVisualRight)-toPx(dzVisualLeft))+'px';
         }
 
         const totalH=chipData.reduce((s,cd)=>s+cd.chipH,0)+Math.max(0,chipData.length-1)*2;
@@ -3011,11 +3013,13 @@ function renderHoraire(){
           const chipBorderColor=isOverQuota?'#DC2626':'#CEC9C4';
           const chipBorderWidth=isOverQuota?'2px':'1.5px';
 
-          const shiftDur=dzEnd-dzOrigin;
-          const leftPct=((aSH-dzOrigin)/shiftDur*100).toFixed(3);
-          const wPct=((aEH-aSH)/shiftDur*100).toFixed(3);
-          const hGapL=(aSH<=dzOrigin+0.001)?3:0;
-          const hGapR=(aEH>=dzEnd-0.001)?3:0;
+          const shiftDur=dzVisualRight-dzVisualLeft;
+          const clippedSH=Math.max(aSH,dzVisualLeft);
+          const clippedEH=Math.min(aEH,dzVisualRight);
+          const leftPct=((clippedSH-dzVisualLeft)/shiftDur*100).toFixed(3);
+          const wPct=((clippedEH-clippedSH)/shiftDur*100).toFixed(3);
+          const hGapL=(clippedSH<=dzVisualLeft+0.001)?3:0;
+          const hGapR=(clippedEH>=dzVisualRight-0.001)?3:0;
           const chipLeft=hGapL?`calc(${leftPct}% + ${hGapL}px)`:`${leftPct}%`;
           const chipWidth=(hGapL+hGapR)?`calc(${wPct}% - ${hGapL+hGapR}px)`:`${wPct}%`;
 
@@ -3303,7 +3307,26 @@ function buildCards(wk,shifts){
     const t=document.createElement('div');t.className='vc-time';
     if(emp){
       const es=empSchedule(name,curDay);
-      t.textContent=es?mStr(es.s)+' – '+mStr(es.e):'Plein shift';
+      if(es){
+        const assigned=[];
+        (SHIFTS[curDay]||[]).forEach(sh=>{
+          [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(r=>{
+            if(!getAssigns(wk,sh.id,r).includes(name))return;
+            const ct=getAssignTimes(wk,sh.id,r,name);
+            if(ct)assigned.push({s:ct.s,e:ct.e});
+            else assigned.push({s:Math.max(es.s,sh.fromH*60),e:Math.min(es.e,sh.toH*60)});
+          });
+        });
+        assigned.sort((a,b)=>a.s-b.s);
+        const free=[];let cur=es.s;
+        assigned.forEach(({s,e})=>{if(s>cur)free.push({s:cur,e:s});cur=Math.max(cur,e);});
+        if(cur<es.e)free.push({s:cur,e:es.e});
+        if(!free.length)return null;
+        freeIvs=free;
+        t.innerHTML=free.map(f=>mStr(f.s)+' – '+mStr(f.e)).join(' &amp; ');
+      } else {
+        t.textContent='Plein shift';
+      }
     }
     else{
       const r=volDayRange(wk,name);
@@ -3404,8 +3427,10 @@ function doAssign(wk,shift,role,name){
     addAssign(wk,shift.id,role,name);
     setAssignLocked(wk,shift.id,role,true,name);
     if(es){
-      setAssignTimes(wk,shift.id,role,es.s,es.e,name);
-      saveAssignment(wk,shift.id,role,name,es.s,es.e,null,true);
+      const s=Math.max(es.s,shift.fromH*60);
+      const e=Math.min(es.e,shift.toH*60);
+      setAssignTimes(wk,shift.id,role,s,e,name);
+      saveAssignment(wk,shift.id,role,name,s,e,null,true);
     } else {
       saveAssignment(wk,shift.id,role,name,null,null,null,true);
     }
