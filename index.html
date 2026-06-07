@@ -70,6 +70,8 @@ main{flex:1;padding:1rem 1.25rem;width:100%;overflow-x:clip}
 .stat-wrap{position:relative;display:inline-flex;align-items:center}
 .stat-tooltip{position:absolute;top:calc(100% + 8px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);padding:12px 16px;font-size:13px;color:var(--text-2);white-space:nowrap;min-width:220px;pointer-events:none;opacity:0;transition:opacity .15s;z-index:200;line-height:1.8}
 .stat-tooltip strong{display:block;font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.stat-tooltip-divider{height:1px;background:var(--border);margin:8px 0}
+.stat-tooltip-sub{display:block;font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;margin-top:2px}
 .stat-wrap.has-info:hover .stat-tooltip{opacity:1}
 .stat-wrap.has-info .o-stat-text{text-decoration:underline dotted;text-underline-offset:3px;cursor:default}
 
@@ -593,7 +595,7 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
       </div>
       <div class="stat-wrap">
         <span class="o-stat-text" id="o-stat">—</span>
-        <div class="stat-tooltip" id="o-stat-tooltip"><strong id="o-stat-tooltip-label">En attente de la réponse de :</strong><span id="o-stat-missing"></span></div>
+        <div class="stat-tooltip" id="o-stat-tooltip"><span id="o-stat-responded"></span><div class="stat-tooltip-divider" id="o-stat-divider" style="display:none"></div><span class="stat-tooltip-sub" id="o-stat-indispo-label" style="display:none">Indisponibles</span><span id="o-stat-indispo"></span></div>
       </div>
       <div style="flex:1"></div>
       <span id="o-sync-badge" class="sync-badge offline" style="display:none"></span>
@@ -2518,19 +2520,36 @@ function renderO(){
     statEl.textContent=nbResp+'/'+total+' bénévoles ont répondu';
     statEl.className='o-stat-text'+(nbResp===total?' all-responded':'');
   }
-  // Tooltip : si < moitié ont répondu → montrer qui a répondu
-  //            si >= moitié ont répondu → montrer qui n'a pas répondu
-  const statWrap=document.querySelector('.stat-wrap');
-  const missingEl=document.getElementById('o-stat-missing');
-  const labelEl=document.getElementById('o-stat-tooltip-label');
-  const showResponded=nbResp>0&&nbResp<total/2;
-  const listNames=showResponded
-    ?allVols.filter(p=>responded.has(p.name)).map(p=>fullName(p))
-    :allVols.filter(p=>!responded.has(p.name)).map(p=>fullName(p));
-  const hasInfo=listNames.length>0&&nbResp<total;
-  if(statWrap)statWrap.classList.toggle('has-info',hasInfo);
-  if(labelEl)labelEl.textContent=showResponded?'A répondu :':'En attente de la réponse de :';
-  if(missingEl){missingEl.textContent=listNames.join('\n');missingEl.style.whiteSpace='pre';}
+  // Tooltip : liste des répondants avec dispos, puis section Indisponibles
+  const statWrap = document.querySelector('.stat-wrap');
+  // Bénévoles ayant répondu avec au moins 1 dispo
+  const withDispos = allVols.filter(p => {
+    if (!responded.has(p.name)) return false;
+    const slots = (wkData[p.name] || {}).slots || {};
+    return Object.keys(slots).length > 0;
+  });
+  // Bénévoles ayant répondu mais 0 dispo
+  const indispos = allVols.filter(p => {
+    if (!responded.has(p.name)) return false;
+    const slots = (wkData[p.name] || {}).slots || {};
+    return Object.keys(slots).length === 0;
+  });
+  const hasInfo = nbResp > 0;
+  if (statWrap) statWrap.classList.toggle('has-info', hasInfo);
+  const respondedEl = document.getElementById('o-stat-responded');
+  const dividerEl = document.getElementById('o-stat-divider');
+  const indispoLabelEl = document.getElementById('o-stat-indispo-label');
+  const indispoEl = document.getElementById('o-stat-indispo');
+  if (respondedEl) {
+    respondedEl.style.whiteSpace = 'pre';
+    respondedEl.textContent = withDispos.map(p => fullName(p)).join('\n');
+  }
+  if (dividerEl) dividerEl.style.display = indispos.length > 0 ? 'block' : 'none';
+  if (indispoLabelEl) indispoLabelEl.style.display = indispos.length > 0 ? 'block' : 'none';
+  if (indispoEl) {
+    indispoEl.style.whiteSpace = 'pre';
+    indispoEl.textContent = indispos.map(p => fullName(p)).join('\n');
+  }
   buildDayTabs();renderHoraire();
 }
 
