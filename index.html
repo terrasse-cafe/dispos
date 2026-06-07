@@ -4066,15 +4066,15 @@ async function openAutoAssign(){
   emps.forEach(emp=>{
     const empName=emp.name;
     // Initialiser coveredIvs avec les assignations locked existantes
-    const coveredIvs=[];
+    const coveredIvs={}; // par jour : {dayId: [{s,e}]}
     rolesQueue.forEach(({sh,role,dayId})=>{
       if(!getAssigns(wk,sh.id,role).includes(empName))return;
       const ct=getAssignTimes(wk,sh.id,role,empName);
       const es=empSchedule(empName,dayId);
-      // Utiliser les vraies heures sauvegardées
-      const s=ct?ct.s/60:(es?es.s/60:sh.fromH);
-      const e=ct?ct.e/60:(es?Math.min(es.e/60,sh.toH):sh.toH);
-      coveredIvs.push({s,e});
+      const s=ct?ct.s:(es?Math.max(es.s,sh.fromH*60):sh.fromH*60);
+      const e=ct?ct.e:(es?Math.min(es.e,sh.toH*60):sh.toH*60);
+      if(!coveredIvs[dayId])coveredIvs[dayId]=[];
+      coveredIvs[dayId].push({s,e});
       markAssigned(empName,dayId,sh.id);
     });
 
@@ -4089,14 +4089,16 @@ async function openAutoAssign(){
       const assignE=Math.min(es.e/60,sh.toH);
       const shiftSm=sh.fromH*60;
       const shiftEm=sh.toH*60;
-      const hasOverlap=coveredIvs.some(iv=>iv.s<shiftEm&&iv.e>shiftSm);
-      if(hasOverlap){console.log('[emp-auto] SKIP',empName,sh.id,role,'→ overlap avec',coveredIvs);return;}
+      const dayIvs=coveredIvs[dayId]||[];
+      const hasOverlap=dayIvs.some(iv=>iv.s<shiftEm&&iv.e>shiftSm);
+      if(hasOverlap){console.log('[emp-auto] SKIP',empName,sh.id,role,'→ overlap avec',dayIvs);return;}
       console.log('[emp-auto] ASSIGN',empName,sh.id,role,'→',assignS,'h à',assignE,'h');
       const sMins=Math.round(assignS*60);
       const eMins=Math.round(assignE*60);
       addAssign(wk,sh.id,role,empName);
       setAssignTimes(wk,sh.id,role,sMins,eMins,empName);
-      coveredIvs.push({s:shiftSm,e:shiftEm});
+      if(!coveredIvs[dayId])coveredIvs[dayId]=[];
+      coveredIvs[dayId].push({s:shiftSm,e:shiftEm});
       toSave.push({wk,shiftId:sh.id,role,name:empName,
         startMins:sMins,endMins:eMins,note:null,locked:false});
       markAssigned(empName,dayId,sh.id);
