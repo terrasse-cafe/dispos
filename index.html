@@ -2133,7 +2133,8 @@ function toggleVolPrefTooltip(e){
 
 function fillVolRoleSelects(vals){
   const ids=['vp-r1','vp-r2','vp-r3','vp-r4','vp-r5','vp-r6'];
-  const uniqueRoles=[...new Set(ALL_ROLES.map(roleDisplayLabel))];
+  const PREF_EXCLUDED=['Mise en place'];
+  const uniqueRoles=[...new Set(ALL_ROLES.map(roleDisplayLabel))].filter(r=>!PREF_EXCLUDED.includes(r));
   ids.forEach((id,i)=>{
     const sel=document.getElementById(id);
     const myVal=vals?vals[i]||'':'';
