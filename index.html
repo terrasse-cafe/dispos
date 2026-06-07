@@ -3568,7 +3568,7 @@ function openTP(e,name,sid,role,shift,wk){
   if(emp){
     const empDayId = Object.keys(SHIFTS).find(d=>(SHIFTS[d]||[]).some(s=>s.id===sid)) || curDay;
     const es = empSchedule(name, empDayId);
-    fromMin = es ? es.s : day.oH*60+day.oM;
+    fromMin = es ? Math.max(es.s, shift.fromH*60) : shift.fromH*60;
     fromMax = es ? es.e - 30 : null;
     toMax   = es ? Math.min(es.e, shift.toH*60) : shift.toH*60;
   } else {
