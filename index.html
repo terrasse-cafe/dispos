@@ -209,7 +209,6 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .h-role-row:last-child{border-bottom:none}
 .h-role-row.row-hover .h-role-name{font-weight:700;color:var(--text)}
 .h-role-name{flex:1;padding:0 8px;display:flex;align-items:center;font-size:11px;color:var(--text-2);line-height:1.3;transition:font-weight .1s,color .1s;overflow:hidden}
-.h-role-name.opt{color:var(--text-3);font-style:italic}
 .h-role-name-wrap{position:relative;display:flex;align-items:center;justify-content:space-between;padding-right:4px;width:var(--role-col);min-width:var(--role-col);flex-shrink:0;border-right:1px solid var(--border);background:var(--surface)}
 .btn-role-edit{display:none;background:none;border:none;padding:3px;border-radius:4px;cursor:pointer;color:var(--text-3);flex-shrink:0}
 .btn-role-edit:hover{color:var(--text);background:var(--border)}
@@ -2867,7 +2866,9 @@ function renderHoraire(){
     ss.textContent=mStr(shift.fromH*60)+' – '+mStr(shift.toH*60);
     sb2.appendChild(ss);sr.appendChild(sl);sr.appendChild(sb2);grid.appendChild(sr);
 
-    const allRoles=[...(shift._slots||shift.roles),...(shift._optSlots||[])];
+    const allRoles=[...(shift._slots||shift.roles),...(shift._optSlots||[])].slice().sort((a,b)=>
+      roleFillPriority(roleDisplayLabel(a))-roleFillPriority(roleDisplayLabel(b))
+    );
     allRoles.forEach(role=>{
       const isOpt=(shift._optSlots||shift.optional||[]).includes(role);
       if(!isOpt)totalReq++;
@@ -2877,8 +2878,8 @@ function renderHoraire(){
       row.addEventListener('dragenter',()=>{if(draggingVol&&volCoversShift(wk,draggingVol,shift))row.classList.add('row-hover');});
       row.addEventListener('dragleave',e=>{if(!row.contains(e.relatedTarget))row.classList.remove('row-hover');});
       row.addEventListener('drop',()=>row.classList.remove('row-hover'));
-      const nc=document.createElement('div');nc.className='h-role-name'+(isOpt?' opt':'');
-      nc.textContent=roleDisplayLabel(role)+(isOpt?' ★':'');
+      const nc=document.createElement('div');nc.className='h-role-name';
+      nc.textContent=roleDisplayLabel(role);
       const ncWrap=document.createElement('div');ncWrap.className='h-role-name-wrap';
       ncWrap.appendChild(nc);
       if(!isPastDay()){
@@ -3480,7 +3481,7 @@ function renderDir(){
 
 function fillRoleSelects(vals){
   const ids=['pm-r1','pm-r2','pm-r3','pm-r4','pm-r5','pm-r6'];
-  const uniqueRoles=[...new Set(ALL_ROLES.map(roleDisplayLabel))];
+  const uniqueRoles=[...new Set(ALL_ROLES.map(roleDisplayLabel))].sort((a,b)=>a.localeCompare(b,'fr'));
   ids.forEach((id,i)=>{
     const sel=document.getElementById(id);
     const myVal=vals?vals[i]||'':'';
