@@ -3055,8 +3055,9 @@ function renderHoraire(){
           let tmS=sm, tmE=em2;
           if(emp){
             const es=empSchedule(assignedName,curDay);
-            tmS=(es&&es.s<shift.fromH*60)?es.s:(rawCt?rawCt.s:sm);
-            tmE=rawCt?rawCt.e:(es?Math.min(es.e,shift.toH*60):em2);
+            const rct=rawCt;
+            tmS=(es&&es.s<shift.fromH*60&&rct&&rct.s===shift.fromH*60)?es.s:(rct?rct.s:sm);
+            tmE=rct?rct.e:(es?Math.min(es.e,shift.toH*60):em2);
           }
           tm.textContent=mStr(tmS)+'–'+mStr(tmE);inner.appendChild(tm);
           const spacer=document.createElement('span');spacer.className='chip-spacer';inner.appendChild(spacer);
@@ -4298,7 +4299,7 @@ function buildPdfBlob(){
               let dispS=ct.s, dispE=ct.e;
               if(isEmp(name)){
                 const es=empSchedule(name,day.id);
-                dispS=(es&&es.s<shift.fromH*60)?es.s:ct.s;
+                dispS=(es&&es.s<shift.fromH*60&&ct.s===shift.fromH*60)?es.s:ct.s;
                 dispE=ct.e;
               }
               timeStr=mStr(dispS)+' – '+mStr(dispE);
