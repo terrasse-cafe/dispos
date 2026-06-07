@@ -1872,7 +1872,6 @@ function switchOrg(id,btn){
 ══════════════════════════════════════════════ */
 function saveBVolWeek(name){
   if(!name)return;
-  try{localStorage.setItem('cafe_week_'+name,wkey(bMon));}catch{}
 }
 function restoreBVolWeek(name){
   try{
@@ -2020,7 +2019,7 @@ async function onVolSelect(){
 
 async function _afterVolPinSuccess(name, p) {
   saveRecentProfile(name);
-  bMon=restoreBVolWeek(name)||getSmartBMon();
+  bMon=getSmartBMon();
   document.getElementById('b-empty-state').style.display='none';
   document.getElementById('b-name-section').style.display='block';
   const _pgr=getPerson(name);
