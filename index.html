@@ -2245,10 +2245,14 @@ async function bShift(d){
 
 function buildTimeSelect(day, type, savedVal, minMins=null, maxMins=null){
   const sel = document.createElement('select');
+  // Bornes de base : heure d'ouverture/fermeture du café
   let startM = day.oH*60+day.oM, endM = day.cH*60+day.cM;
-  if(type==='to') startM += 30; else endM -= 30;
-  if(minMins !== null) startM = Math.max(startM, type==='from' ? minMins : minMins+30);
-  if(maxMins !== null) endM = Math.min(endM, maxMins);
+  // Appliquer les bornes personnalisées AVANT le décalage +/-30
+  // pour que minMins/maxMins soient respectés même hors des heures du café
+  if(minMins !== null) startM = type==='from' ? minMins : Math.max(startM+30, minMins+30);
+  else if(type==='to') startM += 30;
+  if(maxMins !== null) endM = maxMins;
+  else if(type==='from') endM -= 30;
   let m = startM;
   while(m <= endM){
     const o = document.createElement('option');
