@@ -3894,7 +3894,11 @@ function overlapFor(wk,name,shift,dayId){
   if(e<=s)return null;return{s,e};
 }
 function volCoversShiftFor(wk,name,shift,dayId){
-  if(isEmp(name))return true;
+  if(isEmp(name)){
+    const es=empSchedule(name,dayId);
+    if(!es)return false;
+    return es.s<shift.toH*60&&es.e>shift.fromH*60;
+  }
   const r=volDayRangeFor(wk,name,dayId);
   return r&&r.startMins<shift.toH*60&&r.endMins>shift.fromH*60;
 }
@@ -4047,6 +4051,39 @@ async function openAutoAssign(){
   );
 
   const toSave=[];
+
+  // ── Employés en premier ──
+  const emps=directory.filter(p=>p.type==='emp'&&p.active!==false);
+  emps.forEach(emp=>{
+    const empName=emp.name;
+    const coveredIvs=[];
+    rolesQueue.forEach(({sh,role,dayId})=>{
+      if(getAssigns(wk,sh.id,role).includes(empName)){
+        const ct=getAssignTimes(wk,sh.id,role,empName);
+        const es=empSchedule(empName,dayId);
+        const s=ct?ct.s/60:(es?Math.max(es.s/60,sh.fromH):sh.fromH);
+        const e=ct?ct.e/60:(es?Math.min(es.e/60,sh.toH):sh.toH);
+        coveredIvs.push({s,e});
+      }
+    });
+    rolesQueue.forEach(({sh,role,dayId})=>{
+      if(!volCoversShiftFor(wk,empName,sh,dayId))return;
+      if(prefScore(empName,role)===0)return;
+      if(getAssigns(wk,sh.id,role).includes(empName))return;
+      const es=empSchedule(empName,dayId);
+      const assignS=es?Math.max(es.s/60,sh.fromH):sh.fromH;
+      const assignE=es?Math.min(es.e/60,sh.toH):sh.toH;
+      const hasOverlap=coveredIvs.some(iv=>iv.s<assignE&&iv.e>assignS);
+      if(hasOverlap)return;
+      const sMins=Math.round(assignS*60);
+      const eMins=Math.round(assignE*60);
+      addAssign(wk,sh.id,role,empName);
+      setAssignTimes(wk,sh.id,role,sMins,eMins,empName);
+      coveredIvs.push({s:assignS,e:assignE});
+      toSave.push({wk,shiftId:sh.id,role,name:empName,
+        startMins:sMins,endMins:eMins,note:null,locked:false});
+    });
+  });
 
   // Pass 1 — pour chaque bénévole, identifier son meilleur rôle disponible sur chaque shift
   // et le réserver pour éviter qu'il soit gaspillé sur un rôle de moindre préférence.
