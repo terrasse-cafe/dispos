@@ -3436,7 +3436,8 @@ function buildCards(wk,shifts){
 /* ── doAssign — avec persistance, multi-bénévoles ── */
 function doAssign(wk,shift,role,name){
   if(isEmp(name)){
-    const es=empSchedule(name,curDay);
+    const empDayId=Object.keys(SHIFTS).find(d=>(SHIFTS[d]||[]).some(s=>s.id===shift.id))||curDay;
+    const es=empSchedule(name,empDayId);
     addAssign(wk,shift.id,role,name);
     setAssignLocked(wk,shift.id,role,true,name);
     if(es){
