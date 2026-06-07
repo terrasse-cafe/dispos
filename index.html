@@ -3325,9 +3325,12 @@ function buildCards(wk,shifts){
         const free=[];let cur=es.s;
         assigned.forEach(({s,e})=>{if(s>cur)free.push({s:cur,e:s});cur=Math.max(cur,e);});
         if(cur<es.e)free.push({s:cur,e:es.e});
-        if(!free.length)return null;
-        freeIvs=free;
-        t.innerHTML=free.map(f=>mStr(f.s)+' – '+mStr(f.e)).join(' &amp; ');
+        const dayObj=DAYS.find(d=>d.id===curDay);
+        const openMins=dayObj?(dayObj.oH*60+dayObj.oM):0;
+        const visibleFree=free.map(f=>({s:Math.max(f.s,openMins),e:f.e})).filter(f=>f.e>f.s);
+        if(!visibleFree.length)return null;
+        freeIvs=visibleFree;
+        t.innerHTML=visibleFree.map(f=>mStr(f.s)+' – '+mStr(f.e)).join(' &amp; ');
       } else {
         t.textContent='Plein shift';
       }
@@ -4225,7 +4228,12 @@ function buildPdfBlob(){
             const rng = isEmp(name)?null:volDayRange(wk,name); curDay=savedDay;
             let timeStr='';
             if(ct){ timeStr=mStr(ct.s)+' – '+mStr(ct.e); }
-            else if(isEmp(name)){ timeStr=mStr(shift.fromH*60)+' – '+mStr(shift.toH*60); }
+            else if(isEmp(name)){
+              const es=empSchedule(name,day.id);
+              const dispS=es?es.s:shift.fromH*60;
+              const dispE=es?Math.min(es.e,shift.toH*60):shift.toH*60;
+              timeStr=mStr(dispS)+' – '+mStr(dispE);
+            }
             else if(rng){ timeStr=mStr(Math.max(rng.startMins,shift.fromH*60))+' – '+mStr(Math.min(rng.endMins,shift.toH*60)); }
             const _ppdf=getPerson(name);
             return {name:_ppdf?fullName(_ppdf):name, timeStr, note:getAssignNote(wk,shift.id,role,name)||''};
