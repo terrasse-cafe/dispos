@@ -2950,8 +2950,11 @@ function renderHoraire(){
           const rng=emp?null:volDayRange(wk,assignedName);
           const empSched=emp?empSchedule(assignedName,curDay):null;
           let aSH,aEH;
-          if(ct){aSH=ct.s/60;aEH=ct.e/60;}
-          else if(empSched){aSH=empSched.s/60;aEH=empSched.e/60;}
+          if(ct){
+            aSH=Math.max(ct.s/60,dzFromH);
+            aEH=Math.min(ct.e/60,dzToH);
+          }
+          else if(empSched){aSH=Math.max(empSched.s/60,dzFromH);aEH=Math.min(empSched.e/60,dzToH);}
           else if(emp){aSH=dzFromH;aEH=dzToH;}
           else if(rng){aSH=rng.startMins/60;aEH=rng.endMins/60;}
           else{aSH=dzFromH;aEH=dzToH;}
@@ -3047,9 +3050,10 @@ function renderHoraire(){
           }
           const nm=document.createElement('span');nm.className='chip-name';const _pch=getPerson(assignedName);nm.textContent=_pch?fullName(_pch):assignedName;inner.appendChild(nm);
           const tm=document.createElement('span');tm.className='chip-time';
-          // Pour les employés, afficher les vraies heures (empSchedule) même si le chip est clippé visuellement
-          const tmS=emp?(empSchedule(assignedName,curDay)?.s??sm):sm;
-          const tmE=emp?(empSchedule(assignedName,curDay)?.e??em2):em2;
+          // Pour les employés, afficher les vraies heures sauvegardées (ct avant clip)
+          const rawCt=getAssignTimes(wk,shift.id,role,assignedName);
+          const tmS=emp?(rawCt?rawCt.s:(empSchedule(assignedName,curDay)?.s??sm)):sm;
+          const tmE=emp?(rawCt?Math.min(rawCt.e,shift.toH*60):(empSchedule(assignedName,curDay)?.e??em2)):em2;
           tm.textContent=mStr(tmS)+'–'+mStr(tmE);inner.appendChild(tm);
           const spacer=document.createElement('span');spacer.className='chip-spacer';inner.appendChild(spacer);
           if(emp){
@@ -3434,10 +3438,8 @@ function doAssign(wk,shift,role,name){
     addAssign(wk,shift.id,role,name);
     setAssignLocked(wk,shift.id,role,true,name);
     if(es){
-      const s=Math.max(es.s,shift.fromH*60);
-      const e=Math.min(es.e,shift.toH*60);
-      setAssignTimes(wk,shift.id,role,s,e,name);
-      saveAssignment(wk,shift.id,role,name,s,e,null,true);
+      setAssignTimes(wk,shift.id,role,es.s,es.e,name);
+      saveAssignment(wk,shift.id,role,name,es.s,es.e,null,true);
     } else {
       saveAssignment(wk,shift.id,role,name,null,null,null,true);
     }
@@ -4264,7 +4266,11 @@ function buildPdfBlob(){
             const savedDay=curDay; curDay=day.id;
             const rng = isEmp(name)?null:volDayRange(wk,name); curDay=savedDay;
             let timeStr='';
-            if(ct){ timeStr=mStr(ct.s)+' – '+mStr(ct.e); }
+            if(ct){
+              const dispS=ct.s;
+              const dispE=isEmp(name)?Math.min(ct.e,shift.toH*60):ct.e;
+              timeStr=mStr(dispS)+' – '+mStr(dispE);
+            }
             else if(isEmp(name)){
               const es=empSchedule(name,day.id);
               const dispS=es?es.s:shift.fromH*60;
