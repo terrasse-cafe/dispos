@@ -2100,8 +2100,7 @@ function toggleVolPrefTooltip(e){
 
 function fillVolRoleSelects(vals){
   const ids=['vp-r1','vp-r2','vp-r3','vp-r4','vp-r5','vp-r6'];
-  const PREF_EXCLUDED=['Caissier bar'];
-  const uniqueRoles=[...new Set(ALL_ROLES.map(roleDisplayLabel))].filter(r=>!PREF_EXCLUDED.includes(r));
+  const uniqueRoles=[...new Set(ALL_ROLES.map(roleDisplayLabel))];
   ids.forEach((id,i)=>{
     const sel=document.getElementById(id);
     const myVal=vals?vals[i]||'':'';
@@ -3923,10 +3922,7 @@ async function openAutoAssign(){
   function prefScore(name,role){
     const p=getPerson(name);if(!p||!p.roles)return 0;
     const dr=roleDisplayLabel(role);
-    // Caissier bar compte comme Caissier pour les préférences bénévoles
-    const lookupLabels=[dr];
-    if(dr==='Caissier bar')lookupLabels.push('Caissier');
-    const idx=p.roles.findIndex(r=>r&&lookupLabels.some(lbl=>r===lbl||roleDisplayLabel(r)===lbl));
+    const idx=p.roles.findIndex(r=>r&&(r===role||r===dr||roleDisplayLabel(r)===dr));
     if(idx===0)return 6;if(idx===1)return 5;if(idx===2)return 4;if(idx===3)return 3;if(idx===4)return 2;if(idx===5)return 1;return 0;
   }
   function versatility(name){const p=getPerson(name);return p?p.roles.filter(Boolean).length:0;}
