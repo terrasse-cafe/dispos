@@ -249,7 +249,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .chip-x{cursor:pointer;opacity:.3;transition:opacity .1s;position:absolute;right:0;top:0;bottom:0;width:28px;display:flex;align-items:center;justify-content:center}
 .chip-x:hover{opacity:1}
 .chip-note{font-size:10px;font-style:italic;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;margin-top:1px;padding-right:28px}
-.emp-badge{font-size:9px;font-weight:700;letter-spacing:.05em;padding:1px 4px;border-radius:3px;flex-shrink:0;border:1px solid currentColor;opacity:.75}
+.emp-badge{font-size:9px;font-weight:700;letter-spacing:.05em;padding:2px 4px;border-radius:3px;flex-shrink:0;border:1px solid currentColor;opacity:.75;line-height:1.2;display:inline-block;vertical-align:middle}
 .vol-panel{border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);box-shadow:none;overflow:hidden;max-height:calc(100vh - 52px);display:flex;flex-direction:column;transition:outline .1s}
 .vol-cards{transition:outline .1s}
 .emp-cards{transition:outline .1s}
@@ -264,7 +264,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .vol-card.dragging{opacity:.3;transform:scale(.95)}
 .vol-card.emp-card{border-style:solid;border-width:2px}
 .vc-row1{display:flex;align-items:center;justify-content:space-between;gap:4px}
-.vc-name{font-size:11px;font-weight:600;line-height:1.3;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vc-name{font-size:11px;font-weight:600;line-height:1.3;flex:1;min-width:0;overflow:visible;text-overflow:ellipsis;white-space:nowrap}
 .vc-time{font-size:9px;font-family:var(--mono);line-height:1.3;margin-top:1px}
 .no-avail{font-size:11px;color:var(--text-3);font-style:italic;padding:8px 10px;text-align:center}
 .vc-quota{display:flex;align-items:center;gap:3px;flex-shrink:0}
@@ -3356,7 +3356,26 @@ function buildCards(wk,shifts){
     renderHoraire();
   });
   ep.innerHTML='';
-  function makeCard(name,col,emp){
+  function empFreeIvs(name){
+    const es=empSchedule(name,curDay);
+    if(!es)return null;
+    const assigned=[];
+    (SHIFTS[curDay]||[]).forEach(sh=>{
+      [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(r=>{
+        if(!getAssigns(wk,sh.id,r).includes(name))return;
+        const ct=getAssignTimes(wk,sh.id,r,name);
+        if(ct)assigned.push({s:ct.s,e:ct.e});
+        else assigned.push({s:Math.max(es.s,sh.fromH*60),e:Math.min(es.e,sh.toH*60)});
+      });
+    });
+    assigned.sort((a,b)=>a.s-b.s);
+    const free=[];let cur=es.s;
+    assigned.forEach(({s,e})=>{if(s>cur)free.push({s:cur,e:s});cur=Math.max(cur,e);});
+    if(cur<es.e)free.push({s:cur,e:es.e});
+    return free;
+  }
+
+  function makeCard(name,col,emp,singleIv=null){
     const remaining=emp?null:volRemainingMins(wk,name);
     if(!emp&&remaining===0)return null;
     const quota=emp?null:volQuota(wk,name);
@@ -3380,22 +3399,15 @@ function buildCards(wk,shifts){
     if(emp){
       const es=empSchedule(name,curDay);
       if(es){
-        const assigned=[];
-        (SHIFTS[curDay]||[]).forEach(sh=>{
-          [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(r=>{
-            if(!getAssigns(wk,sh.id,r).includes(name))return;
-            const ct=getAssignTimes(wk,sh.id,r,name);
-            if(ct)assigned.push({s:ct.s,e:ct.e});
-            else assigned.push({s:Math.max(es.s,sh.fromH*60),e:Math.min(es.e,sh.toH*60)});
-          });
-        });
-        assigned.sort((a,b)=>a.s-b.s);
-        const free=[];let cur=es.s;
-        assigned.forEach(({s,e})=>{if(s>cur)free.push({s:cur,e:s});cur=Math.max(cur,e);});
-        if(cur<es.e)free.push({s:cur,e:es.e});
-        if(!free.length)return null;
-        freeIvs=free;
-        t.innerHTML=free.map(f=>mStr(f.s)+' – '+mStr(f.e)).join(' &amp; ');
+        if(singleIv){
+          freeIvs=[singleIv];
+          t.textContent=mStr(singleIv.s)+' – '+mStr(singleIv.e);
+        } else {
+          const free=empFreeIvs(name);
+          if(!free.length)return null;
+          freeIvs=free;
+          t.innerHTML=free.map(f=>mStr(f.s)+' – '+mStr(f.e)).join(' &amp; ');
+        }
       } else {
         t.textContent='Plein shift';
       }
@@ -3483,10 +3495,12 @@ function buildCards(wk,shifts){
   if(!anyV)vp.innerHTML='<div class="no-avail" style="color:var(--green)">&#10003; Tous les bénévoles placés</div>';
   let anyE=false;
   directory.filter(p=>p.type==='emp').forEach(p=>{
-    const coverable=SHIFTS[curDay]?SHIFTS[curDay].filter(sh=>volCoversShift(wk,p.name,sh)):[];
-    const allPlaced=coverable.length&&coverable.every(sh=>[...(sh._slots||sh.roles),...(sh._optSlots||[])].some(r=>getAssigns(wk,sh.id,r).includes(p.name)));
-    if(allPlaced)return;
-    const card=makeCard(p.name,EMP_COL,true);if(card){anyE=true;ep.appendChild(card);}
+    const free=empFreeIvs(p.name);
+    if(!free||!free.length)return;
+    free.forEach(iv=>{
+      const card=makeCard(p.name,EMP_COL,true,iv);
+      if(card){anyE=true;ep.appendChild(card);}
+    });
   });
   if(!anyE)ep.innerHTML='<div class="no-avail" style="color:var(--green)">&#10003; Tous les employés placés</div>';
 }
