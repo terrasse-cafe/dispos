@@ -1194,6 +1194,35 @@ const VCOLS=[
   {bg:'#ECFDF5',fg:'#064E3B'},{bg:'#FDF4FF',fg:'#6B21A8'},
 ];
 const EMP_COL={bg:'#FFF7ED',fg:'#9A3412'};
+const EMP_SCHEDULES={
+  'jeudi':{
+    31: {s:14*60, e:21*60},
+    53: {s:14*60, e:21*60},
+    61: {s:14*60, e:21*60},
+  },
+  'vendredi':{
+    61: {s:10*60, e:18*60},
+    31: {s:12*60, e:20*60},
+    53: {s:13.5*60, e:21.5*60},
+  },
+  'samedi':{
+    53: {s:10*60, e:18*60},
+    61: {s:12*60, e:20*60},
+    31: {s:16*60, e:21.5*60},
+  },
+  'dimanche':{
+    53: {s:10*60, e:17*60},
+    61: {s:10*60, e:17*60},
+    31: {s:13*60, e:17*60},
+  },
+};
+function empSchedule(name, dayId){
+  const dayS=EMP_SCHEDULES[dayId];
+  if(!dayS)return null;
+  const p=getPerson(name);
+  if(!p||!p.id)return null;
+  return dayS[p.id]||null;
+}
 const GSH=11,GEH=22,TOTAL_SLOTS=(GEH-GSH)*2;
 
 /* ══════════════════════════════════════════════
@@ -2821,7 +2850,8 @@ function renderHoraire(){
   const availW=Math.max(scrollW-roleColW,numSlots*28);
   const dynCOL=Math.floor(availW/numSlots);
   const TW=dynCOL*numSlots;
-  function toPx(h){return Math.round((h-dSH)*2*dynCOL);}
+  let effectiveDSH=dSH;
+  function toPx(h){return Math.round((h-effectiveDSH)*2*dynCOL);}
   const wk_check=wkey(oMon);
   if(!closedDays[wk_check])closedDays[wk_check]=new Set();
   const isClosed=closedDays[wk_check].has(curDay);
@@ -2916,8 +2946,10 @@ function renderHoraire(){
           const col=emp?EMP_COL:(vcols[assignedName]||VCOLS[0]);
           const ct=getAssignTimes(wk,shift.id,role,assignedName);
           const rng=emp?null:volDayRange(wk,assignedName);
+          const empSched=emp?empSchedule(assignedName,curDay):null;
           let aSH,aEH;
           if(ct){aSH=ct.s/60;aEH=ct.e/60;}
+          else if(empSched){aSH=empSched.s/60;aEH=empSched.e/60;}
           else if(emp){aSH=dzFromH;aEH=dzToH;}
           else if(rng){aSH=rng.startMins/60;aEH=rng.endMins/60;}
           else{aSH=dzFromH;aEH=dzToH;}
@@ -2926,8 +2958,8 @@ function renderHoraire(){
           const assignedQuota=emp?null:volQuota(wk,assignedName);
           const assignedUsed=emp?0:volWeekShiftCount(wk,assignedName);
           const isOverQuota=!emp&&assignedQuota!==99&&assignedUsed>assignedQuota;
-          const sm=ct?ct.s:(rng?Math.max(rng.startMins,dzFromH*60):dzFromH*60);
-          const em2=ct?ct.e:(rng?Math.min(rng.endMins,dzToH*60):dzToH*60);
+          const sm=ct?ct.s:empSched?empSched.s:(rng?Math.max(rng.startMins,dzFromH*60):dzFromH*60);
+          const em2=ct?ct.e:empSched?empSched.e:(rng?Math.min(rng.endMins,dzToH*60):dzToH*60);
           return {assignedName,emp,col,aSH,aEH,noteVal,chipH,isOverQuota,sm,em2};
         });
 
@@ -2936,6 +2968,7 @@ function renderHoraire(){
 
         // Débordements : étendre la dz si des chips sortent des bornes du shift
         const earlyStart=Math.min(dzFromH,...chipData.map(cd=>cd.aSH));
+        if(earlyStart<effectiveDSH)effectiveDSH=Math.floor(earlyStart*2)/2;
         const lateEnd=Math.max(dzToH,...chipData.map(cd=>cd.aEH));
         const dzOrigin=earlyStart;
         const dzEnd=lateEnd;
@@ -3266,7 +3299,10 @@ function buildCards(wk,shifts){
     row1.appendChild(nm);
     let freeIvs=null;
     const t=document.createElement('div');t.className='vc-time';
-    if(emp){t.textContent='Plein shift';}
+    if(emp){
+      const es=empSchedule(name,curDay);
+      t.textContent=es?mStr(es.s)+' – '+mStr(es.e):'Plein shift';
+    }
     else{
       const r=volDayRange(wk,name);
       if(r){
@@ -3362,9 +3398,15 @@ function buildCards(wk,shifts){
 /* ── doAssign — avec persistance, multi-bénévoles ── */
 function doAssign(wk,shift,role,name){
   if(isEmp(name)){
+    const es=empSchedule(name,curDay);
     addAssign(wk,shift.id,role,name);
     setAssignLocked(wk,shift.id,role,true,name);
-    saveAssignment(wk,shift.id,role,name,null,null,null,true);
+    if(es){
+      setAssignTimes(wk,shift.id,role,es.s,es.e,name);
+      saveAssignment(wk,shift.id,role,name,es.s,es.e,null,true);
+    } else {
+      saveAssignment(wk,shift.id,role,name,null,null,null,true);
+    }
   } else {
     if(volAssignedToShift(wk,name,shift)){alert(name+' est déjà assigné(e) à ce shift.');return false;}
     const ov=overlapMins(wk,name,shift);
