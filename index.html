@@ -512,7 +512,7 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
         <div style="font-size:15px;font-weight:600;color:var(--text)" id="b-greeting"></div>
         <button id="b-prefs-btn" onclick="openVolPrefs()" style="border:none;background:none;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:500;color:var(--text-2);font-family:var(--font);padding:4px 8px;border-radius:var(--radius-sm);transition:color .15s;margin-left:auto" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text-2)'">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#clip0_560_818)"><path d="M2 2.66663L6.66667 2.66663M9.33333 2.66663L14 2.66663M2 7.99996L8 7.99996M10.6667 7.99996L14 7.99996M2 13.3333L5.33333 13.3333M8 13.3333L14 13.3333M6.66667 0.666626L6.66667 4.66663M10.6667 5.99996L10.6667 9.99996M5.33333 11.3333L5.33333 15.3333" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></g><defs><clipPath id="clip0_560_818"><rect width="16" height="16" fill="white" transform="translate(16) rotate(90)"/></clipPath></defs></svg>
-          Préférences
+          <span id="b-prefs-label">Préférences</span>
         </button>
       </div>
       <div style="margin-bottom:1.25rem">
@@ -706,12 +706,12 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
 <div class="overlay" id="vol-prefs-overlay" onclick="if(event.target===this)closeVolPrefs()">
   <div class="modal-box">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:1rem">
-      <div style="font-size:15px;font-weight:600;flex:1">Préférences</div>
+      <div id="vp-title" style="font-size:15px;font-weight:600;flex:1">Préférences</div>
       <button onclick="closeVolPrefs()" style="border:none;background:none;cursor:pointer;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;color:var(--text-3);padding:0" title="Fermer"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M9.79096 1.21967C10.0838 0.926977 10.5587 0.926902 10.8515 1.21967C11.1443 1.5125 11.1442 1.98731 10.8515 2.28022L7.09565 6.0351L10.8515 9.79096C11.1443 10.0839 11.1444 10.5587 10.8515 10.8515C10.5587 11.1444 10.0839 11.1443 9.79096 10.8515L6.0351 7.09565L2.28022 10.8515C1.98732 11.1444 1.51256 11.1444 1.21967 10.8515C0.926842 10.5586 0.926799 10.0838 1.21967 9.79096L4.97455 6.0351L1.21967 2.28022C0.926777 1.98732 0.926777 1.51256 1.21967 1.21967C1.51256 0.926777 1.98732 0.926777 2.28022 1.21967L6.0351 4.97455L9.79096 1.21967Z" fill="currentColor"/></svg></button>
     </div>
     <div class="field">
       <label style="display:flex;align-items:center;gap:6px">
-        Rôles préférés
+        <span id="vp-roles-label">Rôles préférés</span>
         <span id="vp-info-icon" style="display:inline-flex;cursor:pointer;color:var(--text-3);position:relative" onclick="toggleVolPrefTooltip(event)">
           <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 7.5v4M8 5.5v.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
           <span id="vp-info-tooltip" style="display:none;position:absolute;top:calc(100% + 6px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-md);padding:8px 10px;font-size:12px;color:var(--text-2);white-space:normal;width:220px;line-height:1.5;z-index:600;pointer-events:none">Classez vos rôles par ordre de préférence. Plus un rôle est haut dans la liste, plus on essaiera de vous y placer.</span>
@@ -727,8 +727,8 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
       </div>
     </div>
     <div class="modal-btns">
-      <button class="btn btn-outlined" onclick="closeVolPrefs()">Annuler</button>
-      <button class="btn btn-secondary" onclick="saveVolPrefs()">Enregistrer</button>
+      <button id="vp-cancel-btn" class="btn btn-outlined" onclick="closeVolPrefs()">Annuler</button>
+      <button id="vp-save-btn" class="btn btn-secondary" onclick="saveVolPrefs()">Enregistrer</button>
     </div>
   </div>
 </div>
@@ -1038,6 +1038,13 @@ const TRANSLATIONS={
     alert_select_day:'Activez au moins un jour.',
     confirm_copy_prev:'Remplacer vos disponibilités actuelles par celles de la semaine précédente ?',
     from_lbl:'DE',to_lbl:'À',
+    closed_day:'Fermé',
+    prefs_btn:'Préférences',
+    prefs_title:'Préférences',
+    prefs_roles_label:'Rôles préférés',
+    prefs_tooltip:'Classez vos rôles par ordre de préférence. Plus un rôle est haut dans la liste, plus on essaiera de vous y placer.',
+    cancel:'Annuler',
+    save:'Enregistrer',
   },
   en:{
     empty_title:'Enter your availability',
@@ -1077,6 +1084,13 @@ const TRANSLATIONS={
     alert_select_day:'Enable at least one day.',
     confirm_copy_prev:"Replace your current availability with last week's?",
     from_lbl:'FROM',to_lbl:'TO',
+    closed_day:'Closed',
+    prefs_btn:'Preferences',
+    prefs_title:'Preferences',
+    prefs_roles_label:'Preferred roles',
+    prefs_tooltip:'Rank your roles in order of preference. The higher a role is on the list, the more we\'ll try to place you there.',
+    cancel:'Cancel',
+    save:'Save',
   }
 };
 function t(key,...args){
@@ -1115,6 +1129,12 @@ function applyLang(){
   const emailEl=document.getElementById('vol-email');
   if(emailEl)emailEl.placeholder=t('email_placeholder');
   const sel=document.getElementById('lang-select');if(sel)sel.value=lang;
+  const prefsLbl=document.getElementById('b-prefs-label');if(prefsLbl)prefsLbl.textContent=t('prefs_btn');
+  s('vp-title',t('prefs_title'));
+  s('vp-roles-label',t('prefs_roles_label'));
+  s('vp-cancel-btn',t('cancel'));
+  s('vp-save-btn',t('save'));
+  const vpTooltip=document.getElementById('vp-info-tooltip');if(vpTooltip)vpTooltip.textContent=t('prefs_tooltip');
 }
 
 const DAYS=[
@@ -2269,7 +2289,7 @@ function renderB(){
       toggleLabel.style.opacity='0.35';
       toggleLabel.style.pointerEvents='none';
       const badge=document.createElement('span');
-      badge.textContent='Fermé';
+      badge.textContent=t('closed_day');
       badge.style.cssText='background:#FDA1A1;color:#1C1917;font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;letter-spacing:0.03em;white-space:nowrap;';
       head.appendChild(title);head.appendChild(badge);
     } else {
