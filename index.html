@@ -4080,39 +4080,23 @@ async function openAutoAssign(){
 
     rolesQueue.forEach(({sh,role,dayId})=>{
       const es=empSchedule(empName,dayId);
-      if(!es)return; // pas de schedule pour cet employé ce jour
-
-      // Vérifier que l'employé couvre ce shift
-      if(!volCoversShiftFor(wk,empName,sh,dayId))return;
-
-      // Vérifier que le slot est vide (1 personne max par slot)
-      if(getAssigns(wk,sh.id,role).length>0)return;
-
-      // Vérifier que l'employé a une préférence pour ce rôle
-      if(prefScore(empName,role)===0)return;
-
-      // Vérifier qu'il n'est pas déjà assigné à ce shift
-      if(getAssigns(wk,sh.id,role).includes(empName))return;
-
-      // Heures réelles pour ce slot : début = vraie heure employé (peut être avant shift),
-      // fin = min(heure fin employé, fin shift)
+      if(!es){console.log('[emp-auto] SKIP',empName,sh.id,role,'→ pas de schedule');return;}
+      if(!volCoversShiftFor(wk,empName,sh,dayId)){console.log('[emp-auto] SKIP',empName,sh.id,role,'→ shift non couvert');return;}
+      if(getAssigns(wk,sh.id,role).length>0){console.log('[emp-auto] SKIP',empName,sh.id,role,'→ slot déjà pris');return;}
+      if(prefScore(empName,role)===0){console.log('[emp-auto] SKIP',empName,sh.id,role,'→ prefScore=0, prefs=',getPerson(empName)?.roles);return;}
+      if(getAssigns(wk,sh.id,role).includes(empName)){console.log('[emp-auto] SKIP',empName,sh.id,role,'→ déjà assigné');return;}
       const assignS=Math.max(es.s/60,sh.fromH);
       const assignE=Math.min(es.e/60,sh.toH);
-
-      // Vérifier pas de conflit horaire avec les slots déjà couverts
-      // Pour le overlap, comparer avec les heures du shift (pas les heures employé avant ouverture)
-      const shiftS=sh.fromH;
-      const shiftE=sh.toH;
-      const hasOverlap=coveredIvs.some(iv=>iv.s<shiftE&&iv.e>shiftS);
-      if(hasOverlap)return;
-
-      // Assigner
+      const shiftSm=sh.fromH*60;
+      const shiftEm=sh.toH*60;
+      const hasOverlap=coveredIvs.some(iv=>iv.s<shiftEm&&iv.e>shiftSm);
+      if(hasOverlap){console.log('[emp-auto] SKIP',empName,sh.id,role,'→ overlap avec',coveredIvs);return;}
+      console.log('[emp-auto] ASSIGN',empName,sh.id,role,'→',assignS,'h à',assignE,'h');
       const sMins=Math.round(assignS*60);
       const eMins=Math.round(assignE*60);
       addAssign(wk,sh.id,role,empName);
       setAssignTimes(wk,sh.id,role,sMins,eMins,empName);
-      // coveredIvs utilise les heures du shift pour le tracking des conflits
-      coveredIvs.push({s:shiftS,e:shiftE});
+      coveredIvs.push({s:shiftSm,e:shiftEm});
       toSave.push({wk,shiftId:sh.id,role,name:empName,
         startMins:sMins,endMins:eMins,note:null,locked:false});
       markAssigned(empName,dayId,sh.id);
