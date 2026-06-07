@@ -4142,54 +4142,65 @@ async function openAutoAssign(){
       markAssigned(empName,dayId,sh.id);
     });
 
-    rolesQueue.forEach(({sh,role,dayId})=>{
-      const es=empSchedule(empName,dayId);
-      if(!es)return;
-      if(!volCoversShiftFor(wk,empName,sh,dayId))return;
-      if(prefScore(empName,role)===0)return;
-      if(getAssigns(wk,sh.id,role).includes(empName))return;
+    // Helper : calculer heures employé non couvertes ce jour
+    function empUncovered(dayId){
+      const es=empSchedule(empName,dayId);if(!es)return false;
+      const ivs=(empCoveredByDay[dayId]||[]).slice().sort((a,b)=>a.s-b.s);
+      let reach=es.s;
+      for(const iv of ivs){if(iv.s>reach)return true;reach=Math.max(reach,iv.e);}
+      return reach<es.e;
+    }
 
-      const shiftSm=sh.fromH*60;
-      const shiftEm=sh.toH*60;
-      const dayIvs=empCoveredByDay[dayId]||[];
-      if(dayIvs.some(iv=>iv.s<shiftEm&&iv.e>shiftSm))return;
-
+    // Helper : assigner l'employé à un slot et mettre à jour coveredIvs
+    function doEmpAssign(sh,role,dayId,es){
       const assignS=Math.max(es.s/60,sh.fromH);
       const assignE=Math.min(es.e/60,sh.toH);
       const sMins=Math.round(assignS*60);
       const eMins=Math.round(assignE*60);
+      addAssign(wk,sh.id,role,empName);
+      setAssignTimes(wk,sh.id,role,sMins,eMins,empName);
+      if(!empCoveredByDay[dayId])empCoveredByDay[dayId]=[];
+      empCoveredByDay[dayId].push({s:sh.fromH*60,e:sh.toH*60});
+      toSave.push({wk,shiftId:sh.id,role,name:empName,startMins:sMins,endMins:eMins,note:null,locked:false});
+      markAssigned(empName,dayId,sh.id);
+    }
 
-      const slotAssigns=getAssigns(wk,sh.id,role);
-      if(slotAssigns.length===0){
-        // Slot vide — assigner directement
-        addAssign(wk,sh.id,role,empName);
-        setAssignTimes(wk,sh.id,role,sMins,eMins,empName);
-        if(!empCoveredByDay[dayId])empCoveredByDay[dayId]=[];
-        empCoveredByDay[dayId].push({s:shiftSm,e:shiftEm});
-        toSave.push({wk,shiftId:sh.id,role,name:empName,startMins:sMins,endMins:eMins,note:null,locked:false});
-        markAssigned(empName,dayId,sh.id);
-      } else {
-        // Slot pris — vérifier si c'est un bénévole (jamais évincer un employé)
-        const ak=akey(sh.id,role);
-        const existingVol=volAssignmentMap.get(ak);
-        if(!existingVol)return; // slot pris par un employé → skip
-        // Évincer le bénévole
-        const volName=existingVol.name;
-        removeAssign(wk,sh.id,role,volName);
-        // Retirer de toSave si présent
-        const tIdx=toSave.findIndex(a=>a.shiftId===sh.id&&a.role===role&&a.name===volName);
-        if(tIdx>=0)toSave.splice(tIdx,1);
-        volAssignmentMap.delete(ak);
-        evictedVols.push({name:volName,dayId,shiftId:sh.id,role,sMins:existingVol.sMins,eMins:existingVol.eMins});
-        // Assigner l'employé
-        addAssign(wk,sh.id,role,empName);
-        setAssignTimes(wk,sh.id,role,sMins,eMins,empName);
-        if(!empCoveredByDay[dayId])empCoveredByDay[dayId]=[];
-        empCoveredByDay[dayId].push({s:shiftSm,e:shiftEm});
-        toSave.push({wk,shiftId:sh.id,role,name:empName,startMins:sMins,endMins:eMins,note:null,locked:false});
-        markAssigned(empName,dayId,sh.id);
+    // Sous-passe A — slots vides seulement
+    for(const {sh,role,dayId} of rolesQueue){
+      const es=empSchedule(empName,dayId);if(!es)continue;
+      if(!volCoversShiftFor(wk,empName,sh,dayId))continue;
+      if(prefScore(empName,role)===0)continue;
+      if(getAssigns(wk,sh.id,role).includes(empName))continue;
+      const shiftSm=sh.fromH*60,shiftEm=sh.toH*60;
+      const dayIvs=empCoveredByDay[dayId]||[];
+      if(dayIvs.some(iv=>iv.s<shiftEm&&iv.e>shiftSm))continue;
+      if(getAssigns(wk,sh.id,role).length===0){
+        doEmpAssign(sh,role,dayId,es);
       }
-    });
+    }
+
+    // Sous-passe B — éviction seulement si heures encore non couvertes
+    for(const {sh,role,dayId} of rolesQueue){
+      if(!empUncovered(dayId))continue;
+      const es=empSchedule(empName,dayId);if(!es)continue;
+      if(!volCoversShiftFor(wk,empName,sh,dayId))continue;
+      if(prefScore(empName,role)===0)continue;
+      if(getAssigns(wk,sh.id,role).includes(empName))continue;
+      const shiftSm=sh.fromH*60,shiftEm=sh.toH*60;
+      const dayIvs=empCoveredByDay[dayId]||[];
+      if(dayIvs.some(iv=>iv.s<shiftEm&&iv.e>shiftSm))continue;
+      const ak=akey(sh.id,role);
+      const existingVol=volAssignmentMap.get(ak);
+      if(!existingVol)continue; // slot pris par un employé → skip
+      // Évincer le bénévole
+      const volName=existingVol.name;
+      removeAssign(wk,sh.id,role,volName);
+      const tIdx=toSave.findIndex(a=>a.shiftId===sh.id&&a.role===role&&a.name===volName);
+      if(tIdx>=0)toSave.splice(tIdx,1);
+      volAssignmentMap.delete(ak);
+      evictedVols.push({name:volName,dayId,shiftId:sh.id,role,sMins:existingVol.sMins,eMins:existingVol.eMins});
+      doEmpAssign(sh,role,dayId,es);
+    }
   });
 
   // ══ PASSE 3 — Replacer les bénévoles évincés ══
