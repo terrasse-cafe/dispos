@@ -4058,30 +4058,54 @@ async function openAutoAssign(){
   const emps=directory.filter(p=>p.type==='emp'&&p.active!==false);
   emps.forEach(emp=>{
     const empName=emp.name;
+    // Initialiser coveredIvs avec les assignations locked existantes
     const coveredIvs=[];
     rolesQueue.forEach(({sh,role,dayId})=>{
-      if(getAssigns(wk,sh.id,role).includes(empName)){
-        const ct=getAssignTimes(wk,sh.id,role,empName);
-        const es=empSchedule(empName,dayId);
-        const s=ct?ct.s/60:(es?Math.max(es.s/60,sh.fromH):sh.fromH);
-        const e=ct?ct.e/60:(es?Math.min(es.e/60,sh.toH):sh.toH);
-        coveredIvs.push({s,e});
-      }
-    });
-    rolesQueue.forEach(({sh,role,dayId})=>{
-      if(!volCoversShiftFor(wk,empName,sh,dayId))return;
-      if(prefScore(empName,role)===0)return;
-      if(getAssigns(wk,sh.id,role).includes(empName))return;
+      if(!getAssigns(wk,sh.id,role).includes(empName))return;
+      const ct=getAssignTimes(wk,sh.id,role,empName);
       const es=empSchedule(empName,dayId);
-      const assignS=es?Math.max(es.s/60,sh.fromH):sh.fromH;
-      const assignE=es?Math.min(es.e/60,sh.toH):sh.toH;
-      const hasOverlap=coveredIvs.some(iv=>iv.s<assignE&&iv.e>assignS);
+      // Utiliser les vraies heures sauvegardées
+      const s=ct?ct.s/60:(es?es.s/60:sh.fromH);
+      const e=ct?ct.e/60:(es?Math.min(es.e/60,sh.toH):sh.toH);
+      coveredIvs.push({s,e});
+      markAssigned(empName,dayId,sh.id);
+    });
+
+    rolesQueue.forEach(({sh,role,dayId})=>{
+      const es=empSchedule(empName,dayId);
+      if(!es)return; // pas de schedule pour cet employé ce jour
+
+      // Vérifier que l'employé couvre ce shift
+      if(!volCoversShiftFor(wk,empName,sh,dayId))return;
+
+      // Vérifier que le slot est vide (1 personne max par slot)
+      if(getAssigns(wk,sh.id,role).length>0)return;
+
+      // Vérifier que l'employé a une préférence pour ce rôle
+      if(prefScore(empName,role)===0)return;
+
+      // Vérifier qu'il n'est pas déjà assigné à ce shift
+      if(getAssigns(wk,sh.id,role).includes(empName))return;
+
+      // Heures réelles pour ce slot : début = vraie heure employé (peut être avant shift),
+      // fin = min(heure fin employé, fin shift)
+      const assignS=es.s/60; // vraie heure de début (ex: 10h)
+      const assignE=Math.min(es.e/60,sh.toH); // tronquée à la fin du shift
+
+      // Vérifier pas de conflit horaire avec les slots déjà couverts
+      // Pour le overlap, comparer avec les heures du shift (pas les heures employé avant ouverture)
+      const shiftS=sh.fromH;
+      const shiftE=sh.toH;
+      const hasOverlap=coveredIvs.some(iv=>iv.s<shiftE&&iv.e>shiftS);
       if(hasOverlap)return;
+
+      // Assigner
       const sMins=Math.round(assignS*60);
       const eMins=Math.round(assignE*60);
       addAssign(wk,sh.id,role,empName);
       setAssignTimes(wk,sh.id,role,sMins,eMins,empName);
-      coveredIvs.push({s:assignS,e:assignE});
+      // coveredIvs utilise les heures du shift pour le tracking des conflits
+      coveredIvs.push({s:shiftS,e:shiftE});
       toSave.push({wk,shiftId:sh.id,role,name:empName,
         startMins:sMins,endMins:eMins,note:null,locked:false});
       markAssigned(empName,dayId,sh.id);
