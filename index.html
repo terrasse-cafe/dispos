@@ -2243,18 +2243,20 @@ async function bShift(d){
   }
 }
 
-function buildTimeSelect(day,type,savedVal,minMins=null){
-  const sel=document.createElement('select');
-  let startM=day.oH*60+day.oM,endM=day.cH*60+day.cM;
-  if(type==='to')startM+=30;else endM-=30;
-  let m=startM;
-  while(m<=endM){
-    const o=document.createElement('option');o.value=m;o.textContent=mStr(m);
-    if(minMins!==null&&m<=minMins){o.disabled=true;o.style.color='#706A65';}
-    if(savedVal!==undefined&&savedVal===m)o.selected=true;
-    else if(savedVal===undefined&&type==='from'&&m===startM)o.selected=true;
-    else if(savedVal===undefined&&type==='to'&&m===endM)o.selected=true;
-    sel.appendChild(o);m+=30;
+function buildTimeSelect(day, type, savedVal, minMins=null, maxMins=null){
+  const sel = document.createElement('select');
+  let startM = day.oH*60+day.oM, endM = day.cH*60+day.cM;
+  if(type==='to') startM += 30; else endM -= 30;
+  if(minMins !== null) startM = Math.max(startM, type==='from' ? minMins : minMins+30);
+  if(maxMins !== null) endM = Math.min(endM, maxMins);
+  let m = startM;
+  while(m <= endM){
+    const o = document.createElement('option');
+    o.value = m; o.textContent = mStr(m);
+    if(savedVal !== undefined && savedVal === m) o.selected = true;
+    else if(savedVal === undefined && type==='from' && m === startM) o.selected = true;
+    else if(savedVal === undefined && type==='to' && m === endM) o.selected = true;
+    sel.appendChild(o); m += 30;
   }
   return sel;
 }
@@ -3531,17 +3533,38 @@ function openTP(e,name,sid,role,shift,wk){
   const day=DAYS.find(d=>d.id===curDay);
   const startVal=ct?ct.s:(rng?Math.max(rng.startMins,shift.fromH*60):shift.fromH*60);
   const endVal=ct?ct.e:(rng?Math.min(rng.endMins,shift.toH*60):shift.toH*60);
-  const containers=document.querySelectorAll('.tp-fields > div');
-  const refreshEndSelect=(newMin)=>{
-    containers[1].innerHTML='<label>Fin</label>';
-    const currentEnd=parseInt(document.getElementById('tp-end')?.value||endVal);
-    const safeEnd=currentEnd<=newMin?newMin+30:currentEnd;
-    const eSel=buildTimeSelect(day,'to',safeEnd,newMin);eSel.id='tp-end';containers[1].appendChild(eSel);
+  const containers = document.querySelectorAll('.tp-fields > div');
+
+  let fromMin, fromMax, toMax;
+  if(emp){
+    const empDayId = Object.keys(SHIFTS).find(d=>(SHIFTS[d]||[]).some(s=>s.id===sid)) || curDay;
+    const es = empSchedule(name, empDayId);
+    fromMin = es ? es.s : day.oH*60+day.oM;
+    fromMax = es ? es.e - 30 : null;
+    toMax   = es ? Math.min(es.e, shift.toH*60) : shift.toH*60;
+  } else {
+    const rng2 = volDayRange(wk, name);
+    fromMin = rng2 ? rng2.startMins : day.oH*60+day.oM;
+    fromMax = rng2 ? rng2.endMins - 30 : null;
+    toMax   = rng2 ? Math.min(rng2.endMins, shift.toH*60) : shift.toH*60;
+  }
+
+  const safeStart = Math.max(fromMin, Math.min(startVal, toMax - 30));
+  const safeEnd   = Math.max(safeStart + 30, Math.min(endVal, toMax));
+
+  const refreshEndSelect = (newMin) => {
+    containers[1].innerHTML = '<label>Fin</label>';
+    const currentEnd = parseInt(document.getElementById('tp-end')?.value || safeEnd);
+    const clampedEnd = Math.max(newMin + 30, Math.min(currentEnd, toMax));
+    const eSel = buildTimeSelect(day, 'to', clampedEnd, newMin, toMax);
+    eSel.id = 'tp-end'; containers[1].appendChild(eSel);
   };
-  containers[0].innerHTML='<label>Début</label>';
-  const sSel=buildTimeSelect(day,'from',startVal);sSel.id='tp-start';containers[0].appendChild(sSel);
-  refreshEndSelect(startVal);
-  sSel.addEventListener('change',ev=>refreshEndSelect(parseInt(ev.target.value)));
+
+  containers[0].innerHTML = '<label>Début</label>';
+  const sSel = buildTimeSelect(day, 'from', safeStart, fromMin, fromMax !== null ? Math.min(fromMax, toMax-30) : toMax-30);
+  sSel.id = 'tp-start'; containers[0].appendChild(sSel);
+  refreshEndSelect(safeStart);
+  sSel.addEventListener('change', ev => refreshEndSelect(parseInt(ev.target.value)));
   // Load existing note
   document.getElementById('tp-note').value=getAssignNote(wk,sid,role,name)||'';
   const pop=document.getElementById('time-pop');pop.classList.add('open');
@@ -3562,6 +3585,43 @@ function closeTP(){
     setAssignTimes(tpCtx.wk,tpCtx.sid,tpCtx.role,s,e,tpCtx.name);
     setAssignNote(tpCtx.wk,tpCtx.sid,tpCtx.role,note,tpCtx.name);
     saveAssignment(tpCtx.wk,tpCtx.sid,tpCtx.role,tpCtx.name,s,e,note,wasLocked);
+
+    // Propagation silencieuse : résoudre les chevauchements sur les autres assignations du même nom ce jour
+    const sameName=tpCtx.name;
+    const wkTP=tpCtx.wk;
+    const editedSid=tpCtx.sid;
+    const editedRole=tpCtx.role;
+    (SHIFTS[curDay]||[]).forEach(sh=>{
+      [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(r=>{
+        if(sh.id===editedSid&&r===editedRole)return;
+        if(!getAssigns(wkTP,sh.id,r).includes(sameName))return;
+        const ct2=getAssignTimes(wkTP,sh.id,r,sameName);
+        if(!ct2)return;
+        if(ct2.e<=s||ct2.s>=e)return; // pas de chevauchement
+        if(ct2.s>=s&&ct2.e<=e){
+          // Entièrement contenu → supprimer
+          const _ot=getAssignTimes(wkTP,sh.id,r,sameName);
+          const _on=getAssignNote(wkTP,sh.id,r,sameName);
+          const _ol=getAssignLocked(wkTP,sh.id,r,sameName);
+          pushUndo([{type:'add',wk:wkTP,sid:sh.id,role:r,name:sameName,times:_ot,note:_on,locked:_ol}]);
+          removeAssign(wkTP,sh.id,r,sameName);
+          deleteAssignment(wkTP,sh.id,r,sameName);
+        } else if(ct2.s<s&&ct2.e>e){
+          // Englobe → tronquer la fin à s
+          setAssignTimes(wkTP,sh.id,r,ct2.s,s,sameName);
+          saveAssignment(wkTP,sh.id,r,sameName,ct2.s,s,getAssignNote(wkTP,sh.id,r,sameName),getAssignLocked(wkTP,sh.id,r,sameName));
+        } else if(ct2.s<s){
+          // Chevauche par la fin → reculer la fin à s
+          setAssignTimes(wkTP,sh.id,r,ct2.s,s,sameName);
+          saveAssignment(wkTP,sh.id,r,sameName,ct2.s,s,getAssignNote(wkTP,sh.id,r,sameName),getAssignLocked(wkTP,sh.id,r,sameName));
+        } else {
+          // Chevauche par le début → avancer le début à e
+          setAssignTimes(wkTP,sh.id,r,e,ct2.e,sameName);
+          saveAssignment(wkTP,sh.id,r,sameName,e,ct2.e,getAssignNote(wkTP,sh.id,r,sameName),getAssignLocked(wkTP,sh.id,r,sameName));
+        }
+      });
+    });
+
     document.getElementById('time-pop').classList.remove('open');
     tpCtx=null;
     renderHoraire();
@@ -4116,23 +4176,86 @@ async function openAutoAssign(){
 
   const toSave=[];
 
-  // ══ PASSE 1 — Bénévoles, par ordre de priorité de rôle ══
-  // Map pour pouvoir défaire les assignations bénévoles en passe 2
-  // akey(sid,role) → {name, sMins, eMins}
-  const volAssignmentMap = new Map();
+  // ══ PASSE A — Employés placés en premier (affectation optimale par shift) ══
+  const emps = directory.filter(p=>p.type==='emp' && p.active!==false);
+  const empNames = emps.map(e=>e.name);
+  const unplacedEmp = [];
 
-  function getBestAvailableRole(name, sh, dayId) {
-    const allRoles = [...(sh._slots||sh.roles), ...(sh._optSlots||[])];
-    let best = null, bestPref = 0;
-    for (const r of allRoles) {
-      const ps = prefScore(name, r);
-      if (ps > bestPref && volCoversShiftFor(wk, name, sh, dayId)) {
-        best = r; bestPref = ps;
-      }
-    }
-    return { role: best, score: bestPref };
+  const shiftList = [];
+  const _seenSh = new Set();
+  rolesQueue.forEach(({sh,dayId})=>{
+    const k = dayId+'|'+sh.id;
+    if(_seenSh.has(k)) return;
+    _seenSh.add(k);
+    shiftList.push({sh,dayId});
+  });
+
+  function empAlreadyOnShift(name, sh){
+    return [...(sh._slots||sh.roles), ...(sh._optSlots||[])]
+      .some(r=>getAssigns(wk,sh.id,r).includes(name));
   }
 
+  function bestEmpAssignmentForShift(sh, present){
+    const allSlots = [...(sh._slots||sh.roles), ...(sh._optSlots||[])];
+    const freeSlots = allSlots.filter(r => getAssigns(wk,sh.id,r).length===0);
+    let best = {}, bestScore = -1;
+    (function rec(i, used, acc, score){
+      if(i===present.length){
+        if(score>bestScore){ bestScore=score; best={...acc}; }
+        return;
+      }
+      const name = present[i];
+      let placeable = false;
+      for(const r of freeSlots){
+        if(used.has(r)) continue;
+        const ps = prefScore(name, r);
+        if(ps===0) continue;
+        placeable = true;
+        const prio = roleFillPriority(roleDisplayLabel(r));
+        used.add(r); acc[name]=r;
+        rec(i+1, used, acc, score + ps*100 + (50-prio));
+        used.delete(r); delete acc[name];
+      }
+      if(!placeable) rec(i+1, used, acc, score);
+    })(0, new Set(), {}, 0);
+    return best;
+  }
+
+  shiftList.forEach(({sh,dayId})=>{
+    const shS = sh.fromH*60, shE = sh.toH*60;
+    const present = empNames.filter(n=>{
+      const es = empSchedule(n,dayId);
+      return es && es.s < shE && es.e > shS && !empAlreadyOnShift(n, sh);
+    });
+    if(!present.length) return;
+
+    const map = bestEmpAssignmentForShift(sh, present);
+
+    present.forEach(n=>{
+      const role = map[n];
+      if(!role){ unplacedEmp.push({name:n, dayId, shiftId:sh.id}); return; }
+      const es = empSchedule(n, dayId);
+      const sMins = Math.round(Math.max(es.s, shS));
+      const eMins = Math.round(Math.min(es.e, shE));
+      addAssign(wk, sh.id, role, n);
+      setAssignTimes(wk, sh.id, role, sMins, eMins, n);
+      markAssigned(n, dayId, sh.id);
+      toSave.push({wk, shiftId:sh.id, role, name:n, startMins:sMins, endMins:eMins, note:null, locked:false});
+    });
+  });
+
+  if(unplacedEmp.length){
+    const lines = unplacedEmp.map(u=>{
+      const p=getPerson(u.name);
+      const dn=p?fullName(p):u.name;
+      const dl=(DAYS.find(d=>d.id===u.dayId)||{}).label||u.dayId;
+      return dn+' — '+dl;
+    });
+    console.warn('[auto-assign] employés non plaçables :', lines);
+    alert('Ces employés n\'ont pas pu être placés sur un rôle préféré (pas assez de slots libres)\n\n'+lines.join('\n')+'\n\nAjoutez un slot au shift concerné ou ajustez leurs rôles préférés.');
+  }
+
+  // ══ PASSE B — Bénévoles, par ordre de priorité de rôle ══
   rolesQueue.forEach(({sh, role, dayId})=>{
     const candidates=Object.keys(wkData).filter(n=>
       !isEmp(n)&&
@@ -4170,118 +4293,13 @@ async function openAutoAssign(){
       addAssign(wk,sh.id,role,cand);
       setAssignTimes(wk,sh.id,role,ov.s,ov.e,cand);
       markAssigned(cand,dayId,sh.id);
-      const ak=akey(sh.id,role);
-      volAssignmentMap.set(ak,{name:cand,sMins:ov.s,eMins:ov.e,shiftId:sh.id,role,dayId});
       toSave.push({wk,shiftId:sh.id,role,name:cand,s:ov.s,e:ov.e});
       break;
     }
   });
 
-  // ══ PASSE 2 — Employés prioritaires (peuvent évincer un bénévole) ══
-  const evictedVols = [];
-  const emps=directory.filter(p=>p.type==='emp'&&p.active!==false);
-
-  emps.forEach(emp=>{
-    const empName=emp.name;
-    // Suivre les shifts déjà couverts par jour (minutes)
-    const empCoveredByDay={}; // dayId → [{s,e}] en minutes
-    // Pré-remplir avec les assignations locked existantes
-    rolesQueue.forEach(({sh,role,dayId})=>{
-      if(!getAssigns(wk,sh.id,role).includes(empName))return;
-      const ct=getAssignTimes(wk,sh.id,role,empName);
-      const es=empSchedule(empName,dayId);
-      const s=ct?ct.s:(es?Math.max(es.s,sh.fromH*60):sh.fromH*60);
-      const e=ct?ct.e:(es?Math.min(es.e,sh.toH*60):sh.toH*60);
-      if(!empCoveredByDay[dayId])empCoveredByDay[dayId]=[];
-      empCoveredByDay[dayId].push({s,e});
-      markAssigned(empName,dayId,sh.id);
-    });
-
-    // Helper : calculer heures employé non couvertes ce jour
-    function empUncovered(dayId){
-      const es=empSchedule(empName,dayId);if(!es)return false;
-      const ivs=(empCoveredByDay[dayId]||[]).slice().sort((a,b)=>a.s-b.s);
-      let reach=es.s;
-      for(const iv of ivs){if(iv.s>reach)return true;reach=Math.max(reach,iv.e);}
-      return reach<es.e;
-    }
-
-    // Helper : assigner l'employé à un slot et mettre à jour coveredIvs
-    function doEmpAssign(sh,role,dayId,es){
-      const assignS=Math.max(es.s/60,sh.fromH);
-      const assignE=Math.min(es.e/60,sh.toH);
-      const sMins=Math.round(assignS*60);
-      const eMins=Math.round(assignE*60);
-      addAssign(wk,sh.id,role,empName);
-      setAssignTimes(wk,sh.id,role,sMins,eMins,empName);
-      if(!empCoveredByDay[dayId])empCoveredByDay[dayId]=[];
-      empCoveredByDay[dayId].push({s:sh.fromH*60,e:sh.toH*60});
-      toSave.push({wk,shiftId:sh.id,role,name:empName,startMins:sMins,endMins:eMins,note:null,locked:false});
-      markAssigned(empName,dayId,sh.id);
-    }
-
-    // Sous-passe A — slots vides seulement
-    for(const {sh,role,dayId} of rolesQueue){
-      const es=empSchedule(empName,dayId);if(!es)continue;
-      if(!volCoversShiftFor(wk,empName,sh,dayId))continue;
-      if(prefScore(empName,role)===0)continue;
-      if(getAssigns(wk,sh.id,role).includes(empName))continue;
-      const shiftSm=sh.fromH*60,shiftEm=sh.toH*60;
-      const dayIvs=empCoveredByDay[dayId]||[];
-      if(dayIvs.some(iv=>iv.s<shiftEm&&iv.e>shiftSm))continue;
-      if(getAssigns(wk,sh.id,role).length===0){
-        doEmpAssign(sh,role,dayId,es);
-      }
-    }
-
-    // Sous-passe B — éviction seulement si heures encore non couvertes
-    for(const {sh,role,dayId} of rolesQueue){
-      if(!empUncovered(dayId))continue;
-      const es=empSchedule(empName,dayId);if(!es)continue;
-      if(!volCoversShiftFor(wk,empName,sh,dayId))continue;
-      if(prefScore(empName,role)===0)continue;
-      if(getAssigns(wk,sh.id,role).includes(empName))continue;
-      const shiftSm=sh.fromH*60,shiftEm=sh.toH*60;
-      const dayIvs=empCoveredByDay[dayId]||[];
-      if(dayIvs.some(iv=>iv.s<shiftEm&&iv.e>shiftSm))continue;
-      const ak=akey(sh.id,role);
-      const existingVol=volAssignmentMap.get(ak);
-      if(!existingVol)continue; // slot pris par un employé → skip
-      // Évincer le bénévole
-      const volName=existingVol.name;
-      removeAssign(wk,sh.id,role,volName);
-      const tIdx=toSave.findIndex(a=>a.shiftId===sh.id&&a.role===role&&a.name===volName);
-      if(tIdx>=0)toSave.splice(tIdx,1);
-      volAssignmentMap.delete(ak);
-      evictedVols.push({name:volName,dayId,shiftId:sh.id,role,sMins:existingVol.sMins,eMins:existingVol.eMins});
-      doEmpAssign(sh,role,dayId,es);
-    }
-  });
-
-  // ══ PASSE 3 — Replacer les bénévoles évincés ══
-  evictedVols.forEach(({name:volName,dayId})=>{
-    const dayQueue=rolesQueue.filter(item=>item.dayId===dayId);
-    for(const {sh,role} of dayQueue){
-      if(getAssigns(wk,sh.id,role).length>0)continue;
-      if(quotaReached(volName))break;
-      if(alreadyOnShift(volName,dayId,sh.id))continue;
-      if(!volCoversShiftFor(wk,volName,sh,dayId))continue;
-      if(prefScore(volName,role)===0)continue;
-      const ov=overlapFor(wk,volName,sh,dayId);if(!ov)continue;
-      addAssign(wk,sh.id,role,volName);
-      setAssignTimes(wk,sh.id,role,ov.s,ov.e,volName);
-      markAssigned(volName,dayId,sh.id);
-      toSave.push({wk,shiftId:sh.id,role,name:volName,s:ov.s,e:ov.e});
-      break;
-    }
-  });
-
-  // Supprimer de Supabase les bénévoles évincés en passe 2
-  for(const ev of evictedVols)await deleteAssignment(wk,ev.shiftId,ev.role,ev.name);
-
   const undoEntries=[
     ...cleared.map(d=>({type:'add',wk:d.wk,sid:d.shiftId,role:d.role,name:d.name,times:d.times,note:d.note,locked:false})),
-    ...evictedVols.map(ev=>({type:'add',wk,sid:ev.shiftId,role:ev.role,name:ev.name,times:{s:ev.sMins,e:ev.eMins},note:null,locked:false})),
     ...toSave.map(a=>({type:'remove',wk:a.wk,sid:a.shiftId,role:a.role,name:a.name,locked:false}))
   ];
   if(undoEntries.length)pushUndo(undoEntries);
