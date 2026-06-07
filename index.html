@@ -255,12 +255,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .vol-panel{border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);box-shadow:none;overflow:hidden;max-height:calc(100vh - 52px);display:flex;flex-direction:column;transition:outline .1s}
 .vol-cards{transition:outline .1s}
 .emp-cards{transition:outline .1s}
-.vp-head{padding:6px 10px;background:var(--bg);border-bottom:1px solid var(--border);font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;flex-shrink:0;display:flex;align-items:center;justify-content:space-between}
-.vp-info-btn{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--text-3);background:transparent;color:var(--text-3);font-size:10px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;line-height:1;padding:0;font-family:var(--font);flex-shrink:0;transition:border-color .1s,color .1s}
-.vp-info-btn:hover{border-color:var(--text);color:var(--text)}
-.vp-info-btn.hidden{display:none}
-#vp-indispo-tooltip{position:fixed;z-index:500;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);padding:12px 14px;font-size:12px;color:var(--text-2);min-width:180px;max-width:240px;display:none;line-height:1.8}
-#vp-indispo-tooltip strong{display:block;font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.vp-head{padding:6px 10px;background:var(--bg);border-bottom:1px solid var(--border);font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;flex-shrink:0}
 .vol-cards{padding:4px;display:flex;flex-direction:column;gap:3px;overflow-y:auto;flex:1;min-height:0}
 .emp-section{border-top:1px solid var(--border);flex-shrink:0}
 .emp-sec-lbl{padding:5px 10px 3px;font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;background:var(--bg)}
@@ -623,11 +618,7 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
       </div>
       <div>
         <div class="vol-panel">
-          <div class="vp-head">
-            <span>Bénévoles — <span id="h-day-lbl">—</span></span>
-            <button class="vp-info-btn hidden" id="vp-indispo-btn" title="Indisponibles">i</button>
-          </div>
-          <div id="vp-indispo-tooltip"></div>
+          <div class="vp-head">Bénévoles — <span id="h-day-lbl">—</span></div>
           <div class="vol-cards" id="vol-cards"></div>
           <div class="emp-section">
             <div class="emp-sec-lbl">Employés</div>
@@ -3347,40 +3338,6 @@ function volWeekShiftCount(wk, name) {
 
 function buildCards(wk,shifts){
   const wkData=avail[wk]||{};
-  // Bouton (i) indisponibles
-  const wkDataAll = avail[wk] || {};
-  const indispoVols = directory.filter(p => {
-    if (p.type !== 'vol') return false;
-    const slots = (wkDataAll[p.name] || {}).slots || {};
-    // A répondu (clé présente dans avail) mais aucune dispo ce jour
-    if (!wkDataAll[p.name]) return false; // pas encore répondu
-    return !Object.keys(slots).some(k => k.startsWith(curDay + '_'));
-  });
-  const indispoBtn = document.getElementById('vp-indispo-btn');
-  const indispoTooltip = document.getElementById('vp-indispo-tooltip');
-  if (indispoBtn) {
-    if (indispoVols.length > 0) {
-      indispoBtn.classList.remove('hidden');
-      indispoBtn.onclick = (ev) => {
-        ev.stopPropagation();
-        const tt = indispoTooltip;
-        if (tt.style.display === 'block') { tt.style.display = 'none'; return; }
-        tt.innerHTML = '<strong>Indisponibles</strong>' +
-          indispoVols.map(p => fullName(p)).join('<br>');
-        const rect = indispoBtn.getBoundingClientRect();
-        tt.style.display = 'block';
-        const ttW = 240, ttH = tt.offsetHeight || 120;
-        let left = rect.right - ttW;
-        let top = rect.bottom + 6;
-        if (top + ttH > window.innerHeight - 8) top = rect.top - ttH - 6;
-        tt.style.left = Math.max(8, left) + 'px';
-        tt.style.top = Math.max(8, top) + 'px';
-      };
-    } else {
-      indispoBtn.classList.add('hidden');
-      indispoTooltip.style.display = 'none';
-    }
-  }
   // Panneau bénévoles = zone de drop pour désassigner
   const vp=document.getElementById('vol-cards');
   vp.addEventListener('dragover',e=>{
@@ -3742,10 +3699,6 @@ document.addEventListener('click',e=>{
 },true);
 document.addEventListener('click',()=>{
   const tt=document.getElementById('vp-info-tooltip');
-  if(tt)tt.style.display='none';
-});
-document.addEventListener('click',()=>{
-  const tt=document.getElementById('vp-indispo-tooltip');
   if(tt)tt.style.display='none';
 });
 
