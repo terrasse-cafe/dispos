@@ -1138,29 +1138,29 @@ function applyLang(){
 }
 
 const DAYS=[
-  {id:'jeudi',    label:'Jeudi',    oH:15,oM:0, cH:21,cM:0,  dow:3},
-  {id:'vendredi', label:'Vendredi', oH:11,oM:0, cH:21,cM:30, dow:4},
-  {id:'samedi',   label:'Samedi',   oH:11,oM:0, cH:21,cM:30, dow:5},
-  {id:'dimanche', label:'Dimanche', oH:11,oM:0, cH:17,cM:0,  dow:6},
+  {id:'jeudi',    label:'Jeudi',    oH:15,oM:0, cH:21,cM:0,  dow:3, gridH:10},
+  {id:'vendredi', label:'Vendredi', oH:11,oM:0, cH:21,cM:30, dow:4, gridH:10},
+  {id:'samedi',   label:'Samedi',   oH:11,oM:0, cH:21,cM:30, dow:5, gridH:10},
+  {id:'dimanche', label:'Dimanche', oH:11,oM:0, cH:17,cM:0,  dow:6, gridH:10},
 ];
 const SHIFTS={
-  jeudi:[{id:'j_s',label:'Soir',fromH:15,toH:21,
+  jeudi:[{id:'j_s',label:'Soir',fromH:10,toH:21,
     roles:['Caissier(ère)','Barista','Préposé(e) au remplissage','Cuisinier(ère)','Préposé(e) à la vaisselle']}],
   vendredi:[
-    {id:'v_j',label:'Jour',fromH:11,toH:17,
+    {id:'v_j',label:'Jour',fromH:10,toH:16,
       roles:['Caissier(ère)','Barista','Mise en place']},
-    {id:'v_s',label:'Soir',fromH:17,toH:21.5,
+    {id:'v_s',label:'Soir',fromH:16,toH:21.5,
       roles:['Caissier(ère)','Barista','Préposé(e) au remplissage','Préposé(e) à la vaisselle','Busboy / Busgirl','Préposé(e) au service','Pizzaiolo','Pizzaiolo','Préposé(e) à la pâte','Cuisinier(ère)','Cuisinier(ère)','Préposé(e) à la passe'],
       optional:['Caissier(ère) bar','Barman / Barmaid'],slotFromH:{'Pizzaiolo':16}}
   ],
   samedi:[
-    {id:'s_j',label:'Jour',fromH:11,toH:17,
+    {id:'s_j',label:'Jour',fromH:10,toH:16,
       roles:['Caissier(ère)','Barista','Mise en place']},
-    {id:'s_s',label:'Soir',fromH:17,toH:21.5,
+    {id:'s_s',label:'Soir',fromH:16,toH:21.5,
       roles:['Caissier(ère)','Barista','Préposé(e) au remplissage','Préposé(e) à la vaisselle','Busboy / Busgirl','Préposé(e) au service','Pizzaiolo','Pizzaiolo','Cuisinier(ère)','Cuisinier(ère)','Préposé(e) à la passe'],
       optional:['Caissier(ère) bar','Barman / Barmaid'],slotFromH:{'Pizzaiolo':16}}
   ],
-  dimanche:[{id:'d_j',label:'Jour',fromH:11,toH:17,
+  dimanche:[{id:'d_j',label:'Jour',fromH:10,toH:17,
     roles:['Caissier(ère)','Barista','Mise en place','Préposé(e) au remplissage','Préposé(e) à la vaisselle']}],
 };
 
