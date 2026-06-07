@@ -3330,12 +3330,9 @@ function buildCards(wk,shifts){
         const free=[];let cur=es.s;
         assigned.forEach(({s,e})=>{if(s>cur)free.push({s:cur,e:s});cur=Math.max(cur,e);});
         if(cur<es.e)free.push({s:cur,e:es.e});
-        const dayObj=DAYS.find(d=>d.id===curDay);
-        const openMins=dayObj?(dayObj.oH*60+dayObj.oM):0;
-        const visibleFree=free.map(f=>({s:Math.max(f.s,openMins),e:f.e})).filter(f=>f.e>f.s);
-        if(!visibleFree.length)return null;
-        freeIvs=visibleFree;
-        t.innerHTML=visibleFree.map(f=>mStr(f.s)+' – '+mStr(f.e)).join(' &amp; ');
+        if(!free.length)return null;
+        freeIvs=free;
+        t.innerHTML=free.map(f=>mStr(f.s)+' – '+mStr(f.e)).join(' &amp; ');
       } else {
         t.textContent='Plein shift';
       }
@@ -3439,8 +3436,10 @@ function doAssign(wk,shift,role,name){
     addAssign(wk,shift.id,role,name);
     setAssignLocked(wk,shift.id,role,true,name);
     if(es){
-      setAssignTimes(wk,shift.id,role,es.s,es.e,name);
-      saveAssignment(wk,shift.id,role,name,es.s,es.e,null,true);
+      const s=es.s;
+      const e=Math.min(es.e,shift.toH*60);
+      setAssignTimes(wk,shift.id,role,s,e,name);
+      saveAssignment(wk,shift.id,role,name,s,e,null,true);
     } else {
       saveAssignment(wk,shift.id,role,name,null,null,null,true);
     }
