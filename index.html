@@ -3514,10 +3514,21 @@ function doAssign(wk,shift,role,name){
     addAssign(wk,shift.id,role,name);
     setAssignLocked(wk,shift.id,role,true,name);
     if(es){
-      const s=Math.max(es.s,shift.fromH*60);
-      const e=Math.min(es.e,shift.toH*60);
-      setAssignTimes(wk,shift.id,role,s,e,name);
-      saveAssignment(wk,shift.id,role,name,s,e,null,true);
+      let s,e;
+      if(draggingVolFreeIvs&&draggingVolFreeIvs.length===1){
+        const iv=draggingVolFreeIvs[0];
+        s=Math.max(iv.s,shift.fromH*60);
+        e=Math.min(iv.e,shift.toH*60);
+      } else {
+        s=Math.max(es.s,shift.fromH*60);
+        e=Math.min(es.e,shift.toH*60);
+      }
+      if(e>s){
+        setAssignTimes(wk,shift.id,role,s,e,name);
+        saveAssignment(wk,shift.id,role,name,s,e,null,true);
+      } else {
+        saveAssignment(wk,shift.id,role,name,null,null,null,true);
+      }
     } else {
       saveAssignment(wk,shift.id,role,name,null,null,null,true);
     }
