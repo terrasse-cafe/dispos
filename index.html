@@ -4061,53 +4061,11 @@ async function openAutoAssign(){
 
   const toSave=[];
 
-  // ── Employés en premier ──
-  const emps=directory.filter(p=>p.type==='emp'&&p.active!==false);
-  emps.forEach(emp=>{
-    const empName=emp.name;
-    // Initialiser coveredIvs avec les assignations locked existantes
-    const coveredIvs={}; // par jour : {dayId: [{s,e}]}
-    rolesQueue.forEach(({sh,role,dayId})=>{
-      if(!getAssigns(wk,sh.id,role).includes(empName))return;
-      const ct=getAssignTimes(wk,sh.id,role,empName);
-      const es=empSchedule(empName,dayId);
-      const s=ct?ct.s:(es?Math.max(es.s,sh.fromH*60):sh.fromH*60);
-      const e=ct?ct.e:(es?Math.min(es.e,sh.toH*60):sh.toH*60);
-      if(!coveredIvs[dayId])coveredIvs[dayId]=[];
-      coveredIvs[dayId].push({s,e});
-      markAssigned(empName,dayId,sh.id);
-    });
+  // ══ PASSE 1 — Bénévoles, par ordre de priorité de rôle ══
+  // Map pour pouvoir défaire les assignations bénévoles en passe 2
+  // akey(sid,role) → {name, sMins, eMins}
+  const volAssignmentMap = new Map();
 
-    rolesQueue.forEach(({sh,role,dayId})=>{
-      const es=empSchedule(empName,dayId);
-      if(!es){console.log('[emp-auto] SKIP',empName,sh.id,role,'→ pas de schedule');return;}
-      if(!volCoversShiftFor(wk,empName,sh,dayId)){console.log('[emp-auto] SKIP',empName,sh.id,role,'→ shift non couvert');return;}
-      if(getAssigns(wk,sh.id,role).length>0){console.log('[emp-auto] SKIP',empName,sh.id,role,'→ slot déjà pris');return;}
-      if(prefScore(empName,role)===0){console.log('[emp-auto] SKIP',empName,sh.id,role,'→ prefScore=0, prefs=',getPerson(empName)?.roles);return;}
-      if(getAssigns(wk,sh.id,role).includes(empName)){console.log('[emp-auto] SKIP',empName,sh.id,role,'→ déjà assigné');return;}
-      const assignS=Math.max(es.s/60,sh.fromH);
-      const assignE=Math.min(es.e/60,sh.toH);
-      const shiftSm=sh.fromH*60;
-      const shiftEm=sh.toH*60;
-      const dayIvs=coveredIvs[dayId]||[];
-      const hasOverlap=dayIvs.some(iv=>iv.s<shiftEm&&iv.e>shiftSm);
-      if(hasOverlap){console.log('[emp-auto] SKIP',empName,sh.id,role,'→ overlap avec',dayIvs);return;}
-      console.log('[emp-auto] ASSIGN',empName,sh.id,role,'→',assignS,'h à',assignE,'h');
-      const sMins=Math.round(assignS*60);
-      const eMins=Math.round(assignE*60);
-      addAssign(wk,sh.id,role,empName);
-      setAssignTimes(wk,sh.id,role,sMins,eMins,empName);
-      if(!coveredIvs[dayId])coveredIvs[dayId]=[];
-      coveredIvs[dayId].push({s:shiftSm,e:shiftEm});
-      toSave.push({wk,shiftId:sh.id,role,name:empName,
-        startMins:sMins,endMins:eMins,note:null,locked:false});
-      markAssigned(empName,dayId,sh.id);
-    });
-  });
-
-  // Pass 1 — pour chaque bénévole, identifier son meilleur rôle disponible sur chaque shift
-  // et le réserver pour éviter qu'il soit gaspillé sur un rôle de moindre préférence.
-  // bestRoleForVolOnShift[name+'|'+shiftId] = role avec le prefScore le plus élevé encore libre
   function getBestAvailableRole(name, sh, dayId) {
     const allRoles = [...(sh._slots||sh.roles), ...(sh._optSlots||[])];
     let best = null, bestPref = 0;
@@ -4120,7 +4078,7 @@ async function openAutoAssign(){
     return { role: best, score: bestPref };
   }
 
-  rolesQueue.forEach(({sh, role, dayId, isOpt})=>{
+  rolesQueue.forEach(({sh, role, dayId})=>{
     const candidates=Object.keys(wkData).filter(n=>
       !isEmp(n)&&
       !quotaReached(n)&&
@@ -4130,53 +4088,138 @@ async function openAutoAssign(){
     );
     if(!candidates.length)return;
 
-    // Exclure les candidats qui ont un rôle de préférence plus haute encore disponible
-    // n'importe où dans la semaine (même shift ou autre shift)
     const eligible = candidates.filter(n => {
       const myPref = prefScore(n, role);
-      // Chercher dans toute la rolesQueue un rôle encore non pourvu où n aurait un meilleur score
       const hasBetterRoleOpen = rolesQueue.some(item => {
-        if (item.sh.id === sh.id && item.role === role) return false; // même slot, ignorer
-        if (prefScore(n, item.role) <= myPref) return false;         // pas meilleur
-        if (alreadyOnShift(n, item.dayId, item.sh.id)) return false; // déjà sur ce shift
-        if (!overlapFor(wk, n, item.sh, item.dayId)) return false;   // pas disponible
-        // Ce rôle meilleur est-il encore vide ?
+        if (item.sh.id === sh.id && item.role === role) return false;
+        if (prefScore(n, item.role) <= myPref) return false;
+        if (alreadyOnShift(n, item.dayId, item.sh.id)) return false;
+        if (!overlapFor(wk, n, item.sh, item.dayId)) return false;
         return getAssigns(wk, item.sh.id, item.role).length === 0;
       });
       return !hasBetterRoleOpen;
     });
 
-    // Si tous les candidats ont un meilleur rôle en attente ailleurs, sauter ce rôle
     if(eligible.length === 0) return;
-
     eligible.sort((a,b)=>compare(b,a,role,sh,dayId));
 
     for(const cand of eligible){
       const ov=overlapFor(wk,cand,sh,dayId);if(!ov)continue;
-
       const existingIvs=getAssigns(wk,sh.id,role).filter(n=>n!==cand).map(n=>{
         const ct=getAssignTimes(wk,sh.id,role,n);
         if(ct)return{s:ct.s,e:ct.e};
         const r=volDayRangeFor(wk,n,dayId);
         return r?{s:r.startMins,e:r.endMins}:{s:sh.fromH*60,e:sh.toH*60};
       });
-
       if(existingIvs.length>0&&isCovered(ov.s,ov.e,existingIvs))continue;
-
       addAssign(wk,sh.id,role,cand);
       setAssignTimes(wk,sh.id,role,ov.s,ov.e,cand);
       markAssigned(cand,dayId,sh.id);
+      const ak=akey(sh.id,role);
+      volAssignmentMap.set(ak,{name:cand,sMins:ov.s,eMins:ov.e,shiftId:sh.id,role,dayId});
       toSave.push({wk,shiftId:sh.id,role,name:cand,s:ov.s,e:ov.e});
       break;
     }
   });
 
+  // ══ PASSE 2 — Employés prioritaires (peuvent évincer un bénévole) ══
+  const evictedVols = [];
+  const emps=directory.filter(p=>p.type==='emp'&&p.active!==false);
+
+  emps.forEach(emp=>{
+    const empName=emp.name;
+    // Suivre les shifts déjà couverts par jour (minutes)
+    const empCoveredByDay={}; // dayId → [{s,e}] en minutes
+    // Pré-remplir avec les assignations locked existantes
+    rolesQueue.forEach(({sh,role,dayId})=>{
+      if(!getAssigns(wk,sh.id,role).includes(empName))return;
+      const ct=getAssignTimes(wk,sh.id,role,empName);
+      const es=empSchedule(empName,dayId);
+      const s=ct?ct.s:(es?Math.max(es.s,sh.fromH*60):sh.fromH*60);
+      const e=ct?ct.e:(es?Math.min(es.e,sh.toH*60):sh.toH*60);
+      if(!empCoveredByDay[dayId])empCoveredByDay[dayId]=[];
+      empCoveredByDay[dayId].push({s,e});
+      markAssigned(empName,dayId,sh.id);
+    });
+
+    rolesQueue.forEach(({sh,role,dayId})=>{
+      const es=empSchedule(empName,dayId);
+      if(!es)return;
+      if(!volCoversShiftFor(wk,empName,sh,dayId))return;
+      if(prefScore(empName,role)===0)return;
+      if(getAssigns(wk,sh.id,role).includes(empName))return;
+
+      const shiftSm=sh.fromH*60;
+      const shiftEm=sh.toH*60;
+      const dayIvs=empCoveredByDay[dayId]||[];
+      if(dayIvs.some(iv=>iv.s<shiftEm&&iv.e>shiftSm))return;
+
+      const assignS=Math.max(es.s/60,sh.fromH);
+      const assignE=Math.min(es.e/60,sh.toH);
+      const sMins=Math.round(assignS*60);
+      const eMins=Math.round(assignE*60);
+
+      const slotAssigns=getAssigns(wk,sh.id,role);
+      if(slotAssigns.length===0){
+        // Slot vide — assigner directement
+        addAssign(wk,sh.id,role,empName);
+        setAssignTimes(wk,sh.id,role,sMins,eMins,empName);
+        if(!empCoveredByDay[dayId])empCoveredByDay[dayId]=[];
+        empCoveredByDay[dayId].push({s:shiftSm,e:shiftEm});
+        toSave.push({wk,shiftId:sh.id,role,name:empName,startMins:sMins,endMins:eMins,note:null,locked:false});
+        markAssigned(empName,dayId,sh.id);
+      } else {
+        // Slot pris — vérifier si c'est un bénévole (jamais évincer un employé)
+        const ak=akey(sh.id,role);
+        const existingVol=volAssignmentMap.get(ak);
+        if(!existingVol)return; // slot pris par un employé → skip
+        // Évincer le bénévole
+        const volName=existingVol.name;
+        removeAssign(wk,sh.id,role,volName);
+        // Retirer de toSave si présent
+        const tIdx=toSave.findIndex(a=>a.shiftId===sh.id&&a.role===role&&a.name===volName);
+        if(tIdx>=0)toSave.splice(tIdx,1);
+        volAssignmentMap.delete(ak);
+        evictedVols.push({name:volName,dayId,shiftId:sh.id,role,sMins:existingVol.sMins,eMins:existingVol.eMins});
+        // Assigner l'employé
+        addAssign(wk,sh.id,role,empName);
+        setAssignTimes(wk,sh.id,role,sMins,eMins,empName);
+        if(!empCoveredByDay[dayId])empCoveredByDay[dayId]=[];
+        empCoveredByDay[dayId].push({s:shiftSm,e:shiftEm});
+        toSave.push({wk,shiftId:sh.id,role,name:empName,startMins:sMins,endMins:eMins,note:null,locked:false});
+        markAssigned(empName,dayId,sh.id);
+      }
+    });
+  });
+
+  // ══ PASSE 3 — Replacer les bénévoles évincés ══
+  evictedVols.forEach(({name:volName,dayId})=>{
+    const dayQueue=rolesQueue.filter(item=>item.dayId===dayId);
+    for(const {sh,role} of dayQueue){
+      if(getAssigns(wk,sh.id,role).length>0)continue;
+      if(quotaReached(volName))break;
+      if(alreadyOnShift(volName,dayId,sh.id))continue;
+      if(!volCoversShiftFor(wk,volName,sh,dayId))continue;
+      if(prefScore(volName,role)===0)continue;
+      const ov=overlapFor(wk,volName,sh,dayId);if(!ov)continue;
+      addAssign(wk,sh.id,role,volName);
+      setAssignTimes(wk,sh.id,role,ov.s,ov.e,volName);
+      markAssigned(volName,dayId,sh.id);
+      toSave.push({wk,shiftId:sh.id,role,name:volName,s:ov.s,e:ov.e});
+      break;
+    }
+  });
+
+  // Supprimer de Supabase les bénévoles évincés en passe 2
+  for(const ev of evictedVols)await deleteAssignment(wk,ev.shiftId,ev.role,ev.name);
+
   const undoEntries=[
     ...cleared.map(d=>({type:'add',wk:d.wk,sid:d.shiftId,role:d.role,name:d.name,times:d.times,note:d.note,locked:false})),
+    ...evictedVols.map(ev=>({type:'add',wk,sid:ev.shiftId,role:ev.role,name:ev.name,times:{s:ev.sMins,e:ev.eMins},note:null,locked:false})),
     ...toSave.map(a=>({type:'remove',wk:a.wk,sid:a.shiftId,role:a.role,name:a.name,locked:false}))
   ];
   if(undoEntries.length)pushUndo(undoEntries);
-  for(const a of toSave)await saveAssignment(a.wk,a.shiftId,a.role,a.name,a.s,a.e,null,false);
+  for(const a of toSave)await saveAssignment(a.wk,a.shiftId,a.role,a.name,a.startMins??a.s,a.endMins??a.e,null,false);
   renderHoraire();
 
   // Feedback
