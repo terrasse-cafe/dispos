@@ -3046,7 +3046,11 @@ function renderHoraire(){
             inner.appendChild(lockIcon);
           }
           const nm=document.createElement('span');nm.className='chip-name';const _pch=getPerson(assignedName);nm.textContent=_pch?fullName(_pch):assignedName;inner.appendChild(nm);
-          const tm=document.createElement('span');tm.className='chip-time';tm.textContent=mStr(sm)+'–'+mStr(em2);inner.appendChild(tm);
+          const tm=document.createElement('span');tm.className='chip-time';
+          // Pour les employés, afficher les vraies heures (empSchedule) même si le chip est clippé visuellement
+          const tmS=emp?(empSchedule(assignedName,curDay)?.s??sm):sm;
+          const tmE=emp?(empSchedule(assignedName,curDay)?.e??em2):em2;
+          tm.textContent=mStr(tmS)+'–'+mStr(tmE);inner.appendChild(tm);
           const spacer=document.createElement('span');spacer.className='chip-spacer';inner.appendChild(spacer);
           if(emp){
             const espan=document.createElement('span');espan.className='chip-quota';
