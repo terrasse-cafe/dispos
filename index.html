@@ -1223,7 +1223,8 @@ function empSchedule(name, dayId){
   if(!dayS)return null;
   const p=getPerson(name);
   if(!p||!p.id)return null;
-  return dayS[p.id]||null;
+  const id=Number(p.id);
+  return dayS[id]||null;
 }
 const GSH=11,GEH=22,TOTAL_SLOTS=(GEH-GSH)*2;
 
@@ -4084,6 +4085,7 @@ async function openAutoAssign(){
       coveredIvs.push({s:assignS,e:assignE});
       toSave.push({wk,shiftId:sh.id,role,name:empName,
         startMins:sMins,endMins:eMins,note:null,locked:false});
+      markAssigned(empName,dayId,sh.id);
     });
   });
 
