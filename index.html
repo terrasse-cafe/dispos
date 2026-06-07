@@ -2892,7 +2892,7 @@ function renderHoraire(){
   const day=DAYS.find(d=>d.id===curDay);
   const shifts=SHIFTS[curDay]||[];
   document.getElementById('h-day-lbl').textContent=day.label;
-  const dSH=day.oH+day.oM/60;
+  const dSH=(day.gridH!==undefined?day.gridH:day.oH)+day.oM/60;
   const dEH=shifts.length?Math.max(...shifts.map(s=>s.toH)):day.cH+day.cM/60;
   const numSlots=Math.round((dEH-dSH)*2);
   const numHours=Math.round(dEH-dSH);
