@@ -3051,10 +3051,13 @@ function renderHoraire(){
           }
           const nm=document.createElement('span');nm.className='chip-name';const _pch=getPerson(assignedName);nm.textContent=_pch?fullName(_pch):assignedName;inner.appendChild(nm);
           const tm=document.createElement('span');tm.className='chip-time';
-          // Pour les employés, afficher les vraies heures sauvegardées (ct avant clip)
           const rawCt=getAssignTimes(wk,shift.id,role,assignedName);
-          const tmS=emp?(rawCt?rawCt.s:(empSchedule(assignedName,curDay)?.s??sm)):sm;
-          const tmE=emp?(rawCt?Math.min(rawCt.e,shift.toH*60):(empSchedule(assignedName,curDay)?.e??em2)):em2;
+          let tmS=sm, tmE=em2;
+          if(emp){
+            const es=empSchedule(assignedName,curDay);
+            tmS=(es&&es.s<shift.fromH*60)?es.s:(rawCt?rawCt.s:sm);
+            tmE=rawCt?rawCt.e:(es?Math.min(es.e,shift.toH*60):em2);
+          }
           tm.textContent=mStr(tmS)+'–'+mStr(tmE);inner.appendChild(tm);
           const spacer=document.createElement('span');spacer.className='chip-spacer';inner.appendChild(spacer);
           if(emp){
@@ -3436,7 +3439,7 @@ function doAssign(wk,shift,role,name){
     addAssign(wk,shift.id,role,name);
     setAssignLocked(wk,shift.id,role,true,name);
     if(es){
-      const s=es.s;
+      const s=Math.max(es.s,shift.fromH*60);
       const e=Math.min(es.e,shift.toH*60);
       setAssignTimes(wk,shift.id,role,s,e,name);
       saveAssignment(wk,shift.id,role,name,s,e,null,true);
@@ -4089,8 +4092,8 @@ async function openAutoAssign(){
 
       // Heures réelles pour ce slot : début = vraie heure employé (peut être avant shift),
       // fin = min(heure fin employé, fin shift)
-      const assignS=es.s/60; // vraie heure de début (ex: 10h)
-      const assignE=Math.min(es.e/60,sh.toH); // tronquée à la fin du shift
+      const assignS=Math.max(es.s/60,sh.fromH);
+      const assignE=Math.min(es.e/60,sh.toH);
 
       // Vérifier pas de conflit horaire avec les slots déjà couverts
       // Pour le overlap, comparer avec les heures du shift (pas les heures employé avant ouverture)
@@ -4292,11 +4295,11 @@ function buildPdfBlob(){
             const rng = isEmp(name)?null:volDayRange(wk,name); curDay=savedDay;
             let timeStr='';
             if(ct){
-              let dispS=ct.s;
-              let dispE=ct.e;
+              let dispS=ct.s, dispE=ct.e;
               if(isEmp(name)){
-                dispS=ct.s<shift.fromH*60?ct.s:Math.max(ct.s,shift.fromH*60);
-                dispE=Math.min(ct.e,shift.toH*60);
+                const es=empSchedule(name,day.id);
+                dispS=(es&&es.s<shift.fromH*60)?es.s:ct.s;
+                dispE=ct.e;
               }
               timeStr=mStr(dispS)+' – '+mStr(dispE);
             }
