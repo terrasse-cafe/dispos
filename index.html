@@ -1580,7 +1580,8 @@ function openVolPin(name, isNew, onSuccess) {
   pinVolIsNew = isNew;
 
   const overlay = document.getElementById('pin-vol-overlay');
-  const firstName = name.split(' ')[0];
+  const _ppin=getPerson(name);
+  const firstName=_ppin?_ppin.first_name:name.split(' ')[0];
   document.getElementById('pin-vol-title').textContent = t('greeting')+' '+firstName;
 
   if (isNew) {
@@ -1886,7 +1887,8 @@ function renderRecentProfiles(){
     const avatarLetters=_prp?initials(_prp):(name.trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase());
     const card=document.createElement('button');
     card.className='b-profile-card';
-    card.innerHTML='<div class="b-profile-avatar">'+avatarLetters+'</div><div class="b-profile-name">'+name+'</div>';
+    const _ppr=getPerson(name);const cardDisplayName=_ppr?fullName(_ppr):name;
+    card.innerHTML='<div class="b-profile-avatar">'+avatarLetters+'</div><div class="b-profile-name">'+cardDisplayName+'</div>';
     card.onclick=()=>connectAsRecentProfile(name);
     cards.appendChild(card);
   });
@@ -1990,7 +1992,8 @@ async function _afterVolPinSuccess(name, p) {
   bMon=restoreBVolWeek(name)||getSmartBMon();
   document.getElementById('b-empty-state').style.display='none';
   document.getElementById('b-name-section').style.display='block';
-  const firstName_=name.trim().split(/\s+/)[0];
+  const _pgr=getPerson(name);
+  const firstName_=_pgr?_pgr.first_name:name.trim().split(/\s+/)[0];
   document.getElementById('b-greeting').textContent=t('greeting')+' '+firstName_;
   document.getElementById('vol-email').value=p?p.email:'';
   bShiftsDesired=bShiftMemory[name]!==undefined?bShiftMemory[name]:0;
