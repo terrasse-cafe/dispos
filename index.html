@@ -4292,8 +4292,12 @@ function buildPdfBlob(){
             const rng = isEmp(name)?null:volDayRange(wk,name); curDay=savedDay;
             let timeStr='';
             if(ct){
-              const dispS=ct.s;
-              const dispE=isEmp(name)?Math.min(ct.e,shift.toH*60):ct.e;
+              let dispS=ct.s;
+              let dispE=ct.e;
+              if(isEmp(name)){
+                dispS=ct.s<shift.fromH*60?ct.s:Math.max(ct.s,shift.fromH*60);
+                dispE=Math.min(ct.e,shift.toH*60);
+              }
               timeStr=mStr(dispS)+' – '+mStr(dispE);
             }
             else if(isEmp(name)){
