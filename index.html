@@ -1575,7 +1575,23 @@ async function bootOrgData() {
 async function bootVolData(wk) {
   if (!sb) return;
   const prevWk=wkey(addWeeks(new Date(wk+'T12:00:00'),-1));
-  await Promise.all([loadAvail(wk),loadAvail(prevWk)]);
+  await Promise.all([
+    loadAvail(wk),
+    loadAvail(prevWk),
+    loadClosedDaysForVol(),
+  ]);
+}
+
+async function loadClosedDaysForVol(){
+  if(!sb)return;
+  const {data}=await sb.from('org_config').select('value').eq('key','closed_days').maybeSingle();
+  if(!data?.value)return;
+  try{
+    const parsed=JSON.parse(data.value);
+    Object.entries(parsed).forEach(([week,days])=>{
+      closedDays[week]=new Set(days);
+    });
+  }catch(e){console.error('loadClosedDaysForVol:',e);}
 }
 
 
@@ -2235,18 +2251,31 @@ function renderB(){
   applyBPastState(readOnly);
   const wrap=document.getElementById('b-days-wrap');wrap.innerHTML='';
   DAYS.forEach(day=>{
+    const isClosed=(closedDays[wk]||new Set()).has(day.id);
     const dayData=bSel[wk][day.id]||null;
     const enabled=!!(dayData);
     const card=document.createElement('div');card.className='b-day-card'+(enabled?' active':'');
     const head=document.createElement('div');head.className='b-day-card-head';
     const title=document.createElement('div');title.className='b-day-card-title';
+    if(isClosed)title.style.color='var(--text-3)';
     title.innerHTML=t('day_'+day.id)+' <span>'+fmt(dayDate(bMon,day.dow))+'</span>';
     const toggleLabel=document.createElement('label');toggleLabel.className='b-toggle';
     const chk=document.createElement('input');chk.type='checkbox';chk.checked=enabled;
     const track=document.createElement('span');track.className='b-toggle-track';
     const thumb=document.createElement('span');thumb.className='b-toggle-thumb';
     toggleLabel.appendChild(chk);toggleLabel.appendChild(track);toggleLabel.appendChild(thumb);
-    head.appendChild(title);head.appendChild(toggleLabel);card.appendChild(head);
+    if(isClosed){
+      chk.disabled=true;
+      toggleLabel.style.opacity='0.35';
+      toggleLabel.style.pointerEvents='none';
+      const badge=document.createElement('span');
+      badge.textContent=t('closed_badge')||'FERMÉ';
+      badge.style.cssText='background:#FECACA;color:#991B1B;font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;letter-spacing:0.03em;white-space:nowrap;';
+      head.appendChild(title);head.appendChild(badge);
+    } else {
+      head.appendChild(title);head.appendChild(toggleLabel);
+    }
+    card.appendChild(head);
     const body=document.createElement('div');body.className='b-day-card-body';body.style.display=enabled?'grid':'none';
     const fromField=document.createElement('div');fromField.className='b-field';fromField.innerHTML='<label>'+t('from_lbl')+'</label>';
     let fromSel=buildTimeSelect(day,'from',dayData?dayData.from:undefined);fromField.appendChild(fromSel);
@@ -2263,11 +2292,13 @@ function renderB(){
     if(readOnly){
       card.classList.add('readonly');
     }
-    chk.addEventListener('change',()=>{
-      const on=chk.checked;card.classList.toggle('active',on);body.style.display=on?'grid':'none';
-      if(on){updateToSelect();}else{delete bSel[wk][day.id];updateBSummary();}
-    });
-    fromSel.addEventListener('change',updateToSelect);toSel.addEventListener('change',saveDay);
+    if(!isClosed){
+      chk.addEventListener('change',()=>{
+        const on=chk.checked;card.classList.toggle('active',on);body.style.display=on?'grid':'none';
+        if(on){updateToSelect();}else{delete bSel[wk][day.id];updateBSummary();}
+      });
+      fromSel.addEventListener('change',updateToSelect);toSel.addEventListener('change',saveDay);
+    }
     wrap.appendChild(card);
   });
   updateBSummary();
