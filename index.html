@@ -3398,6 +3398,25 @@ function buildCards(wk,shifts){
     return free;
   }
 
+  function volFreeIvs(name){
+    const r=volDayRange(wk,name);
+    if(!r)return[];
+    const assigned=[];
+    (SHIFTS[curDay]||[]).forEach(sh=>{
+      [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(role=>{
+        if(!getAssigns(wk,sh.id,role).includes(name))return;
+        const ct=getAssignTimes(wk,sh.id,role,name);
+        if(ct)assigned.push({s:ct.s,e:ct.e});
+        else{const ov=overlapMins(wk,name,sh);if(ov)assigned.push({s:ov.s,e:ov.e});}
+      });
+    });
+    assigned.sort((a,b)=>a.s-b.s);
+    const free=[];let cur=r.startMins;
+    assigned.forEach(({s,e})=>{if(s>cur)free.push({s:cur,e:s});cur=Math.max(cur,e);});
+    if(cur<r.endMins)free.push({s:cur,e:r.endMins});
+    return free;
+  }
+
   function makeCard(name,col,emp,singleIv=null){
     const remaining=emp?null:volRemainingMins(wk,name);
     if(!emp&&remaining===0)return null;
@@ -3438,21 +3457,14 @@ function buildCards(wk,shifts){
     else{
       const r=volDayRange(wk,name);
       if(r){
-        const assigned=[];
-        (SHIFTS[curDay]||[]).forEach(sh=>{
-          [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(role=>{
-            if(!getAssigns(wk,sh.id,role).includes(name))return;
-            const ct=getAssignTimes(wk,sh.id,role,name);
-            if(ct)assigned.push({s:ct.s,e:ct.e});
-            else{const ov=overlapMins(wk,name,sh);if(ov)assigned.push({s:ov.s,e:ov.e});}
-          });
-        });
-        assigned.sort((a,b)=>a.s-b.s);
-        const free=[];let cur=r.startMins;
-        assigned.forEach(({s,e})=>{if(s>cur)free.push({s:cur,e:s});cur=Math.max(cur,e);});
-        if(cur<r.endMins)free.push({s:cur,e:r.endMins});
-        freeIvs=free;
-        t.innerHTML=free.length?free.map(f=>mStr(f.s)+' – '+mStr(f.e)).join(' &amp; '):(mStr(r.startMins)+' – '+mStr(r.endMins));
+        if(singleIv){
+          freeIvs=[singleIv];
+          t.textContent=mStr(singleIv.s)+' – '+mStr(singleIv.e);
+        } else {
+          const free=volFreeIvs(name);
+          freeIvs=free.length?free:null;
+          t.innerHTML=free.length?free.map(f=>mStr(f.s)+' – '+mStr(f.e)).join(' &amp; '):(mStr(r.startMins)+' – '+mStr(r.endMins));
+        }
       }
     }
     card.appendChild(row1);
@@ -3503,16 +3515,26 @@ function buildCards(wk,shifts){
   let anyV=false;
   let lastPriority=0;
   vols.forEach(name=>{
-    const card=makeCard(name,vcols[name]||VCOLS[0],false);
-    if(card){
-      const p=volSortPriority(name);
-      // Ajouter un séparateur visuel entre les groupes
-      if(anyV&&p!==lastPriority&&p>=2){
+    const priority=volSortPriority(name);
+    const free=volFreeIvs(name);
+    let sepInserted=false;
+    const addSep=()=>{
+      if(!sepInserted&&anyV&&priority!==lastPriority&&priority>=2){
         const sep=document.createElement('div');
         sep.style.cssText='height:1px;background:var(--border-light);margin:2px 0;flex-shrink:0';
         vp.appendChild(sep);
+        sepInserted=true;
       }
-      lastPriority=p;anyV=true;vp.appendChild(card);
+    };
+    if(free.length===0){
+      // Aucune plage libre — laisser makeCard décider (remaining===0 → null)
+      const card=makeCard(name,vcols[name]||VCOLS[0],false,null);
+      if(card){addSep();lastPriority=priority;anyV=true;vp.appendChild(card);}
+    } else {
+      free.forEach(iv=>{
+        const card=makeCard(name,vcols[name]||VCOLS[0],false,iv);
+        if(card){addSep();lastPriority=priority;anyV=true;vp.appendChild(card);}
+      });
     }
   });
   if(!anyV)vp.innerHTML='<div class="no-avail" style="color:var(--green)">&#10003; Tous les bénévoles placés</div>';
