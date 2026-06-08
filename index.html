@@ -2774,23 +2774,31 @@ function volPrefersRole(name,role){
 function highlightDZs(wk,shifts){
   shifts.forEach(sh=>{
     const fromRole=draggingFromRole;
+    // Plage spécifique de la card draguée (singleIv si card fragmentée)
+    const dragIv=draggingVolFreeIvs&&draggingVolFreeIvs.length===1?draggingVolFreeIvs[0]:null;
     const covers=draggingVolFreeIvs
       ?draggingVolFreeIvs.some(iv=>iv.s<sh.toH*60&&iv.e>sh.fromH*60)
       :volCoversShift(wk,draggingVol,sh);
-    const alreadyOnShift=!isEmp(draggingVol)&&volAssignedToShift(wk,draggingVol,sh)
-      &&!(fromRole&&fromRole.shiftId===sh.id&&fromRole.role!==null);
     [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(role=>{
       const dz=document.getElementById('dz-'+sh.id+'-'+role.replace(/[^a-z0-9]/gi,'_'));
       if(!dz)return;
       if(fromRole&&fromRole.shiftId===sh.id&&fromRole.role===role){
         dz.classList.remove('dv','di','dok','da');return;
       }
+      // Plage effective du rôle dans ce shift (intersectée avec dragIv si dispo)
       const roleStart=sh.fromH*60;
       const roleEnd=sh.toH*60;
+      // Compatible : la card draguée chevauche ce slot
       const compatible=draggingVolFreeIvs
         ?draggingVolFreeIvs.some(iv=>iv.s<roleEnd&&iv.e>roleStart)
         :covers;
-      if(!compatible||alreadyOnShift){dz.classList.add('di');dz.classList.remove('dv','da');return;}
+      if(!compatible){dz.classList.add('di');dz.classList.remove('dv','da');return;}
+      // Conflit : une assignation existante du même nom chevauche la plage draguée
+      const testIv=dragIv||{s:roleStart,e:roleEnd};
+      const alreadyConflicts=!isEmp(draggingVol)
+        &&volAssignedToShift(wk,draggingVol,sh,testIv)
+        &&!(fromRole&&fromRole.shiftId===sh.id);
+      if(alreadyConflicts){dz.classList.add('di');dz.classList.remove('dv','da');return;}
       const pref=volPrefersRole(draggingVol,role);
       dz.classList.toggle('dv',pref);
       dz.classList.toggle('da',!pref);
@@ -2805,12 +2813,13 @@ function clearDZHighlights(){
   });
 }
 function hoverHighlightDZs(wk,shifts,name,freeIvs){
+  // singleIv : si la card représente une seule plage fragmentée
+  const hoverIv=freeIvs&&freeIvs.length===1?freeIvs[0]:null;
   shifts.forEach(sh=>{
     const coversFree=freeIvs
       ?freeIvs.some(iv=>iv.s<sh.toH*60&&iv.e>sh.fromH*60)
       :volCoversShift(wk,name,sh);
-    const coversRaw=volCoversShift(wk,name,sh);
-    if(!coversFree&&!coversRaw)return;
+    if(!coversFree)return;
     [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(role=>{
       const dz=document.getElementById('dz-'+sh.id+'-'+role.replace(/[^a-z0-9]/gi,'_'));
       if(!dz)return;
@@ -2820,6 +2829,10 @@ function hoverHighlightDZs(wk,shifts,name,freeIvs){
         ?freeIvs.some(iv=>iv.s<roleEnd&&iv.e>roleStart)
         :coversFree;
       if(!compatible)return;
+      // Conflit temporel : une assignation existante chevauche la plage de la card
+      const testIv=hoverIv||{s:roleStart,e:roleEnd};
+      const conflicts=!isEmp(name)&&volAssignedToShift(wk,name,sh,testIv);
+      if(conflicts)return;
       const pref=volPrefersRole(name,role);
       const filled=dz.classList.contains('filled');
       dz.classList.toggle('hv',pref);
@@ -3312,9 +3325,17 @@ function volAssignedMins(wk,name){
   });return total;
 }
 function volRemainingMins(wk,name){return Math.max(0,volTotalAvailMins(wk,name)-volAssignedMins(wk,name));}
-function volAssignedToShift(wk,name,shift){
+function volAssignedToShift(wk,name,shift,testIv=null){
+  // Si testIv est fourni, retourne true seulement si une assignation existante
+  // chevauche temporellement testIv. Sinon, comportement original.
   const allR=[...(shift._slots||shift.roles),...(shift._optSlots||[])];
-  return allR.some(role=>getAssigns(wk,shift.id,role).includes(name));
+  if(!testIv) return allR.some(role=>getAssigns(wk,shift.id,role).includes(name));
+  return allR.some(role=>{
+    if(!getAssigns(wk,shift.id,role).includes(name))return false;
+    const ct=getAssignTimes(wk,shift.id,role,name);
+    if(!ct)return true; // pas de plage connue → considérer comme conflit
+    return ct.s<testIv.e&&ct.e>testIv.s; // chevauchement
+  });
 }
 function overlapMins(wk,name,shift){
   const r=volDayRange(wk,name);if(!r)return null;
