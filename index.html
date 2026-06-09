@@ -4354,6 +4354,7 @@ async function openAutoAssign(){
 
   // ══ PASSE B — Bénévoles, par ordre de priorité de rôle ══
   rolesQueue.forEach(({sh, role, dayId})=>{
+    if(getAssigns(wk,sh.id,role).length>0)return; // 1 personne max par rôle en auto-assign
     const candidates=Object.keys(wkData).filter(n=>
       !isEmp(n)&&
       !quotaReached(n)&&
@@ -4380,13 +4381,6 @@ async function openAutoAssign(){
 
     for(const cand of eligible){
       const ov=overlapFor(wk,cand,sh,dayId);if(!ov)continue;
-      const existingIvs=getAssigns(wk,sh.id,role).filter(n=>n!==cand).map(n=>{
-        const ct=getAssignTimes(wk,sh.id,role,n);
-        if(ct)return{s:ct.s,e:ct.e};
-        const r=volDayRangeFor(wk,n,dayId);
-        return r?{s:r.startMins,e:r.endMins}:{s:sh.fromH*60,e:sh.toH*60};
-      });
-      if(existingIvs.length>0&&isCovered(ov.s,ov.e,existingIvs))continue;
       addAssign(wk,sh.id,role,cand);
       setAssignTimes(wk,sh.id,role,ov.s,ov.e,cand);
       markAssigned(cand,dayId,sh.id);
