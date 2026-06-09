@@ -840,10 +840,14 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
         <!-- Email -->
         <div style="padding:14px 16px;flex:1;display:flex;flex-direction:column;gap:10px">
           <div style="font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em">Courriel</div>
-          <div style="font-size:12px;color:var(--text-2)" id="fin-email-to"></div>
+          <div>
+            <div style="font-size:11px;color:var(--text-3);margin-bottom:4px">Sujet</div>
+            <input type="text" id="fin-email-subject" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;font-family:var(--font);outline:none;background:var(--bg);color:var(--text);transition:border-color .15s" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'" />
+          </div>
           <textarea id="fin-email-body" rows="10" style="flex:1;width:100%;padding:10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:11px;font-family:var(--mono);line-height:1.7;resize:vertical;outline:none;background:var(--bg);color:var(--text);transition:border-color .15s" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"></textarea>
           <button class="btn btn-secondary btn-sm" onclick="sendOutlook()" style="width:100%;justify-content:center;display:flex;gap:6px">✉ Télécharger le PDF et ouvrir Gmail</button>
-          <div style="font-size:10px;color:var(--text-3);text-align:center;margin-top:6px">Le PDF sera téléchargé — glissez-le dans Gmail pour l'attacher.</div>
+          <div id="fin-email-bcc-info" style="font-size:10px;color:var(--text-3);text-align:center"></div>
+          <div style="font-size:10px;color:var(--text-3);text-align:center;margin-top:2px">Le PDF sera téléchargé — glissez-le dans Gmail pour l'attacher.</div>
         </div>
       </div>
     </div>
@@ -1290,7 +1294,6 @@ let _finBlobUrl=null;
 let _autoAssignRunning=false;
 let tpCtx=null,pmCtx=null;
 let directory=[],nextId=1;
-let emailList=[],emailIdx=0;
 let bShiftsDesired=0;
 const bShiftMemory={};
 
@@ -4047,13 +4050,19 @@ function renderFinPreview(wk){
 }
 
 function renderFinEmail(wk){
-  const byPerson=buildScheduleSummary(wk);
-  const names=Object.keys(byPerson);
-  const allEmails=[...new Set(names.map(n=>{const p=getPerson(n);return p&&p.email?p.email:null;}).filter(Boolean))];
-  document.getElementById('fin-email-to').textContent=allEmails.length
-    ?`BCC : ${allEmails.join(', ')}`
+  // Tous les bénévoles et employés actifs ayant un courriel
+  const allEmails=[...new Set(
+    directory.filter(p=>p.active!==false&&p.email).map(p=>p.email)
+  )];
+  // Compteur BCC
+  const bccInfo=document.getElementById('fin-email-bcc-info');
+  if(bccInfo)bccInfo.textContent=allEmails.length
+    ?`${allEmails.length} destinataire${allEmails.length>1?'s':''} en BCC`
     :'Aucun courriel enregistré dans le répertoire';
-  // Message générique — l'horaire est en pièce jointe PDF
+  // Sujet par défaut
+  const subjectEl=document.getElementById('fin-email-subject');
+  if(subjectEl)subjectEl.value=`Horaire bénévoles — ${wlabel(oMon)}`;
+  // Corps du message
   const wkClosed=closedDays[wk]||new Set();
   const closedList=DAYS.filter(d=>wkClosed.has(d.id)).map(d=>d.label);
   let body=`Bonjour à tous,
@@ -4071,16 +4080,15 @@ L'équipe organisatrice`;
 }
 
 function sendOutlook(){
-  const wk=wkey(oMon);
-  const byPerson=buildScheduleSummary(wk);
-  const names=Object.keys(byPerson);
-  const allEmails=[...new Set(names.map(n=>{const p=getPerson(n);return p&&p.email?p.email:null;}).filter(Boolean))];
-  const subject=encodeURIComponent(`Horaire bénévoles — ${wlabel(oMon)}`);
+  // Tous les bénévoles et employés actifs ayant un courriel
+  const allEmails=[...new Set(
+    directory.filter(p=>p.active!==false&&p.email).map(p=>p.email)
+  )];
+  const subjectEl=document.getElementById('fin-email-subject');
+  const subject=encodeURIComponent(subjectEl?subjectEl.value:`Horaire bénévoles — ${wlabel(oMon)}`);
   const body=encodeURIComponent(document.getElementById('fin-email-body').value);
   const gmailUrl=`https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}&bcc=${encodeURIComponent(allEmails.join(','))}`;
-  // Ouvrir Gmail en premier (dans le gestionnaire de clic direct) pour éviter le bloqueur Safari
   window.open(gmailUrl,'_blank');
-  // Puis télécharger le PDF
   exportPdfTable();
 }
 
