@@ -4148,6 +4148,13 @@ function volQuotaReached(wk, name, tempShiftCounts) {
 async function openAutoAssign(){
   if(_autoAssignRunning)return;
   _autoAssignRunning=true;
+  const _autoBtn=document.getElementById('auto-btn');
+  const _autoBtnHTML=_autoBtn?_autoBtn.innerHTML:'';
+  const _autoBtnDisabled=_autoBtn?_autoBtn.disabled:false;
+  if(_autoBtn){
+    _autoBtn.disabled=true;
+    _autoBtn.innerHTML='<span class="spin">↻</span> Calcul en cours';
+  }
   try{
   const wk=wkey(oMon);
   if(sb){
@@ -4343,16 +4350,7 @@ async function openAutoAssign(){
     });
   });
 
-  if(unplacedEmp.length){
-    const lines = unplacedEmp.map(u=>{
-      const p=getPerson(u.name);
-      const dn=p?fullName(p):u.name;
-      const dl=(DAYS.find(d=>d.id===u.dayId)||{}).label||u.dayId;
-      return dn+' — '+dl;
-    });
-    console.warn('[auto-assign] employés non plaçables :', lines);
-    alert('Ces employés n\'ont pas pu être placés sur un rôle préféré (pas assez de slots libres)\n\n'+lines.join('\n')+'\n\nAjoutez un slot au shift concerné ou ajustez leurs rôles préférés.');
-  }
+  if(unplacedEmp.length) console.warn('[auto-assign] employés non placés (pas assez de slots préférés libres) :', unplacedEmp);
 
   // ══ PASSE B — Bénévoles, par ordre de priorité de rôle ══
   rolesQueue.forEach(({sh, role, dayId})=>{
@@ -4397,6 +4395,118 @@ async function openAutoAssign(){
     }
   });
 
+  // ══ PASSE C — Amélioration : promotion, déplacement libérateur, swap (intra-shift) ══
+  function _slotsOf(sh){
+    return [
+      ...(sh._slots||sh.roles),
+      ...(sh._optSlots||[]),
+      ...(sh._togSlots||[]).filter(r=>isSunEventActive(wk,r))
+    ];
+  }
+  function _times(name, sh, dayId){
+    if(isEmp(name)){
+      const es=empSchedule(name,dayId);
+      if(!es)return null;
+      return {s:Math.round(Math.max(es.s,sh.fromH*60)), e:Math.round(Math.min(es.e,sh.toH*60))};
+    }
+    const ov=overlapFor(wk,name,sh,dayId);
+    return ov?{s:ov.s,e:ov.e}:null;
+  }
+  function _move(name, sh, dayId, fromRole, toRole){
+    const tm=_times(name, sh, dayId); if(!tm)return false;
+    removeAssign(wk, sh.id, fromRole, name);
+    addAssign(wk, sh.id, toRole, name);
+    setAssignTimes(wk, sh.id, toRole, tm.s, tm.e, name);
+    const ent=toSave.find(a=>a.shiftId===sh.id && a.name===name && a.role===fromRole);
+    if(ent) ent.role=toRole;
+    return true;
+  }
+
+  let _improved=true, _guard=0;
+  while(_improved && _guard++ < 16){
+    _improved=false;
+    for(const {sh,dayId} of shiftList){
+      const slots=_slotsOf(sh);
+      const occ={};
+      slots.forEach(r=>{ const a=getAssigns(wk,sh.id,r); if(a.length) occ[r]=a[0]; });
+      const emptiesByPrio=slots.filter(r=>!occ[r])
+        .sort((a,b)=>roleFillPriority(roleDisplayLabel(a))-roleFillPriority(roleDisplayLabel(b)));
+
+      // 1) Promotion : déplacer qqn d'un slot moins prioritaire vers un slot vide plus prioritaire
+      for(const empty of emptiesByPrio){
+        if(occ[empty]) continue;
+        const pe=roleFillPriority(roleDisplayLabel(empty));
+        let cand=null, bestGain=-1;
+        for(const filled of slots){
+          const nm=occ[filled]; if(!nm) continue;
+          const pf=roleFillPriority(roleDisplayLabel(filled));
+          if(pe>=pf) continue;
+          const psNew=prefScore(nm,empty), psOld=prefScore(nm,filled);
+          if(psNew===0 || psNew<psOld) continue;
+          const gain=psNew-psOld;
+          if(gain>bestGain){ bestGain=gain; cand={nm,filled}; }
+        }
+        if(cand && _move(cand.nm, sh, dayId, cand.filled, empty)){
+          occ[empty]=cand.nm; delete occ[cand.filled]; _improved=true;
+        }
+      }
+
+      // 2) Déplacement libérateur : un employé migre vers un slot vide qu'il préfère,
+      //    un bénévole reprend son ancien slot → +1 position comblée
+      for(const empty of emptiesByPrio){
+        if(occ[empty]) continue;
+        for(const cur of slots){
+          const E=occ[cur];
+          if(!E || !isEmp(E)) continue;
+          if(prefScore(E,empty)===0) continue;
+          const V=Object.keys(wkData).find(n=>
+            !isEmp(n) && n!==E &&
+            !quotaReached(n) &&
+            !alreadyOnShift(n,dayId,sh.id) &&
+            !Object.values(occ).includes(n) &&
+            volCoversShiftFor(wk,n,sh,dayId) &&
+            prefScore(n,cur)>0
+          );
+          if(!V) continue;
+          const tv=_times(V, sh, dayId);
+          if(!tv) continue;
+          if(!_move(E, sh, dayId, cur, empty)) continue;
+          addAssign(wk,sh.id,cur,V);
+          setAssignTimes(wk,sh.id,cur,tv.s,tv.e,V);
+          markAssigned(V,dayId,sh.id);
+          toSave.push({wk,shiftId:sh.id,role:cur,name:V,s:tv.s,e:tv.e});
+          occ[empty]=E; occ[cur]=V;
+          _improved=true;
+          break;
+        }
+      }
+
+      // 3) Swap : échanger deux personnes si la somme des préférences augmente
+      const filledRoles=slots.filter(r=>occ[r]);
+      for(let i=0;i<filledRoles.length;i++){
+        for(let j=i+1;j<filledRoles.length;j++){
+          const r1=filledRoles[i], r2=filledRoles[j];
+          const n1=occ[r1], n2=occ[r2];
+          if(!n1||!n2) continue;
+          if(prefScore(n1,r2)===0 || prefScore(n2,r1)===0) continue;
+          const curScore=prefScore(n1,r1)+prefScore(n2,r2);
+          const swpScore=prefScore(n1,r2)+prefScore(n2,r1);
+          if(swpScore>curScore){
+            const t1=_times(n1,sh,dayId), t2=_times(n2,sh,dayId);
+            if(!t1||!t2) continue;
+            removeAssign(wk,sh.id,r1,n1);
+            removeAssign(wk,sh.id,r2,n2);
+            addAssign(wk,sh.id,r2,n1); setAssignTimes(wk,sh.id,r2,t1.s,t1.e,n1);
+            addAssign(wk,sh.id,r1,n2); setAssignTimes(wk,sh.id,r1,t2.s,t2.e,n2);
+            const e1=toSave.find(a=>a.shiftId===sh.id&&a.name===n1&&a.role===r1); if(e1)e1.role=r2;
+            const e2=toSave.find(a=>a.shiftId===sh.id&&a.name===n2&&a.role===r2); if(e2)e2.role=r1;
+            occ[r1]=n2; occ[r2]=n1; _improved=true;
+          }
+        }
+      }
+    }
+  }
+
   const undoEntries=[
     ...cleared.map(d=>({type:'add',wk:d.wk,sid:d.shiftId,role:d.role,name:d.name,times:d.times,note:d.note,locked:false})),
     ...toSave.map(a=>({type:'remove',wk:a.wk,sid:a.shiftId,role:a.role,name:a.name,locked:false}))
@@ -4414,7 +4524,10 @@ async function openAutoAssign(){
     setSyncBadge('o-sync-badge','saved','✓ Horaire déjà optimisé');
     setTimeout(()=>setSyncBadge('o-sync-badge','saved',''),3500);
   }
-  }finally{_autoAssignRunning=false;}
+  }finally{
+    _autoAssignRunning=false;
+    if(_autoBtn){_autoBtn.innerHTML=_autoBtnHTML;_autoBtn.disabled=_autoBtnDisabled;}
+  }
 }
 
 /* ══════════════════════════════════════════════
