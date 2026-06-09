@@ -2934,7 +2934,6 @@ function renderHoraire(){
   const availW=Math.max(scrollW-roleColW,numSlots*28);
   const dynCOL=Math.floor(availW/numSlots);
   const TW=dynCOL*numSlots;
-  grid.style.minWidth=(roleColW+TW)+'px';
   let effectiveDSH=dSH;
   function toPx(h){return Math.round((h-effectiveDSH)*2*dynCOL);}
   const wk_check=wkey(oMon);
