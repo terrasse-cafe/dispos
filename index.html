@@ -4501,7 +4501,7 @@ function buildPdfBlob(){
         ...(shift._slots||shift.roles),
         ...(shift._optSlots||[]),
         ...(shift._togSlots||[]).filter(r=>isSunEventActive(wk,r))
-      ];
+      ].slice().sort((a,b)=>roleFillPriority(roleDisplayLabel(a))-roleFillPriority(roleDisplayLabel(b)));
       allRoles.forEach(role => {
         const isOpt = (shift._optSlots||shift.optional||[]).includes(role);
         const names2 = getAssigns(wk, shift.id, role);
