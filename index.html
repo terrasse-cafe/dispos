@@ -4286,12 +4286,16 @@ async function openAutoAssign(){
   });
 
   function empAlreadyOnShift(name, sh){
-    return [...(sh._slots||sh.roles), ...(sh._optSlots||[])]
+    return [...(sh._slots||sh.roles), ...(sh._optSlots||[]), ...(sh._togSlots||[])]
       .some(r=>getAssigns(wk,sh.id,r).includes(name));
   }
 
   function bestEmpAssignmentForShift(sh, present){
-    const allSlots = [...(sh._slots||sh.roles), ...(sh._optSlots||[])];
+    const allSlots = [
+      ...(sh._slots||sh.roles),
+      ...(sh._optSlots||[]),
+      ...(sh._togSlots||[]).filter(r=>isSunEventActive(wk,r))
+    ];
     const freeSlots = allSlots.filter(r => getAssigns(wk,sh.id,r).length===0);
     let best = {}, bestScore = -1;
     (function rec(i, used, acc, score){
