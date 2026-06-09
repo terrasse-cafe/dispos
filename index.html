@@ -212,6 +212,17 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .h-role-row.row-hover .h-role-name{font-weight:700;color:var(--text)}
 .h-role-name{flex:1;padding:0 8px;display:flex;align-items:center;font-size:11px;color:var(--text-2);line-height:1.3;transition:font-weight .1s,color .1s;overflow:hidden}
 .h-role-name-wrap{position:relative;display:flex;align-items:center;justify-content:space-between;padding-right:4px;width:var(--role-col);min-width:var(--role-col);flex-shrink:0;border-right:1px solid var(--border);background:var(--surface)}
+/* ── Rôles événement dimanche — toggle ── */
+.tog-switch-wrap{display:flex;align-items:center;padding:0 5px;flex-shrink:0}
+.tog-switch{position:relative;width:28px;height:16px;cursor:pointer;flex-shrink:0;display:inline-block}
+.tog-switch input{opacity:0;width:0;height:0;position:absolute}
+.tog-track{position:absolute;inset:0;border-radius:8px;background:var(--border);transition:background .15s}
+.tog-switch input:checked~.tog-track{background:var(--accent-dark)}
+.tog-thumb{position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:#fff;transition:transform .15s;box-shadow:0 1px 2px rgba(0,0,0,.18)}
+.tog-switch input:checked~.tog-track .tog-thumb{transform:translateX(12px)}
+.h-role-row.tog-inactive .h-role-name{opacity:.4}
+.h-role-row.tog-inactive .h-timeline{opacity:.3;pointer-events:none}
+.h-role-row.tog-inactive.row-hover .h-role-name{font-weight:400;color:var(--text-2)}
 .h-timeline{flex:1;position:relative;background:var(--bg);overflow:visible}
 .h-dz{position:absolute;top:3px;bottom:3px;border:2px dashed var(--border);border-radius:6px;display:flex;align-items:center;padding:0 10px;transition:border-color .1s,background .1s;cursor:default;overflow:hidden}
 .h-dz.empty{background:transparent}.h-dz.filled{border-style:solid}
@@ -1155,7 +1166,8 @@ const SHIFTS={
       optional:['Caissier(ère) bar','Barman / Barmaid'],slotFromH:{'Pizzaiolo':16}}
   ],
   dimanche:[{id:'d_j',label:'Jour',fromH:10,toH:17,
-    roles:['Caissier(ère)','Barista','Mise en place','Préposé(e) au remplissage','Préposé(e) à la vaisselle']}],
+    roles:['Caissier(ère)','Barista','Mise en place','Préposé(e) au remplissage','Préposé(e) à la vaisselle'],
+    toggleable:['Cuisinier(ère)','Cuisinier(ère)#2','Préposé(e) à la passe']}],
 };
 
 // Générer les clés uniques pour chaque slot de rôle (role#index si dupliqué)
@@ -1175,9 +1187,10 @@ function roleDisplayLabel(r){return r.replace(/#\d+$/,'');}
 Object.values(SHIFTS).flat().forEach(sh=>{
   sh._slots=expandRoles(sh.roles);
   sh._optSlots=expandRoles(sh.optional||[]);
+  sh._togSlots=expandRoles(sh.toggleable||[]);
 });
 
-const ALL_ROLES=[...new Set(Object.values(SHIFTS).flat().flatMap(s=>s.roles.concat(s.optional||[])))];
+const ALL_ROLES=[...new Set(Object.values(SHIFTS).flat().flatMap(s=>s.roles.concat(s.optional||[]).concat(s.toggleable||[])))];
 function roleLabel(r){return roleDisplayLabel(r);}
 const DISPLAY_ROLES=[...new Set(ALL_ROLES)];
 const ROLE_FILL_PRIORITY={
@@ -1250,6 +1263,7 @@ const GSH=11,GEH=22,TOTAL_SLOTS=(GEH-GSH)*2;
    STATE (in-memory, synced from Supabase)
 ══════════════════════════════════════════════ */
 let oMon=getMonday(new Date());
+let sundayEventRoles={}; // {wk: Set<string>} — rôles événement dimanche actifs par semaine
 
 // Semaine bénévole : si on est lun-mer → semaine prochaine (prochain jeudi)
 // Si on est jeu-dim → semaine courante
@@ -1475,6 +1489,35 @@ async function saveSlotOverrides() {
     { onConflict: 'key' }
   );
 }
+function isSunEventActive(wk,role){
+  return sundayEventRoles[wk]?.has(role)||false;
+}
+async function loadSundayEventRoles(){
+  if(!sb)return;
+  const {data}=await sb.from('org_config').select('value').eq('key','sunday_event_roles').maybeSingle();
+  if(!data?.value)return;
+  try{
+    const obj=JSON.parse(data.value);
+    Object.entries(obj).forEach(([week,roles])=>{
+      sundayEventRoles[week]=new Set(roles);
+    });
+  }catch(e){console.error('loadSundayEventRoles:',e);}
+}
+async function saveSundayEventRoles(){
+  if(!sb)return;
+  const toSave={};
+  Object.entries(sundayEventRoles).forEach(([week,set])=>{
+    if(set.size>0)toSave[week]=[...set];
+  });
+  await sb.from('org_config').upsert({key:'sunday_event_roles',value:JSON.stringify(toSave)},{onConflict:'key'});
+}
+async function toggleSundayEventRole(wk,role){
+  if(!sundayEventRoles[wk])sundayEventRoles[wk]=new Set();
+  if(sundayEventRoles[wk].has(role))sundayEventRoles[wk].delete(role);
+  else sundayEventRoles[wk].add(role);
+  await saveSundayEventRoles();
+  renderHoraire();
+}
 
 function applySlotOverrides() {
   Object.entries(slotOverrides).forEach(([key, val]) => {
@@ -1576,6 +1619,7 @@ async function bootOrgData() {
   await loadAvail(wk);
   await loadAssignments(wk);
   await loadSlotOverrides();
+  await loadSundayEventRoles();
   const {data:cdRow}=await sb.from('org_config').select('value').eq('key','closed_days').maybeSingle();
   if(cdRow?.value){
     try{
@@ -2921,22 +2965,39 @@ function renderHoraire(){
     ss.textContent=mStr(shift.fromH*60)+' – '+mStr(shift.toH*60);
     sb2.appendChild(ss);sr.appendChild(sl);sr.appendChild(sb2);grid.appendChild(sr);
 
-    const allRoles=[...(shift._slots||shift.roles),...(shift._optSlots||[])].slice().sort((a,b)=>
+    const allRoles=[...(shift._slots||shift.roles),...(shift._optSlots||[]),...(shift._togSlots||[])].slice().sort((a,b)=>
       roleFillPriority(roleDisplayLabel(a))-roleFillPriority(roleDisplayLabel(b))
     );
     allRoles.forEach(role=>{
       const isOpt=(shift._optSlots||shift.optional||[]).includes(role);
-      if(!isOpt)totalReq++;
+      const isToggle=(shift._togSlots||[]).includes(role);
+      const isActive=!isToggle||isSunEventActive(wk,role);
+      if(!isOpt&&isActive)totalReq++;
       const row=document.createElement('div');row.className='h-role-row';
+      if(isToggle&&!isActive)row.classList.add('tog-inactive');
       row.addEventListener('mouseenter',()=>row.classList.add('row-hover'));
       row.addEventListener('mouseleave',()=>row.classList.remove('row-hover'));
-      row.addEventListener('dragenter',()=>{if(draggingVol&&volCoversShift(wk,draggingVol,shift))row.classList.add('row-hover');});
+      row.addEventListener('dragenter',()=>{if(draggingVol&&volCoversShift(wk,draggingVol,shift)&&!row.classList.contains('tog-inactive'))row.classList.add('row-hover');});
       row.addEventListener('dragleave',e=>{if(!row.contains(e.relatedTarget))row.classList.remove('row-hover');});
       row.addEventListener('drop',()=>row.classList.remove('row-hover'));
       const nc=document.createElement('div');nc.className='h-role-name';
       nc.textContent=roleDisplayLabel(role);
+      if(isToggle)nc.title=roleDisplayLabel(role);
       const ncWrap=document.createElement('div');ncWrap.className='h-role-name-wrap';
       ncWrap.appendChild(nc);
+      if(isToggle){
+        const togWrap=document.createElement('div');togWrap.className='tog-switch-wrap';
+        const togLabel=document.createElement('label');togLabel.className='tog-switch';
+        togLabel.title=isActive?'Désactiver ce rôle':'Activer ce rôle';
+        const togInput=document.createElement('input');togInput.type='checkbox';togInput.checked=isActive;
+        togInput.addEventListener('change',async(e)=>{e.stopPropagation();await toggleSundayEventRole(wk,role);});
+        const togTrack=document.createElement('div');togTrack.className='tog-track';
+        const togThumb=document.createElement('div');togThumb.className='tog-thumb';
+        togTrack.appendChild(togThumb);
+        togLabel.appendChild(togInput);togLabel.appendChild(togTrack);
+        togWrap.appendChild(togLabel);
+        ncWrap.appendChild(togWrap);
+      }
       row.appendChild(ncWrap);
       const tl=document.createElement('div');tl.className='h-timeline';tl.style.width=tl.style.minWidth=TW+'px';
       const dz=document.createElement('div');dz.className='h-dz';
@@ -2950,7 +3011,7 @@ function renderHoraire(){
       const hasAny=assignedList.length>0;
 
       if(hasAny){
-        if(!isOpt)totalFilled++;
+        if(!isOpt&&isActive)totalFilled++;
         dz.classList.add('filled');
         dz.style.background='transparent';
         dz.style.borderColor='var(--border)';
@@ -3236,7 +3297,7 @@ function volTotalAvailMins(wk,name){
 function volAssignedMins(wk,name){
   const shifts=SHIFTS[curDay]||[];let total=0;
   shifts.forEach(sh=>{
-    const allR=[...(sh._slots||sh.roles),...(sh._optSlots||[])];
+    const allR=[...(sh._slots||sh.roles),...(sh._optSlots||[]),...(sh._togSlots||[])];
     allR.forEach(role=>{
       if(!getAssigns(wk,sh.id,role).includes(name))return;
       const ct=getAssignTimes(wk,sh.id,role,name);
@@ -3249,7 +3310,7 @@ function volRemainingMins(wk,name){return Math.max(0,volTotalAvailMins(wk,name)-
 function volAssignedToShift(wk,name,shift,testIv=null){
   // Si testIv est fourni, retourne true seulement si une assignation existante
   // chevauche temporellement testIv. Sinon, comportement original.
-  const allR=[...(shift._slots||shift.roles),...(shift._optSlots||[])];
+  const allR=[...(shift._slots||shift.roles),...(shift._optSlots||[]),...(shift._togSlots||[])];
   if(!testIv) return allR.some(role=>getAssigns(wk,shift.id,role).includes(name));
   return allR.some(role=>{
     if(!getAssigns(wk,shift.id,role).includes(name))return false;
@@ -3271,7 +3332,7 @@ function volWeekShiftCount(wk, name) {
   DAYS.forEach(day => {
     if(wkClosed.has(day.id))return; // ignorer les jours fermés
     (SHIFTS[day.id]||[]).forEach(sh => {
-      const allR = [...(sh._slots||sh.roles),...(sh._optSlots||[])];
+      const allR = [...(sh._slots||sh.roles),...(sh._optSlots||[]),...(sh._togSlots||[])];
       if (allR.some(r => getAssigns(wk,sh.id,r).includes(name))) seen.add(sh.id);
     });
   });
@@ -3326,7 +3387,7 @@ function buildCards(wk,shifts){
     if(!es)return null;
     const assigned=[];
     (SHIFTS[curDay]||[]).forEach(sh=>{
-      [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(r=>{
+      [...(sh._slots||sh.roles),...(sh._optSlots||[]),...(sh._togSlots||[])].forEach(r=>{
         if(!getAssigns(wk,sh.id,r).includes(name))return;
         const ct=getAssignTimes(wk,sh.id,r,name);
         if(ct)assigned.push({s:ct.s,e:ct.e});
@@ -3345,7 +3406,7 @@ function buildCards(wk,shifts){
     if(!r)return[];
     const assigned=[];
     (SHIFTS[curDay]||[]).forEach(sh=>{
-      [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(role=>{
+      [...(sh._slots||sh.roles),...(sh._optSlots||[]),...(sh._togSlots||[])].forEach(role=>{
         if(!getAssigns(wk,sh.id,role).includes(name))return;
         const ct=getAssignTimes(wk,sh.id,role,name);
         if(ct)assigned.push({s:ct.s,e:ct.e});
@@ -4175,7 +4236,9 @@ async function openAutoAssign(){
     const closed=(closedDays[wk]||new Set()).has(day.id);
     if(closed)return;
     (SHIFTS[day.id]||[]).forEach(sh=>{
-      [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(role=>{
+      [...(sh._slots||sh.roles),...(sh._optSlots||[]),...(sh._togSlots||[])].forEach(role=>{
+        const isToggle=(sh._togSlots||[]).includes(role);
+        if(isToggle&&!isSunEventActive(wk,role))return;
         rolesQueue.push({sh,role,dayId:day.id,isOpt:(sh._optSlots||sh.optional||[]).includes(role)});
       });
     });
@@ -4410,7 +4473,11 @@ function buildPdfBlob(){
     // Collecter les lignes de ce jour (une entries[] par rôle, une entrée par bénévole)
     const rows = [];
     shifts.forEach(shift => {
-      const allRoles = [...(shift._slots||shift.roles), ...(shift._optSlots||[])];
+      const allRoles = [
+        ...(shift._slots||shift.roles),
+        ...(shift._optSlots||[]),
+        ...(shift._togSlots||[]).filter(r=>isSunEventActive(wk,r))
+      ];
       allRoles.forEach(role => {
         const isOpt = (shift._optSlots||shift.optional||[]).includes(role);
         const names2 = getAssigns(wk, shift.id, role);
