@@ -1513,8 +1513,18 @@ async function saveSundayEventRoles(){
 }
 async function toggleSundayEventRole(wk,role){
   if(!sundayEventRoles[wk])sundayEventRoles[wk]=new Set();
-  if(sundayEventRoles[wk].has(role))sundayEventRoles[wk].delete(role);
-  else sundayEventRoles[wk].add(role);
+  if(sundayEventRoles[wk].has(role)){
+    sundayEventRoles[wk].delete(role);
+    // Désassigner tous les occupants de ce rôle sur le dimanche de cette semaine
+    const sh=SHIFTS.dimanche[0];
+    const names=getAssigns(wk,sh.id,role).slice();
+    for(const name of names){
+      removeAssign(wk,sh.id,role,name);
+      await deleteAssignment(wk,sh.id,role,name);
+    }
+  } else {
+    sundayEventRoles[wk].add(role);
+  }
   await saveSundayEventRoles();
   renderHoraire();
 }
@@ -2815,7 +2825,8 @@ function highlightDZs(wk,shifts){
     const covers=draggingVolFreeIvs
       ?draggingVolFreeIvs.some(iv=>iv.s<sh.toH*60&&iv.e>sh.fromH*60)
       :volCoversShift(wk,draggingVol,sh);
-    [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(role=>{
+    const _togActive_h=(sh._togSlots||[]).filter(r=>isSunEventActive(wkey(oMon),r));
+    [...(sh._slots||sh.roles),...(sh._optSlots||[]),..._togActive_h].forEach(role=>{
       const dz=document.getElementById('dz-'+sh.id+'-'+role.replace(/[^a-z0-9]/gi,'_'));
       if(!dz)return;
       if(fromRole&&fromRole.shiftId===sh.id&&fromRole.role===role){
@@ -2856,7 +2867,8 @@ function hoverHighlightDZs(wk,shifts,name,freeIvs){
       ?freeIvs.some(iv=>iv.s<sh.toH*60&&iv.e>sh.fromH*60)
       :volCoversShift(wk,name,sh);
     if(!coversFree)return;
-    [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(role=>{
+    const _togActive_hh=(sh._togSlots||[]).filter(r=>isSunEventActive(wkey(oMon),r));
+    [...(sh._slots||sh.roles),...(sh._optSlots||[]),..._togActive_hh].forEach(role=>{
       const dz=document.getElementById('dz-'+sh.id+'-'+role.replace(/[^a-z0-9]/gi,'_'));
       if(!dz)return;
       const roleStart=sh.fromH*60;
