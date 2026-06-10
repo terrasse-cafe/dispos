@@ -1154,24 +1154,24 @@ const DAYS=[
 ];
 const SHIFTS={
   jeudi:[{id:'j_s',label:'Soir',fromH:10,toH:21,
-    roles:['Caissier(ère)','Barista','Préposé(e) au remplissage','Cuisinier(ère)','Préposé(e) à la vaisselle']}],
+    roles:['Caissier·ère','Barista','Préposé·e au remplissage','Cuisinier·ère','Préposé·e à la vaisselle']}],
   vendredi:[
     {id:'v_j',label:'Jour',fromH:10,toH:16,
-      roles:['Caissier(ère)','Barista','Mise en place']},
+      roles:['Caissier·ère','Barista','Mise en place']},
     {id:'v_s',label:'Soir',fromH:16,toH:21.5,
-      roles:['Caissier(ère)','Barista','Préposé(e) au remplissage','Préposé(e) à la vaisselle','Busboy / Busgirl','Préposé(e) au service','Pizzaiolo','Pizzaiolo','Préposé(e) à la pâte','Cuisinier(ère)','Cuisinier(ère)','Préposé(e) à la passe'],
-      optional:['Caissier(ère) bar','Barman / Barmaid'],slotFromH:{'Pizzaiolo':16}}
+      roles:['Caissier·ère','Barista','Préposé·e au remplissage','Préposé·e à la vaisselle','Busboy / Busgirl','Préposé·e au service','Pizzaiolo','Pizzaiolo','Préposé·e à la pâte','Cuisinier·ère','Cuisinier·ère','Préposé·e à la passe'],
+      optional:['Caissier·ère bar','Barman / Barmaid'],slotFromH:{'Pizzaiolo':16}}
   ],
   samedi:[
     {id:'s_j',label:'Jour',fromH:10,toH:16,
-      roles:['Caissier(ère)','Barista','Mise en place']},
+      roles:['Caissier·ère','Barista','Mise en place']},
     {id:'s_s',label:'Soir',fromH:16,toH:21.5,
-      roles:['Caissier(ère)','Barista','Préposé(e) au remplissage','Préposé(e) à la vaisselle','Busboy / Busgirl','Préposé(e) au service','Pizzaiolo','Pizzaiolo','Cuisinier(ère)','Cuisinier(ère)','Préposé(e) à la passe'],
-      optional:['Caissier(ère) bar','Barman / Barmaid'],slotFromH:{'Pizzaiolo':16}}
+      roles:['Caissier·ère','Barista','Préposé·e au remplissage','Préposé·e à la vaisselle','Busboy / Busgirl','Préposé·e au service','Pizzaiolo','Pizzaiolo','Cuisinier·ère','Cuisinier·ère','Préposé·e à la passe'],
+      optional:['Caissier·ère bar','Barman / Barmaid'],slotFromH:{'Pizzaiolo':16}}
   ],
   dimanche:[{id:'d_j',label:'Jour',fromH:10,toH:17,
-    roles:['Caissier(ère)','Barista','Mise en place','Préposé(e) au remplissage','Préposé(e) à la vaisselle'],
-    toggleable:['Cuisinier(ère)','Cuisinier(ère)#2','Préposé(e) à la passe']}],
+    roles:['Caissier·ère','Barista','Mise en place','Préposé·e au remplissage','Préposé·e à la vaisselle'],
+    toggleable:['Cuisinier·ère','Cuisinier·ère#2','Préposé·e à la passe']}],
 };
 
 // Générer les clés uniques pour chaque slot de rôle (role#index si dupliqué)
@@ -1198,20 +1198,20 @@ const ALL_ROLES=[...new Set(Object.values(SHIFTS).flat().flatMap(s=>s.roles.conc
 function roleLabel(r){return roleDisplayLabel(r);}
 const DISPLAY_ROLES=[...new Set(ALL_ROLES)];
 const ROLE_FILL_PRIORITY={
-  'Caissier(ère)':1,
+  'Caissier·ère':1,
   'Barista':2,
   'Mise en place':3,
   'Mise en place#2':4,
   'Pizzaiolo':5,
-  'Cuisinier(ère)':6,
-  'Cuisinier(ère)#2':6,
-  'Préposé(e) à la pâte':7,
-  'Préposé(e) à la passe':8,
-  'Préposé(e) au remplissage':9,
-  'Préposé(e) à la vaisselle':10,
-  'Caissier(ère) bar':11,
+  'Cuisinier·ère':6,
+  'Cuisinier·ère#2':6,
+  'Préposé·e à la pâte':7,
+  'Préposé·e à la passe':8,
+  'Préposé·e au remplissage':9,
+  'Préposé·e à la vaisselle':10,
+  'Caissier·ère bar':11,
   'Barman / Barmaid':12,
-  'Préposé(e) au service':13,
+  'Préposé·e au service':13,
   'Busboy / Busgirl':14,
   'Pizzaiolo#2':15,
 };
@@ -4782,18 +4782,18 @@ function buildPdfBlob(){
 function loadTestData() {
   // ── Répertoire ──
   directory = [
-    {id:1, name:'Alice Tremblay',   email:'alice@exemple.com',  type:'vol', roles:['Caissier(ère)','Barista',''],           pin:'1234'},
-    {id:2, name:'Bruno Gagnon',     email:'bruno@exemple.com',  type:'vol', roles:['Pizzaiolo','Cuisinier(ère)',''],          pin:'2222'},
+    {id:1, name:'Alice Tremblay',   email:'alice@exemple.com',  type:'vol', roles:['Caissier·ère','Barista',''],           pin:'1234'},
+    {id:2, name:'Bruno Gagnon',     email:'bruno@exemple.com',  type:'vol', roles:['Pizzaiolo','Cuisinier·ère',''],          pin:'2222'},
     {id:3, name:'Camille Leblanc',  email:'camille@exemple.com',type:'vol', roles:['Barista','Mise en place',''],        pin:'3333'},
-    {id:4, name:'David Côté',       email:'david@exemple.com',  type:'vol', roles:['Busboy / Busgirl','Préposé(e) à la vaisselle',''], pin:''},
-    {id:5, name:'Émilie Fortin',    email:'emilie@exemple.com', type:'vol', roles:['Préposé(e) au service','Préposé(e) au remplissage',''], pin:'5678'},
-    {id:6, name:'François Roy',     email:'francois@exemple.com',type:'vol',roles:['Caissier(ère)','Préposé(e) à la passe',''], pin:'1111'},
-    {id:7, name:'Gabrielle Simard', email:'gab@exemple.com',    type:'vol', roles:['Barista','Caissier(ère) bar',''],        pin:'9999'},
-    {id:8, name:'Hugo Lavoie',      email:'hugo@exemple.com',   type:'vol', roles:['Cuisinier(ère)','Pizzaiolo',''],         pin:''},
-    {id:9, name:'Isabelle Morin',   email:'isa@exemple.com',    type:'vol', roles:['Préposé(e) à la pâte','Cuisinier(ère)',''], pin:'4321'},
-    {id:10,name:'Julien Bergeron',  email:'julien@exemple.com', type:'vol', roles:['Préposé(e) à la vaisselle','Busboy / Busgirl',''], pin:'0000'},
-    {id:11,name:'Marie-Ève Dupuis', email:'marieve@exemple.com',type:'emp', roles:['Caissier(ère)','Barista',''],            pin:''},
-    {id:12,name:'Patrick Nadeau',   email:'patrick@exemple.com',type:'emp', roles:['Pizzaiolo','Cuisinier(ère)',''],         pin:''},
+    {id:4, name:'David Côté',       email:'david@exemple.com',  type:'vol', roles:['Busboy / Busgirl','Préposé·e à la vaisselle',''], pin:''},
+    {id:5, name:'Émilie Fortin',    email:'emilie@exemple.com', type:'vol', roles:['Préposé·e au service','Préposé·e au remplissage',''], pin:'5678'},
+    {id:6, name:'François Roy',     email:'francois@exemple.com',type:'vol',roles:['Caissier·ère','Préposé·e à la passe',''], pin:'1111'},
+    {id:7, name:'Gabrielle Simard', email:'gab@exemple.com',    type:'vol', roles:['Barista','Caissier·ère bar',''],        pin:'9999'},
+    {id:8, name:'Hugo Lavoie',      email:'hugo@exemple.com',   type:'vol', roles:['Cuisinier·ère','Pizzaiolo',''],         pin:''},
+    {id:9, name:'Isabelle Morin',   email:'isa@exemple.com',    type:'vol', roles:['Préposé·e à la pâte','Cuisinier·ère',''], pin:'4321'},
+    {id:10,name:'Julien Bergeron',  email:'julien@exemple.com', type:'vol', roles:['Préposé·e à la vaisselle','Busboy / Busgirl',''], pin:'0000'},
+    {id:11,name:'Marie-Ève Dupuis', email:'marieve@exemple.com',type:'emp', roles:['Caissier·ère','Barista',''],            pin:''},
+    {id:12,name:'Patrick Nadeau',   email:'patrick@exemple.com',type:'emp', roles:['Pizzaiolo','Cuisinier·ère',''],         pin:''},
   ];
   nextId = 13;
   rebuildVcols();
@@ -4843,9 +4843,9 @@ function loadTestData() {
     assigns[wk][k] = arr;
     if (s != null) assigns[wk][k+'__t__'+name] = {s, e};
   }
-  assign('v_s', 'Caissier(ère)',           'Alice Tremblay',   17*60, 21.5*60);
+  assign('v_s', 'Caissier·ère',           'Alice Tremblay',   17*60, 21.5*60);
   assign('v_s', 'Barista',            'Gabrielle Simard', 17*60, 21*60);
-  assign('v_s', 'Préposé(e) à la vaisselle',  'David Côté',       17*60, 21.5*60);
+  assign('v_s', 'Préposé·e à la vaisselle',  'David Côté',       17*60, 21.5*60);
   assign('v_s', 'Busboy / Busgirl',   'Julien Bergeron',  17*60, 21.5*60);
   assign('v_s', 'Pizzaiolo',          'Patrick Nadeau',   null,  null);
 }
