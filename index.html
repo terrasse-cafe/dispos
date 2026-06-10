@@ -1652,7 +1652,9 @@ function subscribeRealtime(wk) {
         try {
           const parsed = JSON.parse(r.slots_json);
           avail[wk][r.person_name] = (parsed && ('slots' in parsed || 'quota' in parsed)) ? parsed : {slots: parsed};
+          if (r.updated_at) avail[wk][r.person_name].updated_at = r.updated_at;
         } catch(e) {}
+        renderHoraire();
         renderO();
       }
     )
