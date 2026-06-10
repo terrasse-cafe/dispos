@@ -761,7 +761,7 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
   </div>
   <div>
     <label style="font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px">Note / renfort</label>
-    <textarea id="tp-note" rows="2" placeholder="ex: + Marie 17h-19h en renfort" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;resize:vertical;outline:none;line-height:1.5;transition:border-color .15s"></textarea>
+    <textarea id="tp-note" rows="2" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;resize:vertical;outline:none;line-height:1.5;transition:border-color .15s"></textarea>
   </div>
   <button class="tp-remove" onclick="removeAssignTP()">Retirer ce bénévole</button>
 </div>
@@ -3780,7 +3780,23 @@ function openTP(e,name,sid,role,shift,wk){
   _positionPop(e.clientX,e.clientY);
   tpCtx.anchorEl=e.target;
   const _tpHScroll=document.querySelector('.h-scroll');
-  const _tpReposition=()=>{const r=tpCtx?.anchorEl?.getBoundingClientRect();if(r)_positionPop(r.left+r.width/2,r.top+r.height/2);};
+  const _tpReposition=()=>{
+    if(!tpCtx||!tpCtx.anchorEl)return;
+    const pop2=document.getElementById('time-pop');
+    if(!pop2.classList.contains('open'))return;
+    const r=tpCtx.anchorEl.getBoundingClientRect();
+    if(r.bottom<0||r.top>window.innerHeight||r.right<0||r.left>window.innerWidth){
+      _tpCleanup();pop2.classList.remove('open');tpCtx=null;return;
+    }
+    const pH=pop2.offsetHeight||320;
+    const pW=pop2.offsetWidth||268;
+    let l=r.right+14,t=r.top;
+    if(l+pW>window.innerWidth-8)l=r.left-pW-14;
+    if(l<8)l=8;
+    if(t+pH>window.innerHeight-8)t=window.innerHeight-pH-8;
+    if(t<8)t=8;
+    pop2.style.left=l+'px';pop2.style.top=t+'px';
+  };
   tpCtx._reposition=_tpReposition;
   if(_tpHScroll)_tpHScroll.addEventListener('scroll',_tpReposition);
   window.addEventListener('scroll',_tpReposition,{passive:true});
