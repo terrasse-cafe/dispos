@@ -381,6 +381,8 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
 .toggle-switch input:checked+.toggle-track{background:var(--accent-dark)}
 .toggle-switch input:checked+.toggle-track::before{transform:translateX(16px)}
 .toggle-label{font-size:13px;color:var(--text);font-family:var(--font);cursor:pointer;user-select:none}
+.pm-day-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:8px}
+.pm-day-card:last-child{margin-bottom:0}
 .pin-input-admin{width:100px;letter-spacing:.2em;font-family:var(--mono);font-size:14px;text-align:center}
 @media(max-width:639px){
   .pin-box{padding:1.25rem 1.5rem 1rem}
@@ -763,40 +765,50 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
 
 <!-- PERSON MODAL -->
 <div class="overlay" id="person-overlay" onclick="if(event.target===this)closePersonModal()">
-  <div class="modal-box">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:1rem">
+  <div class="modal-box" style="padding:0;overflow:hidden;display:flex;flex-direction:column">
+    <!-- Header -->
+    <div style="padding:1rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0">
       <div id="pm-title" style="font-size:15px;font-weight:600;flex:1">Ajouter une personne</div>
+      <button type="button" id="pm-pill-vol" class="status-btn pm-type-pill active" onclick="setPmType('vol')">Bénévole</button>
+      <button type="button" id="pm-pill-emp" class="status-btn pm-type-pill" onclick="setPmType('emp')">Employé</button>
+      <input type="hidden" id="pm-type" value="vol"/>
       <div id="pm-active-wrap" style="display:none;align-items:center;gap:8px">
-        <label class="toggle-switch">
-          <input type="checkbox" id="pm-active" checked/>
-          <span class="toggle-track"></span>
-        </label>
+        <label class="toggle-switch"><input type="checkbox" id="pm-active" checked/><span class="toggle-track"></span></label>
         <span class="toggle-label">Actif</span>
       </div>
       <button onclick="closePersonModal()" style="border:none;background:none;cursor:pointer;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text-3);transition:color .1s;padding:0" title="Fermer" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text-3)'"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M9.79096 1.21967C10.0838 0.926977 10.5587 0.926902 10.8515 1.21967C11.1443 1.5125 11.1442 1.98731 10.8515 2.28022L7.09565 6.0351L10.8515 9.79096C11.1443 10.0839 11.1444 10.5587 10.8515 10.8515C10.5587 11.1444 10.0839 11.1443 9.79096 10.8515L6.0351 7.09565L2.28022 10.8515C1.98732 11.1444 1.51256 11.1444 1.21967 10.8515C0.926842 10.5586 0.926799 10.0838 1.21967 9.79096L4.97455 6.0351L1.21967 2.28022C0.926777 1.98732 0.926777 1.51256 1.21967 1.21967C1.51256 0.926777 1.98732 0.926777 2.28022 1.21967L6.0351 4.97455L9.79096 1.21967Z" fill="currentColor"/></svg></button>
     </div>
-    <div class="field"><label>Prénom <span style="color:#DC2626">*</span></label><input type="text" id="pm-first-name" placeholder="Prénom"/></div>
-    <div class="field"><label>Nom de famille</label><input type="text" id="pm-last-name" placeholder="Nom de famille"/></div>
-    <div class="field"><label>Courriel</label><input type="email" id="pm-email" placeholder="prenom@exemple.com"/></div>
-    <div class="field"><label>Type</label>
-      <div style="display:flex;gap:6px">
-        <button type="button" id="pm-pill-vol" class="status-btn pm-type-pill active" onclick="setPmType('vol')">Bénévole</button>
-        <button type="button" id="pm-pill-emp" class="status-btn pm-type-pill" onclick="setPmType('emp')">Employé</button>
-      </div>
-      <input type="hidden" id="pm-type" value="vol"/>
-    </div>
-    <div class="field">
-      <label>Rôles préférés (priorité auto-assignation)</label>
-      <div style="display:flex;flex-direction:column;gap:6px">
-        <select id="pm-r1"></select>
-        <select id="pm-r2"></select>
-        <select id="pm-r3"></select>
-        <select id="pm-r4"></select>
-        <select id="pm-r5"></select>
-        <select id="pm-r6"></select>
+    <!-- Tab bar (emp only) -->
+    <div id="pm-tab-bar" style="display:none;padding:0 1.5rem;border-bottom:1px solid var(--border);flex-shrink:0">
+      <div class="org-tabs" style="margin:0;border:none">
+        <button class="org-tab active" id="pm-tab-general" onclick="setPmTab('general')">Général</button>
+        <button class="org-tab" id="pm-tab-horaire" onclick="setPmTab('horaire')">Horaire</button>
       </div>
     </div>
-    <div class="modal-btns">
+    <!-- Scrollable panels -->
+    <div style="flex:1;overflow-y:auto;min-height:0">
+      <div id="pm-panel-general" style="padding:1.5rem">
+        <div class="field"><label>Prénom <span style="color:#DC2626">*</span></label><input type="text" id="pm-first-name" placeholder="Prénom"/></div>
+        <div class="field"><label>Nom de famille</label><input type="text" id="pm-last-name" placeholder="Nom de famille"/></div>
+        <div class="field"><label>Courriel</label><input type="email" id="pm-email" placeholder="prenom@exemple.com"/></div>
+        <div class="field">
+          <label>Rôles préférés (priorité auto-assignation)</label>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <select id="pm-r1"></select>
+            <select id="pm-r2"></select>
+            <select id="pm-r3"></select>
+            <select id="pm-r4"></select>
+            <select id="pm-r5"></select>
+            <select id="pm-r6"></select>
+          </div>
+        </div>
+      </div>
+      <div id="pm-panel-horaire" style="display:none;padding:1.5rem;background:var(--bg)">
+        <!-- populated by renderPmHoraire() -->
+      </div>
+    </div>
+    <!-- Footer buttons -->
+    <div style="padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;align-items:center;flex-shrink:0;background:var(--surface)">
       <div style="display:flex;gap:6px;margin-right:auto">
         <button class="btn btn-danger" id="pm-delete" onclick="deletePersonFromModal()" style="display:none">Supprimer</button>
         <button class="btn btn-outlined" id="pm-reset-pin" onclick="resetPersonPin()" style="display:none">Réinitialiser le PIN</button>
@@ -1254,12 +1266,16 @@ const EMP_SCHEDULES={
   },
 };
 function empSchedule(name, dayId){
+  const per=getPerson(name);
+  if(per&&per.schedule_json){
+    const d=per.schedule_json[dayId];
+    if(d&&d.on!==false&&d.s!=null&&d.e!=null) return {s:d.s,e:d.e};
+    if(d&&d.on===false) return null;
+  }
   const dayS=EMP_SCHEDULES[dayId];
   if(!dayS)return null;
-  const p=getPerson(name);
-  if(!p||!p.id)return null;
-  const id=Number(p.id);
-  return dayS[id]||null;
+  if(!per||!per.id)return null;
+  return dayS[Number(per.id)]||null;
 }
 const GSH=11,GEH=22,TOTAL_SLOTS=(GEH-GSH)*2;
 
@@ -1379,7 +1395,8 @@ async function loadPeople() {
       type: r.type,
       roles: [r.role1||'', r.role2||'', r.role3||'', r.role4||'', r.role5||'', r.role6||''],
       pin: r.pin || '',
-      active: r.active !== false
+      active: r.active !== false,
+      schedule_json: r.schedule_json || null
     };
     obj.name = displayName(obj);
     return obj;
@@ -1392,7 +1409,7 @@ async function loadPeople() {
 
 async function upsertPerson(p) {
   if (!sb) return;
-  const row = {first_name:p.first_name||'', last_name:p.last_name||'', email:p.email, type:p.type, role1:p.roles[0]||'', role2:p.roles[1]||'', role3:p.roles[2]||'', role4:p.roles[3]||'', role5:p.roles[4]||'', role6:p.roles[5]||'', pin:p.pin||'', active:p.active!==false};
+  const row = {first_name:p.first_name||'', last_name:p.last_name||'', email:p.email, type:p.type, role1:p.roles[0]||'', role2:p.roles[1]||'', role3:p.roles[2]||'', role4:p.roles[3]||'', role5:p.roles[4]||'', role6:p.roles[5]||'', pin:p.pin||'', active:p.active!==false, schedule_json:p.schedule_json||null};
   let error;
   if (p.id) {
     // Modification — update par id
@@ -3788,12 +3805,92 @@ function initRoleSelectListeners(){
   const ids=['pm-r1','pm-r2','pm-r3','pm-r4','pm-r5','pm-r6'];
   ids.forEach(id=>{document.getElementById(id).addEventListener('change',()=>{const cur=ids.map(i=>document.getElementById(i).value);fillRoleSelects(cur);});});
 }
+function setPmTab(tab){
+  document.getElementById('pm-tab-general').classList.toggle('active',tab==='general');
+  document.getElementById('pm-tab-horaire').classList.toggle('active',tab==='horaire');
+  document.getElementById('pm-panel-general').style.display=tab==='general'?'':'none';
+  document.getElementById('pm-panel-horaire').style.display=tab==='horaire'?'':'none';
+}
+const PM_SCHED_DAYS=[
+  {id:'jeudi',label:'Jeudi'},
+  {id:'vendredi',label:'Vendredi'},
+  {id:'samedi',label:'Samedi'},
+  {id:'dimanche',label:'Dimanche'},
+];
+const PM_FAKE_DAY={oH:9,oM:0,cH:22,cM:0};
+function renderPmHoraire(p){
+  const container=document.getElementById('pm-panel-horaire');
+  container.innerHTML='';
+  const sj=(p&&p.schedule_json)||{};
+  PM_SCHED_DAYS.forEach(({id,label})=>{
+    const d=sj[id];
+    const isOn=d?d.on!==false:false;
+    const savedS=d?d.s:undefined;
+    const savedE=d?d.e:undefined;
+    const card=document.createElement('div');
+    card.className='pm-day-card';
+    // Header row
+    const hdr=document.createElement('div');
+    hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:10px';
+    const lbl=document.createElement('span');
+    lbl.style.cssText='font-size:13px;font-weight:600;color:var(--text)';
+    lbl.textContent=label;
+    const togLbl=document.createElement('label');
+    togLbl.className='toggle-switch';
+    const cb=document.createElement('input');
+    cb.type='checkbox';cb.id=`pm-day-${id}`;cb.checked=isOn;
+    cb.addEventListener('change',()=>pmDayToggle(id));
+    const track=document.createElement('span');
+    track.className='toggle-track';
+    togLbl.appendChild(cb);togLbl.appendChild(track);
+    hdr.appendChild(lbl);hdr.appendChild(togLbl);
+    // Time fields
+    const fields=document.createElement('div');
+    fields.id=`pm-day-${id}-fields`;
+    fields.style.cssText=`display:${isOn?'flex':'none'};gap:10px;align-items:flex-end`;
+    const startWrap=document.createElement('div');
+    startWrap.style.cssText='flex:1;display:flex;flex-direction:column;gap:4px';
+    const startLbl=document.createElement('label');
+    startLbl.style.cssText='font-size:12px;color:var(--text-2)';
+    startLbl.textContent='Début';
+    const startSel=buildTimeSelect(PM_FAKE_DAY,'from',savedS);
+    startSel.id=`pm-day-${id}-s`;startSel.style.width='100%';
+    startSel.addEventListener('change',()=>pmDayUpdateEnd(id));
+    startWrap.appendChild(startLbl);startWrap.appendChild(startSel);
+    const endWrap=document.createElement('div');
+    endWrap.style.cssText='flex:1;display:flex;flex-direction:column;gap:4px';
+    const endLbl=document.createElement('label');
+    endLbl.style.cssText='font-size:12px;color:var(--text-2)';
+    endLbl.textContent='Fin';
+    const endSel=buildTimeSelect(PM_FAKE_DAY,'to',savedE);
+    endSel.id=`pm-day-${id}-e`;endSel.style.width='100%';
+    endWrap.appendChild(endLbl);endWrap.appendChild(endSel);
+    fields.appendChild(startWrap);fields.appendChild(endWrap);
+    card.appendChild(hdr);card.appendChild(fields);
+    container.appendChild(card);
+  });
+}
+function pmDayToggle(dayId){
+  const on=document.getElementById(`pm-day-${dayId}`).checked;
+  document.getElementById(`pm-day-${dayId}-fields`).style.display=on?'flex':'none';
+}
+function pmDayUpdateEnd(dayId){
+  const sVal=parseInt(document.getElementById(`pm-day-${dayId}-s`).value);
+  const eEl=document.getElementById(`pm-day-${dayId}-e`);
+  const curE=parseInt(eEl.value);
+  const newSel=buildTimeSelect(PM_FAKE_DAY,'to',curE>sVal?curE:sVal+30,sVal,null);
+  newSel.id=`pm-day-${dayId}-e`;newSel.style.width='100%';
+  eEl.parentNode.replaceChild(newSel,eEl);
+}
 function setPmType(val){
   document.getElementById('pm-type').value=val;
   document.getElementById('pm-pill-vol').classList.toggle('active',val==='vol');
   document.getElementById('pm-pill-emp').classList.toggle('active',val==='emp');
   const p=pmCtx?directory.find(x=>x.id===pmCtx):null;
   document.getElementById('pm-reset-pin').style.display=(p&&val==='vol'&&p.pin)?'inline-flex':'none';
+  const tabBar=document.getElementById('pm-tab-bar');
+  tabBar.style.display=val==='emp'?'':'none';
+  if(val==='emp'){renderPmHoraire(p);setPmTab('general');}
 }
 async function openPersonModal(id){
   // Recharger depuis Supabase pour avoir les ids à jour
@@ -3811,6 +3908,7 @@ async function openPersonModal(id){
   ['pm-r1','pm-r2','pm-r3','pm-r4','pm-r5','pm-r6'].forEach(id=>{document.getElementById(id).innerHTML='<option value="">— Aucun —</option>';});
   fillRoleSelects(vals);initRoleSelectListeners();
   document.getElementById('pm-delete').style.display=p?'inline-flex':'none';
+  renderPmHoraire(p);
   document.getElementById('person-overlay').classList.add('open');
 }
 function closePersonModal(){document.getElementById('person-overlay').classList.remove('open');pmCtx=null;}
@@ -3877,7 +3975,19 @@ async function savePerson(){
   const roles=[document.getElementById('pm-r1').value,document.getElementById('pm-r2').value,document.getElementById('pm-r3').value,document.getElementById('pm-r4').value,document.getElementById('pm-r5').value,document.getElementById('pm-r6').value];
   const active=document.getElementById('pm-active').checked;
   const existingPin=pmCtx?(directory.find(x=>x.id===pmCtx)||{}).pin||'':'';
-  const personData={id:pmCtx||null,first_name,last_name,email,type,roles,pin:type==='vol'?existingPin:'',active};
+  let schedule_json=null;
+  if(type==='emp'){
+    schedule_json={};
+    PM_SCHED_DAYS.forEach(({id:dayId})=>{
+      const cb=document.getElementById(`pm-day-${dayId}`);
+      if(!cb)return;
+      const on=cb.checked;
+      const s=on?parseInt(document.getElementById(`pm-day-${dayId}-s`).value):null;
+      const e=on?parseInt(document.getElementById(`pm-day-${dayId}-e`).value):null;
+      schedule_json[dayId]={on,s,e};
+    });
+  }
+  const personData={id:pmCtx||null,first_name,last_name,email,type,roles,pin:type==='vol'?existingPin:'',active,schedule_json};
   personData.name=displayName(personData);
   const existing=pmCtx?directory.find(x=>x.id===pmCtx):null;
   const oldName=existing?existing.name:'';
@@ -3886,7 +3996,7 @@ async function savePerson(){
 
   // 1. Persist people (must succeed before cascade)
   if(sb&&pmCtx){
-    const row={first_name,last_name,email,type,role1:roles[0]||'',role2:roles[1]||'',role3:roles[2]||'',role4:roles[3]||'',role5:roles[4]||'',role6:roles[5]||'',pin:personData.pin,active};
+    const row={first_name,last_name,email,type,role1:roles[0]||'',role2:roles[1]||'',role3:roles[2]||'',role4:roles[3]||'',role5:roles[4]||'',role6:roles[5]||'',pin:personData.pin,active,schedule_json};
     const {error}=await sb.from('people').update(row).eq('id',pmCtx);
     if(error){alert('Erreur sauvegarde : '+error.message);return;}
   } else {
@@ -3918,7 +4028,7 @@ async function savePerson(){
   }
 
   // 3. Mettre à jour directory local
-  if(existing){existing.first_name=first_name;existing.last_name=last_name;existing.name=newName;existing.email=email;existing.type=type;existing.roles=roles;existing.pin=personData.pin;existing.active=active;}
+  if(existing){existing.first_name=first_name;existing.last_name=last_name;existing.name=newName;existing.email=email;existing.type=type;existing.roles=roles;existing.pin=personData.pin;existing.active=active;existing.schedule_json=schedule_json;}
   else{directory.push(personData);}
 
   rebuildVcols();populateVolSelect();renderDir();
