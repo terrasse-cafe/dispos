@@ -3267,11 +3267,6 @@ function renderHoraire(){
             noteLine.textContent=noteVal;covWrap.appendChild(noteLine);
           }
           chip.appendChild(covWrap);
-          if(_ci){
-            const _dot=document.createElement('span');
-            _dot.style.cssText='position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:#F59E0B;pointer-events:none;flex-shrink:0;z-index:2;';
-            chip.appendChild(_dot);
-          }
           if(!past)chip.addEventListener('click',ev=>{if(x.contains(ev.target))return;openTP(ev,assignedName,shift.id,role,shift,wk);});
           if(!past){
             chip.draggable=true;
