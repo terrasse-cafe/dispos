@@ -135,6 +135,9 @@ main{flex:1;padding:1rem 1.25rem;width:100%;overflow-x:clip}
 .org-tab{padding:7px 18px;border-radius:var(--radius-sm) var(--radius-sm) 0 0;border:1px solid transparent;border-bottom:none;background:transparent;font-size:13px;cursor:pointer;color:var(--text-2);transition:all .12s;margin-bottom:-1px}
 .org-tab.active{background:var(--surface);border-color:var(--border);border-bottom-color:var(--surface);color:var(--text);font-weight:500}
 .org-tab:hover:not(.active){background:var(--bg)}
+.pm-tab{padding:8px 0;margin-right:24px;border:none;background:transparent;font-family:var(--font);font-size:14px;font-weight:400;color:#706A65;cursor:pointer;position:relative}
+.pm-tab.active{color:#1C1917;font-weight:700}
+.pm-tab.active::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;background:#FAAF5C;border-radius:3px 3px 0 0}
 
 /* inputs */
 input[type=text],input[type=email],select{padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;background:var(--surface);color:var(--text);outline:none;transition:border-color .15s}
@@ -783,11 +786,9 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
       </div>
     </div>
     <!-- [B] Tabs (emp only) -->
-    <div id="pm-tabs" style="display:none;padding:0 1.5rem;border-bottom:1px solid var(--border);flex-shrink:0">
-      <div class="org-tabs" style="margin:0;border:none">
-        <button class="org-tab active" id="pm-tab-general" onclick="switchPmTab('general')">Général</button>
-        <button class="org-tab" id="pm-tab-horaire" onclick="switchPmTab('horaire')">Horaire</button>
-      </div>
+    <div id="pm-tabs" style="display:none;align-items:center;padding:0 1.5rem;border-bottom:1px solid var(--border);flex-shrink:0">
+      <button class="pm-tab active" id="pm-tab-general" onclick="switchPmTab('general')">Général</button>
+      <button class="pm-tab" id="pm-tab-horaire" onclick="switchPmTab('horaire')">Horaire</button>
     </div>
     <!-- [C] Body -->
     <div id="pm-body" style="padding:1rem 1.5rem;background:var(--bg);overflow-y:auto;flex:1">
@@ -3821,69 +3822,75 @@ const PM_SCHED_DAYS=[
   {id:'samedi',label:'Samedi'},
   {id:'dimanche',label:'Dimanche'},
 ];
-const PM_SCHED_DEFAULTS={
-  jeudi:{on:true,s:600,e:1260},
-  vendredi:{on:true,s:600,e:1290},
-  samedi:{on:true,s:600,e:1290},
-  dimanche:{on:true,s:600,e:1020},
-};
-const PM_SCH_DAY={oH:10,oM:0,cH:21,cM:30};
-function populatePmHoraire(p){
-  const container=document.getElementById('pm-panel-horaire');
+const EMP_DAY_CONFIG=[
+  {id:'jeudi',    label:'Jeudi',    defS:600,defE:1260,maxE:1260},
+  {id:'vendredi', label:'Vendredi', defS:600,defE:1290,maxE:1290},
+  {id:'samedi',   label:'Samedi',   defS:600,defE:1290,maxE:1290},
+  {id:'dimanche', label:'Dimanche', defS:600,defE:1020,maxE:1020},
+];
+let pmScheduleState={};
+function buildEmpSelect(minM,maxM,savedVal){
+  const sel=document.createElement('select');
+  for(let m=minM;m<=maxM;m+=30){
+    const o=document.createElement('option');
+    o.value=m;o.textContent=mStr(m);
+    if(m===savedVal)o.selected=true;
+    sel.appendChild(o);
+  }
+  return sel;
+}
+function buildEmpScheduleUI(container,existingScheduleJson){
   container.innerHTML='';
-  PM_SCHED_DAYS.forEach(({id,label})=>{
-    let isOn,savedS,savedE;
-    if(p&&p.schedule_json&&p.schedule_json[id]!==undefined){
-      const d=p.schedule_json[id];
-      isOn=d.on!==false;
-      savedS=d.s!=null?d.s:PM_SCHED_DEFAULTS[id].s;
-      savedE=d.e!=null?d.e:PM_SCHED_DEFAULTS[id].e;
-    } else if(p&&p.id&&EMP_SCHEDULES[id]&&EMP_SCHEDULES[id][Number(p.id)]){
-      const d=EMP_SCHEDULES[id][Number(p.id)];
-      isOn=true;savedS=d.s;savedE=d.e;
-    } else {
-      isOn=PM_SCHED_DEFAULTS[id].on;
-      savedS=PM_SCHED_DEFAULTS[id].s;
-      savedE=PM_SCHED_DEFAULTS[id].e;
-    }
-    if(savedS!=null)savedS=Math.round(Math.min(Math.max(savedS,600),1290)/30)*30;
-    if(savedE!=null)savedE=Math.round(Math.min(Math.max(savedE,630),1290)/30)*30;
-    const row=document.createElement('div');
-    row.style.cssText='display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border-light)';
-    const nameLbl=document.createElement('span');
-    nameLbl.style.cssText='font-size:14px;font-weight:600;flex:1;color:var(--text)';
-    nameLbl.textContent=label;
-    const togLbl=document.createElement('label');
-    togLbl.className='toggle-switch';
-    const cb=document.createElement('input');
-    cb.type='checkbox';cb.id=`pm-sch-${id}`;cb.checked=isOn;
-    cb.addEventListener('change',()=>pmSchDayToggle(id));
-    const track=document.createElement('span');track.className='toggle-track';
-    togLbl.appendChild(cb);togLbl.appendChild(track);
-    const deWrap=document.createElement('div');
-    deWrap.style.cssText='display:flex;align-items:center;gap:5px';
-    const deLbl=document.createElement('span');
-    deLbl.style.cssText='font-size:12px;color:var(--text-2)';deLbl.textContent='De';
-    const sSel=buildTimeSelect(PM_SCH_DAY,'from',savedS,600,1290);
-    sSel.id=`pm-sch-${id}-s`;sSel.disabled=!isOn;sSel.style.opacity=isOn?'1':'0.4';
-    deWrap.appendChild(deLbl);deWrap.appendChild(sSel);
-    const aWrap=document.createElement('div');
-    aWrap.style.cssText='display:flex;align-items:center;gap:5px';
-    const aLbl=document.createElement('span');
-    aLbl.style.cssText='font-size:12px;color:var(--text-2)';aLbl.textContent='À';
-    const eSel=buildTimeSelect(PM_SCH_DAY,'to',savedE,600,1290);
-    eSel.id=`pm-sch-${id}-e`;eSel.disabled=!isOn;eSel.style.opacity=isOn?'1':'0.4';
-    aWrap.appendChild(aLbl);aWrap.appendChild(eSel);
-    row.appendChild(nameLbl);row.appendChild(togLbl);row.appendChild(deWrap);row.appendChild(aWrap);
-    container.appendChild(row);
+  pmScheduleState={};
+  EMP_DAY_CONFIG.forEach(cfg=>{
+    const sj=existingScheduleJson?existingScheduleJson[cfg.id]:null;
+    const isOn=sj?sj.on!==false:true;
+    const sVal=sj&&sj.s!=null?Math.round(Math.min(Math.max(sj.s,600),cfg.maxE)/30)*30:cfg.defS;
+    const eVal=sj&&sj.e!=null?Math.round(Math.min(Math.max(sj.e,600),cfg.maxE)/30)*30:cfg.defE;
+    pmScheduleState[cfg.id]={on:isOn,s:sVal,e:eVal};
+    const card=document.createElement('div');card.className='b-day-card'+(isOn?' active':'');
+    card.style.marginBottom='10px';
+    const head=document.createElement('div');head.className='b-day-card-head';
+    const title=document.createElement('div');title.className='b-day-card-title';title.textContent=cfg.label;
+    const toggleLabel=document.createElement('label');toggleLabel.className='b-toggle';
+    const chk=document.createElement('input');chk.type='checkbox';chk.checked=isOn;
+    const track=document.createElement('span');track.className='b-toggle-track';
+    const thumb=document.createElement('span');thumb.className='b-toggle-thumb';
+    toggleLabel.appendChild(chk);toggleLabel.appendChild(track);toggleLabel.appendChild(thumb);
+    head.appendChild(title);head.appendChild(toggleLabel);
+    card.appendChild(head);
+    const body=document.createElement('div');body.className='b-day-card-body';body.style.display=isOn?'grid':'none';
+    const fromField=document.createElement('div');fromField.className='b-field';fromField.innerHTML='<label>De</label>';
+    let sSel=buildEmpSelect(600,cfg.maxE,sVal);fromField.appendChild(sSel);
+    const toField=document.createElement('div');toField.className='b-field';toField.innerHTML='<label>À</label>';
+    let eSel=buildEmpSelect(600,cfg.maxE,eVal);toField.appendChild(eSel);
+    body.appendChild(fromField);body.appendChild(toField);
+    card.appendChild(body);
+    function saveState(){pmScheduleState[cfg.id]={on:chk.checked,s:parseInt(sSel.value),e:parseInt(eSel.value)};}
+    chk.addEventListener('change',()=>{
+      const on=chk.checked;
+      card.classList.toggle('active',on);
+      body.style.display=on?'grid':'none';
+      pmScheduleState[cfg.id].on=on;
+    });
+    sSel.addEventListener('change',saveState);eSel.addEventListener('change',saveState);
+    container.appendChild(card);
   });
 }
-function pmSchDayToggle(dayId){
-  const on=document.getElementById(`pm-sch-${dayId}`).checked;
-  const s=document.getElementById(`pm-sch-${dayId}-s`);
-  const e=document.getElementById(`pm-sch-${dayId}-e`);
-  s.disabled=!on;s.style.opacity=on?'1':'0.4';
-  e.disabled=!on;e.style.opacity=on?'1':'0.4';
+function populatePmHoraire(p){
+  const container=document.getElementById('pm-panel-horaire');
+  let sj=null;
+  if(p&&p.schedule_json){
+    sj=p.schedule_json;
+  } else if(p&&p.id){
+    sj={};
+    EMP_DAY_CONFIG.forEach(cfg=>{
+      const dayS=EMP_SCHEDULES[cfg.id];
+      const empEntry=dayS?dayS[Number(p.id)]:null;
+      sj[cfg.id]=empEntry?{on:true,s:empEntry.s,e:empEntry.e}:{on:false,s:cfg.defS,e:cfg.defE};
+    });
+  }
+  buildEmpScheduleUI(container,sj);
 }
 function setPmType(val){
   document.getElementById('pm-type').value=val;
@@ -3986,12 +3993,8 @@ async function savePerson(){
   if(type==='emp'){
     schedule_json={};
     PM_SCHED_DAYS.forEach(({id:dayId})=>{
-      const cb=document.getElementById(`pm-sch-${dayId}`);
-      if(!cb)return;
-      const on=cb.checked;
-      const s=on?parseInt(document.getElementById(`pm-sch-${dayId}-s`).value):null;
-      const e=on?parseInt(document.getElementById(`pm-sch-${dayId}-e`).value):null;
-      schedule_json[dayId]={on,s,e};
+      const st=pmScheduleState[dayId];
+      schedule_json[dayId]=st?{on:st.on,s:st.s,e:st.e}:{on:false,s:600,e:1260};
     });
   }
   const personData={id:pmCtx||null,first_name,last_name,email,type,roles,pin:type==='vol'?existingPin:'',active,schedule_json};
