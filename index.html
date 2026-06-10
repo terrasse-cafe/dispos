@@ -766,28 +766,32 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
 <!-- PERSON MODAL -->
 <div class="overlay" id="person-overlay" onclick="if(event.target===this)closePersonModal()">
   <div class="modal-box" style="padding:0;overflow:hidden;display:flex;flex-direction:column">
-    <!-- Header -->
-    <div style="padding:1rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0">
-      <div id="pm-title" style="font-size:15px;font-weight:600;flex:1">Ajouter une personne</div>
-      <button type="button" id="pm-pill-vol" class="status-btn pm-type-pill active" onclick="setPmType('vol')">Bénévole</button>
-      <button type="button" id="pm-pill-emp" class="status-btn pm-type-pill" onclick="setPmType('emp')">Employé</button>
-      <input type="hidden" id="pm-type" value="vol"/>
-      <div id="pm-active-wrap" style="display:none;align-items:center;gap:8px">
-        <label class="toggle-switch"><input type="checkbox" id="pm-active" checked/><span class="toggle-track"></span></label>
-        <span class="toggle-label">Actif</span>
+    <!-- [A] Header -->
+    <div style="padding:1rem 1.5rem;border-bottom:1px solid var(--border);flex-shrink:0">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <div id="pm-title" style="font-size:15px;font-weight:600;flex:1">Ajouter une personne</div>
+        <div id="pm-active-wrap" style="display:none;align-items:center;gap:8px">
+          <label class="toggle-switch"><input type="checkbox" id="pm-active" checked/><span class="toggle-track"></span></label>
+          <span class="toggle-label">Actif</span>
+        </div>
+        <button onclick="closePersonModal()" style="border:none;background:none;cursor:pointer;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text-3);transition:color .1s;padding:0" title="Fermer" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text-3)'"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M9.79096 1.21967C10.0838 0.926977 10.5587 0.926902 10.8515 1.21967C11.1443 1.5125 11.1442 1.98731 10.8515 2.28022L7.09565 6.0351L10.8515 9.79096C11.1443 10.0839 11.1444 10.5587 10.8515 10.8515C10.5587 11.1444 10.0839 11.1443 9.79096 10.8515L6.0351 7.09565L2.28022 10.8515C1.98732 11.1444 1.51256 11.1444 1.21967 10.8515C0.926842 10.5586 0.926799 10.0838 1.21967 9.79096L4.97455 6.0351L1.21967 2.28022C0.926777 1.98732 0.926777 1.51256 1.21967 1.21967C1.51256 0.926777 1.98732 0.926777 2.28022 1.21967L6.0351 4.97455L9.79096 1.21967Z" fill="currentColor"/></svg></button>
       </div>
-      <button onclick="closePersonModal()" style="border:none;background:none;cursor:pointer;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text-3);transition:color .1s;padding:0" title="Fermer" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text-3)'"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M9.79096 1.21967C10.0838 0.926977 10.5587 0.926902 10.8515 1.21967C11.1443 1.5125 11.1442 1.98731 10.8515 2.28022L7.09565 6.0351L10.8515 9.79096C11.1443 10.0839 11.1444 10.5587 10.8515 10.8515C10.5587 11.1444 10.0839 11.1443 9.79096 10.8515L6.0351 7.09565L2.28022 10.8515C1.98732 11.1444 1.51256 11.1444 1.21967 10.8515C0.926842 10.5586 0.926799 10.0838 1.21967 9.79096L4.97455 6.0351L1.21967 2.28022C0.926777 1.98732 0.926777 1.51256 1.21967 1.21967C1.51256 0.926777 1.98732 0.926777 2.28022 1.21967L6.0351 4.97455L9.79096 1.21967Z" fill="currentColor"/></svg></button>
+      <div style="display:flex;gap:6px">
+        <button type="button" id="pm-pill-vol" class="status-btn pm-type-pill active" onclick="setPmType('vol')">Bénévole</button>
+        <button type="button" id="pm-pill-emp" class="status-btn pm-type-pill" onclick="setPmType('emp')">Employé</button>
+        <input type="hidden" id="pm-type" value="vol"/>
+      </div>
     </div>
-    <!-- Tab bar (emp only) -->
-    <div id="pm-tab-bar" style="display:none;padding:0 1.5rem;border-bottom:1px solid var(--border);flex-shrink:0">
+    <!-- [B] Tabs (emp only) -->
+    <div id="pm-tabs" style="display:none;padding:0 1.5rem;border-bottom:1px solid var(--border);flex-shrink:0">
       <div class="org-tabs" style="margin:0;border:none">
-        <button class="org-tab active" id="pm-tab-general" onclick="setPmTab('general')">Général</button>
-        <button class="org-tab" id="pm-tab-horaire" onclick="setPmTab('horaire')">Horaire</button>
+        <button class="org-tab active" id="pm-tab-general" onclick="switchPmTab('general')">Général</button>
+        <button class="org-tab" id="pm-tab-horaire" onclick="switchPmTab('horaire')">Horaire</button>
       </div>
     </div>
-    <!-- Scrollable panels -->
-    <div style="flex:1;overflow-y:auto;min-height:0">
-      <div id="pm-panel-general" style="padding:1.5rem">
+    <!-- [C] Body -->
+    <div id="pm-body" style="padding:1rem 1.5rem;background:var(--bg);overflow-y:auto;flex:1">
+      <div id="pm-panel-general">
         <div class="field"><label>Prénom <span style="color:#DC2626">*</span></label><input type="text" id="pm-first-name" placeholder="Prénom"/></div>
         <div class="field"><label>Nom de famille</label><input type="text" id="pm-last-name" placeholder="Nom de famille"/></div>
         <div class="field"><label>Courriel</label><input type="email" id="pm-email" placeholder="prenom@exemple.com"/></div>
@@ -803,11 +807,11 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
           </div>
         </div>
       </div>
-      <div id="pm-panel-horaire" style="display:none;padding:1.5rem;background:var(--bg)">
-        <!-- populated by renderPmHoraire() -->
+      <div id="pm-panel-horaire" style="display:none">
+        <!-- populated by populatePmHoraire() -->
       </div>
     </div>
-    <!-- Footer buttons -->
+    <!-- [D] Footer -->
     <div style="padding:1rem 1.5rem;border-top:1px solid var(--border);display:flex;align-items:center;flex-shrink:0;background:var(--surface)">
       <div style="display:flex;gap:6px;margin-right:auto">
         <button class="btn btn-danger" id="pm-delete" onclick="deletePersonFromModal()" style="display:none">Supprimer</button>
@@ -3805,7 +3809,7 @@ function initRoleSelectListeners(){
   const ids=['pm-r1','pm-r2','pm-r3','pm-r4','pm-r5','pm-r6'];
   ids.forEach(id=>{document.getElementById(id).addEventListener('change',()=>{const cur=ids.map(i=>document.getElementById(i).value);fillRoleSelects(cur);});});
 }
-function setPmTab(tab){
+function switchPmTab(tab){
   document.getElementById('pm-tab-general').classList.toggle('active',tab==='general');
   document.getElementById('pm-tab-horaire').classList.toggle('active',tab==='horaire');
   document.getElementById('pm-panel-general').style.display=tab==='general'?'':'none';
@@ -3817,70 +3821,69 @@ const PM_SCHED_DAYS=[
   {id:'samedi',label:'Samedi'},
   {id:'dimanche',label:'Dimanche'},
 ];
-const PM_FAKE_DAY={oH:9,oM:0,cH:22,cM:0};
-function renderPmHoraire(p){
+const PM_SCHED_DEFAULTS={
+  jeudi:{on:true,s:600,e:1260},
+  vendredi:{on:true,s:600,e:1290},
+  samedi:{on:true,s:600,e:1290},
+  dimanche:{on:true,s:600,e:1020},
+};
+const PM_SCH_DAY={oH:10,oM:0,cH:21,cM:30};
+function populatePmHoraire(p){
   const container=document.getElementById('pm-panel-horaire');
   container.innerHTML='';
-  const sj=(p&&p.schedule_json)||{};
   PM_SCHED_DAYS.forEach(({id,label})=>{
-    const d=sj[id];
-    const isOn=d?d.on!==false:false;
-    const savedS=d?d.s:undefined;
-    const savedE=d?d.e:undefined;
-    const card=document.createElement('div');
-    card.className='pm-day-card';
-    // Header row
-    const hdr=document.createElement('div');
-    hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:10px';
-    const lbl=document.createElement('span');
-    lbl.style.cssText='font-size:13px;font-weight:600;color:var(--text)';
-    lbl.textContent=label;
+    let isOn,savedS,savedE;
+    if(p&&p.schedule_json&&p.schedule_json[id]!==undefined){
+      const d=p.schedule_json[id];
+      isOn=d.on!==false;
+      savedS=d.s!=null?d.s:PM_SCHED_DEFAULTS[id].s;
+      savedE=d.e!=null?d.e:PM_SCHED_DEFAULTS[id].e;
+    } else if(p&&p.id&&EMP_SCHEDULES[id]&&EMP_SCHEDULES[id][Number(p.id)]){
+      const d=EMP_SCHEDULES[id][Number(p.id)];
+      isOn=true;savedS=d.s;savedE=d.e;
+    } else {
+      isOn=PM_SCHED_DEFAULTS[id].on;
+      savedS=PM_SCHED_DEFAULTS[id].s;
+      savedE=PM_SCHED_DEFAULTS[id].e;
+    }
+    if(savedS!=null)savedS=Math.round(Math.min(Math.max(savedS,600),1290)/30)*30;
+    if(savedE!=null)savedE=Math.round(Math.min(Math.max(savedE,630),1290)/30)*30;
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border-light)';
+    const nameLbl=document.createElement('span');
+    nameLbl.style.cssText='font-size:14px;font-weight:600;flex:1;color:var(--text)';
+    nameLbl.textContent=label;
     const togLbl=document.createElement('label');
     togLbl.className='toggle-switch';
     const cb=document.createElement('input');
-    cb.type='checkbox';cb.id=`pm-day-${id}`;cb.checked=isOn;
-    cb.addEventListener('change',()=>pmDayToggle(id));
-    const track=document.createElement('span');
-    track.className='toggle-track';
+    cb.type='checkbox';cb.id=`pm-sch-${id}`;cb.checked=isOn;
+    cb.addEventListener('change',()=>pmSchDayToggle(id));
+    const track=document.createElement('span');track.className='toggle-track';
     togLbl.appendChild(cb);togLbl.appendChild(track);
-    hdr.appendChild(lbl);hdr.appendChild(togLbl);
-    // Time fields
-    const fields=document.createElement('div');
-    fields.id=`pm-day-${id}-fields`;
-    fields.style.cssText=`display:${isOn?'flex':'none'};gap:10px;align-items:flex-end`;
-    const startWrap=document.createElement('div');
-    startWrap.style.cssText='flex:1;display:flex;flex-direction:column;gap:4px';
-    const startLbl=document.createElement('label');
-    startLbl.style.cssText='font-size:12px;color:var(--text-2)';
-    startLbl.textContent='Début';
-    const startSel=buildTimeSelect(PM_FAKE_DAY,'from',savedS);
-    startSel.id=`pm-day-${id}-s`;startSel.style.width='100%';
-    startSel.addEventListener('change',()=>pmDayUpdateEnd(id));
-    startWrap.appendChild(startLbl);startWrap.appendChild(startSel);
-    const endWrap=document.createElement('div');
-    endWrap.style.cssText='flex:1;display:flex;flex-direction:column;gap:4px';
-    const endLbl=document.createElement('label');
-    endLbl.style.cssText='font-size:12px;color:var(--text-2)';
-    endLbl.textContent='Fin';
-    const endSel=buildTimeSelect(PM_FAKE_DAY,'to',savedE);
-    endSel.id=`pm-day-${id}-e`;endSel.style.width='100%';
-    endWrap.appendChild(endLbl);endWrap.appendChild(endSel);
-    fields.appendChild(startWrap);fields.appendChild(endWrap);
-    card.appendChild(hdr);card.appendChild(fields);
-    container.appendChild(card);
+    const deWrap=document.createElement('div');
+    deWrap.style.cssText='display:flex;align-items:center;gap:5px';
+    const deLbl=document.createElement('span');
+    deLbl.style.cssText='font-size:12px;color:var(--text-2)';deLbl.textContent='De';
+    const sSel=buildTimeSelect(PM_SCH_DAY,'from',savedS,600,1290);
+    sSel.id=`pm-sch-${id}-s`;sSel.disabled=!isOn;sSel.style.opacity=isOn?'1':'0.4';
+    deWrap.appendChild(deLbl);deWrap.appendChild(sSel);
+    const aWrap=document.createElement('div');
+    aWrap.style.cssText='display:flex;align-items:center;gap:5px';
+    const aLbl=document.createElement('span');
+    aLbl.style.cssText='font-size:12px;color:var(--text-2)';aLbl.textContent='À';
+    const eSel=buildTimeSelect(PM_SCH_DAY,'to',savedE,600,1290);
+    eSel.id=`pm-sch-${id}-e`;eSel.disabled=!isOn;eSel.style.opacity=isOn?'1':'0.4';
+    aWrap.appendChild(aLbl);aWrap.appendChild(eSel);
+    row.appendChild(nameLbl);row.appendChild(togLbl);row.appendChild(deWrap);row.appendChild(aWrap);
+    container.appendChild(row);
   });
 }
-function pmDayToggle(dayId){
-  const on=document.getElementById(`pm-day-${dayId}`).checked;
-  document.getElementById(`pm-day-${dayId}-fields`).style.display=on?'flex':'none';
-}
-function pmDayUpdateEnd(dayId){
-  const sVal=parseInt(document.getElementById(`pm-day-${dayId}-s`).value);
-  const eEl=document.getElementById(`pm-day-${dayId}-e`);
-  const curE=parseInt(eEl.value);
-  const newSel=buildTimeSelect(PM_FAKE_DAY,'to',curE>sVal?curE:sVal+30,sVal,null);
-  newSel.id=`pm-day-${dayId}-e`;newSel.style.width='100%';
-  eEl.parentNode.replaceChild(newSel,eEl);
+function pmSchDayToggle(dayId){
+  const on=document.getElementById(`pm-sch-${dayId}`).checked;
+  const s=document.getElementById(`pm-sch-${dayId}-s`);
+  const e=document.getElementById(`pm-sch-${dayId}-e`);
+  s.disabled=!on;s.style.opacity=on?'1':'0.4';
+  e.disabled=!on;e.style.opacity=on?'1':'0.4';
 }
 function setPmType(val){
   document.getElementById('pm-type').value=val;
@@ -3888,9 +3891,14 @@ function setPmType(val){
   document.getElementById('pm-pill-emp').classList.toggle('active',val==='emp');
   const p=pmCtx?directory.find(x=>x.id===pmCtx):null;
   document.getElementById('pm-reset-pin').style.display=(p&&val==='vol'&&p.pin)?'inline-flex':'none';
-  const tabBar=document.getElementById('pm-tab-bar');
-  tabBar.style.display=val==='emp'?'':'none';
-  if(val==='emp'){renderPmHoraire(p);setPmTab('general');}
+  document.getElementById('pm-tabs').style.display=val==='emp'?'flex':'none';
+  if(val==='vol'){
+    document.getElementById('pm-panel-general').style.display='';
+    document.getElementById('pm-panel-horaire').style.display='none';
+  } else {
+    populatePmHoraire(p);
+    switchPmTab('general');
+  }
 }
 async function openPersonModal(id){
   // Recharger depuis Supabase pour avoir les ids à jour
@@ -3908,7 +3916,6 @@ async function openPersonModal(id){
   ['pm-r1','pm-r2','pm-r3','pm-r4','pm-r5','pm-r6'].forEach(id=>{document.getElementById(id).innerHTML='<option value="">— Aucun —</option>';});
   fillRoleSelects(vals);initRoleSelectListeners();
   document.getElementById('pm-delete').style.display=p?'inline-flex':'none';
-  renderPmHoraire(p);
   document.getElementById('person-overlay').classList.add('open');
 }
 function closePersonModal(){document.getElementById('person-overlay').classList.remove('open');pmCtx=null;}
@@ -3979,11 +3986,11 @@ async function savePerson(){
   if(type==='emp'){
     schedule_json={};
     PM_SCHED_DAYS.forEach(({id:dayId})=>{
-      const cb=document.getElementById(`pm-day-${dayId}`);
+      const cb=document.getElementById(`pm-sch-${dayId}`);
       if(!cb)return;
       const on=cb.checked;
-      const s=on?parseInt(document.getElementById(`pm-day-${dayId}-s`).value):null;
-      const e=on?parseInt(document.getElementById(`pm-day-${dayId}-e`).value):null;
+      const s=on?parseInt(document.getElementById(`pm-sch-${dayId}-s`).value):null;
+      const e=on?parseInt(document.getElementById(`pm-sch-${dayId}-e`).value):null;
       schedule_json[dayId]={on,s,e};
     });
   }
