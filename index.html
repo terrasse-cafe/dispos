@@ -753,6 +753,8 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
     <button onclick="closeTP()" style="border:none;background:none;cursor:pointer;font-size:16px;line-height:1;color:var(--text-3);padding:0 0 0 8px;flex-shrink:0;transition:color .1s" title="Fermer">×</button>
   </div>
   <div class="tp-role" id="tp-role">—</div>
+  <div id="tp-dispo-notice" style="display:none;font-size:12px;padding:8px 10px;border-radius:6px;background:#FFFBEB;border:1px solid #FCD34D;color:#92400E;line-height:1.5"></div>
+  <button id="tp-update-dispo" class="btn btn-outlined btn-sm" style="display:none" onclick="updateTPDispo()">Mettre à jour</button>
   <div class="tp-fields">
     <div><label>Début</label></div>
     <div><label>Fin</label></div>
@@ -1304,7 +1306,7 @@ function getSmartBMon(){
 let bMon=getSmartBMon();
 let closedDays={}; // {wk: Set<dayId>} jours fermés (météo etc.)
 let slotOverrides={}; // { "shift_id__role": { fromH, toH } }
-let bSel={},avail={},assigns={},vcols={};
+let bSel={},avail={},assigns={},vcols={},assignUpdatedAt={};
 let curDay='vendredi';
 let draggingVol=null;
 let draggingFromRole=null; // {shiftId, role, name} quand on drag depuis un bloc assigné
@@ -1449,6 +1451,7 @@ async function loadAvail(wk) {
       } else {
         avail[wk][r.person_name] = { slots: parsed };
       }
+      avail[wk][r.person_name].updated_at = r.updated_at || null;
     } catch(e) {}
   });
 }
@@ -1482,6 +1485,7 @@ async function loadAssignments(wk) {
   const { data, error } = await sb.from('assignments').select('*').eq('week_key', wk);
   if (error) { console.error('loadAssignments:', error); return; }
   if (!assigns[wk]) assigns[wk] = {};
+  assignUpdatedAt[wk] = {};
   data.forEach(r => {
     if (!r.person_name) return;
     const k = akey(r.shift_id, r.role);
@@ -1494,6 +1498,9 @@ async function loadAssignments(wk) {
     }
     if (r.note) assigns[wk][k+'__n__'+r.person_name] = r.note;
     if (r.locked) assigns[wk][k+'__l__'+r.person_name] = true;
+    if (r.updated_at && r.person_name) {
+      assignUpdatedAt[wk][akey(r.shift_id,r.role)+'||'+r.person_name] = r.updated_at;
+    }
   });
 }
 
@@ -3205,6 +3212,14 @@ function renderHoraire(){
             noteLine.textContent=noteVal;covWrap.appendChild(noteLine);
           }
           chip.appendChild(covWrap);
+          if(!emp&&!past){
+            const _ci=getDispoChangeInfo(wk,assignedName,shift.id,role,shift,curDay);
+            if(_ci){
+              const _dot=document.createElement('span');
+              _dot.style.cssText='position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:#F59E0B;pointer-events:none;flex-shrink:0;z-index:2;';
+              chip.appendChild(_dot);
+            }
+          }
           if(!past)chip.addEventListener('click',ev=>{if(x.contains(ev.target))return;openTP(ev,assignedName,shift.id,role,shift,wk);});
           if(!past){
             chip.draggable=true;
@@ -3683,9 +3698,51 @@ function openTP(e,name,sid,role,shift,wk){
   if(left+popW>window.innerWidth-8)left=e.clientX-popW-10;
   if(top+popH>window.innerHeight-8)top=window.innerHeight-popH-8;
   pop.style.left=Math.max(8,left)+'px';pop.style.top=Math.max(8,top)+'px';
+  const _ci2=getDispoChangeInfo(wk,name,sid,role,shift,curDay);
+  const _notice=document.getElementById('tp-dispo-notice');
+  const _updBtn=document.getElementById('tp-update-dispo');
+  const _tpStart=document.getElementById('tp-start');
+  const _tpEnd=document.getElementById('tp-end');
+  tpCtx.dispoCase=_ci2?_ci2.case:null;
+  tpCtx.newDispoS=_ci2?.newS??null;
+  tpCtx.newDispoE=_ci2?.newE??null;
+  if(_ci2&&_ci2.case===5){
+    _notice.style.display='block';
+    _notice.textContent='Ce bénévole n\'est plus disponible pour ce créneau';
+    _updBtn.style.display='none';
+    _tpStart.disabled=true;
+    _tpEnd.disabled=true;
+  } else if(_ci2&&_ci2.case===23){
+    _notice.style.display='block';
+    _notice.textContent='Disponibilités modifiées — maintenant '+mStr(_ci2.newS)+'–'+mStr(_ci2.newE);
+    _updBtn.style.display='';
+    _tpStart.disabled=false;
+    _tpEnd.disabled=false;
+  } else {
+    _notice.style.display='none';
+    _updBtn.style.display='none';
+    _tpStart.disabled=false;
+    _tpEnd.disabled=false;
+  }
+}
+function updateTPDispo(){
+  if(!tpCtx||tpCtx.newDispoS==null)return;
+  const note=document.getElementById('tp-note').value.trim()||null;
+  const wasLocked=getAssignLocked(tpCtx.wk,tpCtx.sid,tpCtx.role,tpCtx.name);
+  setAssignTimes(tpCtx.wk,tpCtx.sid,tpCtx.role,tpCtx.newDispoS,tpCtx.newDispoE,tpCtx.name);
+  setAssignNote(tpCtx.wk,tpCtx.sid,tpCtx.role,note,tpCtx.name);
+  saveAssignment(tpCtx.wk,tpCtx.sid,tpCtx.role,tpCtx.name,tpCtx.newDispoS,tpCtx.newDispoE,note,wasLocked);
+  document.getElementById('time-pop').classList.remove('open');
+  tpCtx=null;
+  renderHoraire();
 }
 function closeTP(){
   if(!tpCtx){document.getElementById('time-pop').classList.remove('open');return;}
+  if(tpCtx.dispoCase===5){
+    document.getElementById('time-pop').classList.remove('open');
+    tpCtx=null;
+    return;
+  }
   // Auto-save à la fermeture
   const s=parseInt(document.getElementById('tp-start')?.value);
   const e=parseInt(document.getElementById('tp-end')?.value);
@@ -4229,6 +4286,24 @@ function overlapFor(wk,name,shift,dayId){
   const r=volDayRangeFor(wk,name,dayId);if(!r)return null;
   const s=Math.max(r.startMins,shift.fromH*60);const e=Math.min(r.endMins,shift.toH*60);
   if(e<=s)return null;return{s,e};
+}
+function getDispoChangeInfo(wk,name,sid,role,shift,dayId){
+  if(isEmp(name))return null;
+  const availEntry=(avail[wk]||{})[name];
+  const availUa=availEntry?.updated_at;
+  if(!availUa)return null;
+  const assignUa=(assignUpdatedAt[wk]||{})[akey(sid,role)+'||'+name];
+  if(!assignUa)return null;
+  if(new Date(availUa)<=new Date(assignUa))return null;
+  const ct=getAssignTimes(wk,sid,role,name);
+  if(!ct)return null;
+  const newRange=volDayRangeFor(wk,name,dayId);
+  if(!newRange)return{case:5};
+  const newClampedS=Math.max(newRange.startMins,shift.fromH*60);
+  const newClampedE=Math.min(newRange.endMins,shift.toH*60);
+  if(newClampedE<=newClampedS)return{case:5};
+  if(newClampedS<=ct.s&&newClampedE>=ct.e)return null;
+  return{case:23,newS:newClampedS,newE:newClampedE};
 }
 function volCoversShiftFor(wk,name,shift,dayId){
   if(isEmp(name)){
