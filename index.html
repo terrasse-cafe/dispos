@@ -755,7 +755,6 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
   </div>
   <div class="tp-role" id="tp-role">—</div>
   <div id="tp-dispo-notice" style="display:none;font-size:12px;padding:8px 10px;border-radius:6px;background:#FFFBEB;border:1px solid #FCD34D;color:#92400E;line-height:1.5"></div>
-  <button id="tp-update-dispo" class="btn btn-outlined btn-sm" style="display:none" onclick="updateTPDispo()">Mettre à jour</button>
   <div class="tp-fields">
     <div><label>Début</label></div>
     <div><label>Fin</label></div>
@@ -3787,7 +3786,6 @@ function openTP(e,name,sid,role,shift,wk){
   window.addEventListener('scroll',_tpReposition,{passive:true});
   const _ci2=getDispoChangeInfo(wk,name,sid,role,shift,curDay);
   const _notice=document.getElementById('tp-dispo-notice');
-  const _updBtn=document.getElementById('tp-update-dispo');
   const _tpStart=document.getElementById('tp-start');
   const _tpEnd=document.getElementById('tp-end');
   tpCtx.dispoCase=_ci2?_ci2.case:null;
@@ -3796,32 +3794,24 @@ function openTP(e,name,sid,role,shift,wk){
   if(_ci2&&_ci2.case===5){
     _notice.style.display='block';
     _notice.textContent='Ce bénévole n\'est plus disponible pour ce créneau';
-    _updBtn.style.display='none';
     _tpStart.disabled=true;
     _tpEnd.disabled=true;
   } else if(_ci2&&_ci2.case===23){
+    const _note=(assigns[wk]?.[akey(sid,role)+'__n__'+name])||null;
+    const _wasLocked=getAssignLocked(wk,sid,role,name);
+    setAssignTimes(wk,sid,role,_ci2.newS,_ci2.newE,name);
+    saveAssignment(wk,sid,role,name,_ci2.newS,_ci2.newE,_note,_wasLocked);
+    renderHoraire();
     _notice.style.display='block';
-    _notice.textContent='Disponibilités modifiées — maintenant '+mStr(_ci2.newS)+'–'+mStr(_ci2.newE);
-    _updBtn.style.display='';
+    _notice.textContent='Disponibilités mises à jour — '+mStr(_ci2.newS)+'–'+mStr(_ci2.newE);
     _tpStart.disabled=false;
     _tpEnd.disabled=false;
+    tpCtx.dispoCase=null;
   } else {
     _notice.style.display='none';
-    _updBtn.style.display='none';
     _tpStart.disabled=false;
     _tpEnd.disabled=false;
   }
-}
-function updateTPDispo(){
-  if(!tpCtx||tpCtx.newDispoS==null)return;
-  const note=document.getElementById('tp-note').value.trim()||null;
-  const wasLocked=getAssignLocked(tpCtx.wk,tpCtx.sid,tpCtx.role,tpCtx.name);
-  setAssignTimes(tpCtx.wk,tpCtx.sid,tpCtx.role,tpCtx.newDispoS,tpCtx.newDispoE,tpCtx.name);
-  setAssignNote(tpCtx.wk,tpCtx.sid,tpCtx.role,note,tpCtx.name);
-  saveAssignment(tpCtx.wk,tpCtx.sid,tpCtx.role,tpCtx.name,tpCtx.newDispoS,tpCtx.newDispoE,note,wasLocked);
-  document.getElementById('time-pop').classList.remove('open');
-  _tpCleanup();tpCtx=null;
-  renderHoraire();
 }
 function _tpCleanup(){
   if(!tpCtx||!tpCtx._reposition)return;
