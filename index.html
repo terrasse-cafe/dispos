@@ -4706,7 +4706,7 @@ function buildPdfBlob(){
       if(y + totalRowH > pageH - margin - 8){ doc.addPage(); drawPageHeader(); y=20; drawColHeaders(); }
 
       // Fond de ligne alternée (toute la hauteur)
-      setFill(ri%2===0?'#DEDAD6':C.surface); setDraw(C.border);
+      setFill(ri%2===0?'#F7F5F2':C.surface); setDraw(C.border);
       doc.rect(margin, y, usable, totalRowH, 'FD');
 
       // Séparateurs verticaux de colonnes
