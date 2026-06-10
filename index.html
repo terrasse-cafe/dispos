@@ -3263,7 +3263,7 @@ function renderHoraire(){
           tm.style.whiteSpace='nowrap';
           if(chipLevel<3){
             inner.appendChild(tm);
-            if(_ci&&!emp&&!past){const _wi=document.createElement('span');_wi.style.cssText='display:inline-flex;align-items:center;flex-shrink:0;margin-left:3px;';_wi.innerHTML='<svg width="11" height="11" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 1.5L10.5 10H1.5L6 1.5Z" stroke="#F59E0B" stroke-width="1.3" stroke-linejoin="round"/><line x1="6" y1="5" x2="6" y2="7.5" stroke="#F59E0B" stroke-width="1.3" stroke-linecap="round"/><circle cx="6" cy="9" r="0.6" fill="#F59E0B"/></svg>';inner.appendChild(_wi);}
+            if(_ci&&!emp&&!past){const _wi=document.createElement('span');_wi.style.cssText='display:inline-flex;align-items:center;flex-shrink:0;margin-left:3px;';_wi.innerHTML='<svg width="13" height="13" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 1.5L10.5 10H1.5L6 1.5Z" stroke="#F59E0B" stroke-width="1.3" stroke-linejoin="round"/><line x1="6" y1="5" x2="6" y2="7.5" stroke="#F59E0B" stroke-width="1.3" stroke-linecap="round"/><circle cx="6" cy="9" r="0.6" fill="#F59E0B"/></svg>';inner.appendChild(_wi);}
           }
           const spacer=document.createElement('span');spacer.className='chip-spacer';inner.appendChild(spacer);
           if(emp&&chipLevel===0){
