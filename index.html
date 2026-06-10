@@ -1239,6 +1239,28 @@ const ROLE_FILL_PRIORITY={
 function roleFillPriority(role){
   return ROLE_FILL_PRIORITY[role]??99;
 }
+const ROLE_DISPLAY_ORDER=[
+  'Caissier·ère',
+  'Barista',
+  'Mise en place',
+  'Mise en place#2',
+  'Pizzaiolo',
+  'Pizzaiolo#2',
+  'Préposé·e à la pâte',
+  'Cuisinier·ère',
+  'Cuisinier·ère#2',
+  'Préposé·e à la passe',
+  'Préposé·e au service',
+  'Préposé·e au remplissage',
+  'Préposé·e à la vaisselle',
+  'Busboy / Busgirl',
+  'Caissier·ère bar',
+  'Barman / Barmaid',
+];
+function roleDisplayOrder(role){
+  const idx=ROLE_DISPLAY_ORDER.indexOf(role);
+  return idx>=0?idx:99;
+}
 function labelToRole(label){return label;}
 function roleToLabel(r){return roleDisplayLabel(r);}
 const VCOLS=[
@@ -3035,7 +3057,7 @@ function renderHoraire(){
     sb2.appendChild(ss);sr.appendChild(sl);sr.appendChild(sb2);grid.appendChild(sr);
 
     const allRoles=[...(shift._slots||shift.roles),...(shift._optSlots||[]),...(shift._togSlots||[])].slice().sort((a,b)=>
-      roleFillPriority(roleDisplayLabel(a))-roleFillPriority(roleDisplayLabel(b))
+      roleDisplayOrder(a)-roleDisplayOrder(b)
     );
     allRoles.forEach(role=>{
       const isOpt=(shift._optSlots||shift.optional||[]).includes(role);
@@ -4866,7 +4888,7 @@ function buildPdfBlob(){
         ...(shift._slots||shift.roles),
         ...(shift._optSlots||[]),
         ...(shift._togSlots||[]).filter(r=>isSunEventActive(wk,r))
-      ].slice().sort((a,b)=>roleFillPriority(roleDisplayLabel(a))-roleFillPriority(roleDisplayLabel(b)));
+      ].slice().sort((a,b)=>roleDisplayOrder(a)-roleDisplayOrder(b));
       allRoles.forEach(role => {
         const isOpt = (shift._optSlots||shift.optional||[]).includes(role);
         const names2 = getAssigns(wk, shift.id, role);
