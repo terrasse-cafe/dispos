@@ -4706,7 +4706,7 @@ function buildPdfBlob(){
       if(y + totalRowH > pageH - margin - 8){ doc.addPage(); drawPageHeader(); y=20; drawColHeaders(); }
 
       // Fond de ligne alternée (toute la hauteur)
-      setFill(ri%2===0?'#FAFAF9':C.surface); setDraw(C.border);
+      setFill(ri%2===0?'#DEDAD6':C.surface); setDraw(C.border);
       doc.rect(margin, y, usable, totalRowH, 'FD');
 
       // Séparateurs verticaux de colonnes
@@ -4732,7 +4732,7 @@ function buildPdfBlob(){
           doc.setFont('helvetica','normal'); doc.setFontSize(8);
           doc.text(entry.name, margin+cRole+3, midY);
           doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
-          setTextColor(C.text3);
+          setTextColor(C.text2);
           doc.text(entry.timeStr, margin+cRole+cName+3, midY);
           if(noteLines.length){
             doc.setFont('helvetica','italic'); doc.setFontSize(7);
@@ -4743,7 +4743,7 @@ function buildPdfBlob(){
           }
         } else {
           doc.setFont('helvetica','italic'); doc.setFontSize(7.5);
-          setTextColor(C.text3);
+          setTextColor(C.text2);
           doc.text('— non assigné', margin+cRole+3, midY);
         }
         subY += h;
