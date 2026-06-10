@@ -1042,6 +1042,7 @@ const TRANSLATIONS={
     this_week:'Cette semaine',
     copy_prev_week:'Répéter',
     past_notice:'Semaine passée — les disponibilités ne sont plus modifiables.',
+    locked_notice:'Les disponibilités pour cette semaine sont verrouillées depuis mercredi midi. Pour toute modification, contactez l\'organisatrice.',
     quota_label:'Nombre de quarts souhaités',
     email_label:'Courriel de notification',
     email_placeholder:'prenom@exemple.com',
@@ -1088,6 +1089,7 @@ const TRANSLATIONS={
     this_week:'This week',
     copy_prev_week:'Repeat',
     past_notice:'Past week — availability can no longer be modified.',
+    locked_notice:'Availability for this week has been locked since Wednesday noon. For any changes, please contact the organizer.',
     quota_label:'Preferred number of shifts',
     email_label:'Notification email',
     email_placeholder:'firstname@example.com',
@@ -2156,7 +2158,7 @@ async function _afterVolPinSuccess(name, p) {
   buildShiftChips();
   const showWeek=bShiftsDesired!==0;
   document.getElementById('b-week-section').style.display=showWeek?'block':'none';
-  if(showWeek)renderB();else applyBPastState(isWeekReadOnly(wk));
+  if(showWeek)renderB();else applyBPastState(isWeekReadOnly(wk),isWeekLocked(wk));
 }
 
 // Restaure bSel et bShiftsDesired pour une semaine donnée.
@@ -2317,7 +2319,7 @@ async function bShift(d){
     buildShiftChips();
     const showWeek=bShiftsDesired!==0;
     document.getElementById('b-week-section').style.display=showWeek?'block':'none';
-    if(showWeek)renderB();else applyBPastState(isWeekReadOnly(wk));
+    if(showWeek)renderB();else applyBPastState(isWeekReadOnly(wk),isWeekLocked(wk));
   } else {
     renderB();
   }
@@ -2352,13 +2354,23 @@ function isWeekReadOnly(wk){
   const weekEnd=new Date(mon);weekEnd.setDate(mon.getDate()+6);
   return weekEnd<now;
 }
+function isWeekLocked(wk){
+  if(isWeekReadOnly(wk))return false;
+  const mon=new Date(wk+'T00:00:00');
+  const wed=new Date(mon);wed.setDate(mon.getDate()+2);
+  const wedStr=wed.toISOString().slice(0,10);
+  // Midi Montréal EDT = 16h00 UTC (UTC-4, avril–octobre)
+  const lockTime=new Date(wedStr+'T16:00:00Z');
+  return new Date()>=lockTime;
+}
 
 function renderB(){
   const wk=wkey(bMon);
   if(!bSel[wk])bSel[wk]={};
   document.getElementById('b-wlabel').textContent=wlabel(bMon);
   const readOnly=isWeekReadOnly(wk);
-  applyBPastState(readOnly);
+  const locked=isWeekLocked(wk);
+  applyBPastState(readOnly,locked);
   const wrap=document.getElementById('b-days-wrap');wrap.innerHTML='';
   DAYS.forEach(day=>{
     const isClosed=(closedDays[wk]||new Set()).has(day.id);
@@ -2399,7 +2411,7 @@ function renderB(){
       toField.replaceChild(newToSel,toSel);toSel=newToSel;
       toSel.addEventListener('change',saveDay);saveDay();
     }
-    if(readOnly){
+    if(readOnly||locked){
       card.classList.add('readonly');
     }
     if(!isClosed){
@@ -2419,7 +2431,7 @@ function updateBCopyBtn(){
   const btn=document.getElementById('b-copy-btn');
   if(!btn)return;
   const name=document.getElementById('vol-select').value;
-  if(!name||isWeekReadOnly(wkey(bMon))){btn.style.display='none';return;}
+  if(!name||isWeekReadOnly(wkey(bMon))||isWeekLocked(wkey(bMon))){btn.style.display='none';return;}
   btn.style.display='inline-flex';
   const prevWk=wkey(addWeeks(bMon,-1));
   const hasPrev=!!(avail[prevWk]&&avail[prevWk][name]);
@@ -2449,13 +2461,23 @@ async function copyPrevWeek(){
   document.getElementById('b-week-section').style.display=showWeek?'block':'none';
   if(showWeek)renderB();
 }
-function applyBPastState(readOnly){
-  document.getElementById('b-past-notice').style.display=readOnly?'block':'none';
-  document.getElementById('b-shift-chips').classList.toggle('b-past',readOnly);
+function applyBPastState(readOnly,locked=false){
+  const inactive=readOnly||locked;
+  const notice=document.getElementById('b-past-notice');
+  if(locked){
+    notice.textContent=t('locked_notice');
+    notice.style.display='block';
+  } else if(readOnly){
+    notice.textContent=t('past_notice');
+    notice.style.display='block';
+  } else {
+    notice.style.display='none';
+  }
+  document.getElementById('b-shift-chips').classList.toggle('b-past',inactive);
   const emailEl=document.getElementById('vol-email');
-  if(emailEl)emailEl.classList.toggle('b-past',readOnly);
+  if(emailEl)emailEl.classList.toggle('b-past',inactive);
   const submitBtn=document.querySelector('.b-actions .btn-secondary');
-  if(submitBtn)submitBtn.style.display=readOnly?'none':'';
+  if(submitBtn)submitBtn.style.display=inactive?'none':'';
   updateBCopyBtn();
 }
 
@@ -2466,6 +2488,8 @@ function updateBSummary(){}
 async function submitAvail(){
   const name=document.getElementById('vol-select').value;
   if(!name){alert(t('alert_select_name'));return}
+  const wkCheck=wkey(bMon);
+  if(isWeekLocked(wkCheck)||isWeekReadOnly(wkCheck))return;
   const wk=wkey(bMon),sel=bSel[wk]||{};
   if(bShiftsDesired!==0&&!Object.keys(sel).length){alert(t('alert_select_day'));return}
   if(!avail[wk])avail[wk]={};
