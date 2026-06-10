@@ -1313,7 +1313,11 @@ const GSH=11,GEH=22,TOTAL_SLOTS=(GEH-GSH)*2;
 /* ══════════════════════════════════════════════
    STATE (in-memory, synced from Supabase)
 ══════════════════════════════════════════════ */
-let oMon=getMonday(new Date());
+let oMon=(()=>{
+  const _savedWk=localStorage.getItem('tc_org_week');
+  if(_savedWk){const _d=new Date(_savedWk+'T00:00:00');if(!isNaN(_d)&&_d.getDay()===1)return _d;}
+  return getMonday(new Date());
+})();
 let sundayEventRoles={}; // {wk: Set<string>} — rôles événement dimanche actifs par semaine
 
 // Semaine bénévole : si on est lun-mer → semaine prochaine (prochain jeudi)
@@ -2616,6 +2620,7 @@ async function oShift(d){
   oMon=addWeeks(oMon,d);
   undoStack=[];redoStack=[];updateUndoBtn();updateRedoBtn();
   const wk=wkey(oMon);
+  localStorage.setItem('tc_org_week',wk);
   if(sb){
     await loadAvail(wk);
     await loadAssignments(wk);
