@@ -3171,6 +3171,13 @@ function renderHoraire(){
           const chipLeft=hGapL?`calc(${leftPct}% + ${hGapL}px)`:`${leftPct}%`;
           const chipWidth=(hGapL+hGapR)?`calc(${wPct}% - ${hGapL+hGapR}px)`:`${wPct}%`;
           const chipPxW=Math.round((clippedEH-clippedSH)*2*dynCOL);
+          let chipLevel;
+          if(chipPxW>=180)chipLevel=0;
+          else if(chipPxW>=130)chipLevel=1;
+          else if(chipPxW>=90)chipLevel=2;
+          else if(chipPxW>=60)chipLevel=3;
+          else if(chipPxW>=40)chipLevel=4;
+          else chipLevel=5;
           const _ci=(!emp&&!past)?getDispoChangeInfo(wk,assignedName,shift.id,role,shift,curDay):null;
 
           const chip=document.createElement('div');chip.className='avail-chip';
@@ -3195,7 +3202,12 @@ function renderHoraire(){
             lockIcon.innerHTML='<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.66667 7.33337V4.66671C4.66667 3.78265 5.01786 2.93481 5.64298 2.30968C6.2681 1.68456 7.11595 1.33337 8 1.33337C8.88406 1.33337 9.7319 1.68456 10.357 2.30968C10.9821 2.93481 11.3333 3.78265 11.3333 4.66671V7.33337M3.33333 7.33337H12.6667C13.403 7.33337 14 7.93033 14 8.66671V13.3334C14 14.0698 13.403 14.6667 12.6667 14.6667H3.33333C2.59695 14.6667 2 14.0698 2 13.3334V8.66671C2 7.93033 2.59695 7.33337 3.33333 7.33337Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
             inner.appendChild(lockIcon);
           }
-          const nm=document.createElement('span');nm.className='chip-name';const _pch=getPerson(assignedName);nm.textContent=_pch?(chipPxW<90?shortName(_pch):fullName(_pch)):assignedName;inner.appendChild(nm);
+          const nm=document.createElement('span');nm.className='chip-name';
+          const _pch=getPerson(assignedName);
+          if(chipLevel<=1){nm.textContent=_pch?fullName(_pch):assignedName;}
+          else if(chipLevel<=3){nm.textContent=_pch?shortName(_pch):assignedName;}
+          else{nm.textContent=_pch?initials(_pch):assignedName.slice(0,2).toUpperCase();}
+          inner.appendChild(nm);
           const tm=document.createElement('span');tm.className='chip-time';
           const rawCt=getAssignTimes(wk,shift.id,role,assignedName);
           let tmS=sm, tmE=em2;
@@ -3207,15 +3219,19 @@ function renderHoraire(){
             tmS=(es&&es.s<gridStartMins_&&rct&&rct.s===gridStartMins_)?es.s:(rct?rct.s:sm);
             tmE=rct?rct.e:(es?Math.min(es.e,shift.toH*60):em2);
           }
-          tm.textContent=mStr(tmS)+'–'+mStr(tmE);inner.appendChild(tm);
-          if(_ci&&!emp&&!past){const _wi=document.createElement('span');_wi.style.cssText='display:inline-flex;align-items:center;flex-shrink:0;margin-left:3px;';_wi.innerHTML='<svg width="11" height="11" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 1.5L10.5 10H1.5L6 1.5Z" stroke="#F59E0B" stroke-width="1.3" stroke-linejoin="round"/><line x1="6" y1="5" x2="6" y2="7.5" stroke="#F59E0B" stroke-width="1.3" stroke-linecap="round"/><circle cx="6" cy="9" r="0.6" fill="#F59E0B"/></svg>';inner.appendChild(_wi);}
+          tm.textContent=mStr(tmS)+'–'+mStr(tmE);
+          if(chipLevel<3){
+            inner.appendChild(tm);
+            if(_ci&&!emp&&!past){const _wi=document.createElement('span');_wi.style.cssText='display:inline-flex;align-items:center;flex-shrink:0;margin-left:3px;';_wi.innerHTML='<svg width="11" height="11" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 1.5L10.5 10H1.5L6 1.5Z" stroke="#F59E0B" stroke-width="1.3" stroke-linejoin="round"/><line x1="6" y1="5" x2="6" y2="7.5" stroke="#F59E0B" stroke-width="1.3" stroke-linecap="round"/><circle cx="6" cy="9" r="0.6" fill="#F59E0B"/></svg>';inner.appendChild(_wi);}
+          }
           const spacer=document.createElement('span');spacer.className='chip-spacer';inner.appendChild(spacer);
-          if(emp){
+          if(emp&&chipLevel===0){
             const espan=document.createElement('span');espan.className='chip-quota';
             espan.style.color='var(--text-2)';espan.textContent='EMP';inner.appendChild(espan);
-          } else {
+          }
+          if(!emp){
             const cq=volQuota(wk,assignedName);const cu=volWeekShiftCount(wk,assignedName);
-            if(cq!==99&&cq>0){
+            if(cq!==99&&cq>0&&chipLevel<=4){
               const qspan=document.createElement('span');qspan.className='chip-quota';
               qspan.style.color=isOverQuota?'#B91C1C':'var(--text-2)';qspan.textContent=cu+'/'+cq;inner.appendChild(qspan);
             }
