@@ -1330,7 +1330,7 @@ let oMon=(()=>{
   return getMonday(new Date());
 })();
 let sundayEventRoles={}; // {wk: Set<string>} — rôles événement dimanche actifs par semaine
-let trainingRoleWeeks=new Set(); // Set<wk> — semaines où le rôle Bénévole en formation est actif
+let trainingRoleShifts=new Set(); // Set<"wk|shiftId"> — shifts où Bénévole en formation est actif
 
 // Semaine bénévole : si on est lun-mer → semaine prochaine (prochain jeudi)
 // Si on est jeu-dim → semaine courante
@@ -1604,40 +1604,35 @@ async function toggleSundayEventRole(wk,role){
   renderHoraire();
 }
 
-async function loadTrainingRoleWeeks(){
+function trainingKey(wk,shiftId){return wk+'|'+shiftId;}
+function isTrainingActive(wk,shiftId){return trainingRoleShifts.has(trainingKey(wk,shiftId));}
+async function loadTrainingRoleShifts(){
   if(!sb)return;
-  const {data}=await sb.from('org_config').select('value').eq('key','training_role_weeks').maybeSingle();
+  const {data}=await sb.from('org_config').select('value').eq('key','training_role_shifts').maybeSingle();
   if(!data?.value)return;
   try{
     const arr=JSON.parse(data.value);
-    trainingRoleWeeks=new Set(arr);
-  }catch(e){console.error('loadTrainingRoleWeeks:',e);}
+    trainingRoleShifts=new Set(arr);
+  }catch(e){console.error('loadTrainingRoleShifts:',e);}
 }
-async function saveTrainingRoleWeeks(){
+async function saveTrainingRoleShifts(){
   if(!sb)return;
-  await sb.from('org_config').upsert({key:'training_role_weeks',value:JSON.stringify([...trainingRoleWeeks])},{onConflict:'key'});
+  await sb.from('org_config').upsert({key:'training_role_shifts',value:JSON.stringify([...trainingRoleShifts])},{onConflict:'key'});
 }
-async function toggleTrainingRoleWeek(wk){
-  if(trainingRoleWeeks.has(wk)){
-    trainingRoleWeeks.delete(wk);
-    for(const day of DAYS){
-      for(const sh of (SHIFTS[day.id]||[])){
-        if(!(sh._togSlots||[]).includes('Bénévole en formation'))continue;
-        const names=getAssigns(wk,sh.id,'Bénévole en formation').slice();
-        for(const name of names){
-          removeAssign(wk,sh.id,'Bénévole en formation',name);
-          await deleteAssignment(wk,sh.id,'Bénévole en formation',name);
-        }
-      }
+async function toggleTrainingRoleShift(wk,sh){
+  const key=trainingKey(wk,sh.id);
+  if(trainingRoleShifts.has(key)){
+    trainingRoleShifts.delete(key);
+    const names=getAssigns(wk,sh.id,'Bénévole en formation').slice();
+    for(const name of names){
+      removeAssign(wk,sh.id,'Bénévole en formation',name);
+      await deleteAssignment(wk,sh.id,'Bénévole en formation',name);
     }
   } else {
-    trainingRoleWeeks.add(wk);
+    trainingRoleShifts.add(key);
   }
-  await saveTrainingRoleWeeks();
+  await saveTrainingRoleShifts();
   renderHoraire();
-}
-function isTrainingActive(wk){
-  return trainingRoleWeeks.has(wk);
 }
 
 function applySlotOverrides() {
@@ -1743,7 +1738,7 @@ async function bootOrgData() {
   await loadAssignments(wk);
   await loadSlotOverrides();
   await loadSundayEventRoles();
-  await loadTrainingRoleWeeks();
+  await loadTrainingRoleShifts();
   const {data:cdRow}=await sb.from('org_config').select('value').eq('key','closed_days').maybeSingle();
   if(cdRow?.value){
     try{
@@ -3117,7 +3112,7 @@ function highlightDZs(wk,shifts){
     const covers=draggingVolFreeIvs
       ?draggingVolFreeIvs.some(iv=>iv.s<sh.toH*60&&iv.e>sh.fromH*60)
       :volCoversShift(wk,draggingVol,sh);
-    const _togActive_h=(sh._togSlots||[]).filter(r=>roleDisplayLabel(r)==='Bénévole en formation'?isTrainingActive(wkey(oMon)):isSunEventActive(wkey(oMon),r));
+    const _togActive_h=(sh._togSlots||[]).filter(r=>roleDisplayLabel(r)==='Bénévole en formation'?isTrainingActive(wkey(oMon),sh.id):isSunEventActive(wkey(oMon),r));
     [...(sh._slots||sh.roles),...(sh._optSlots||[]),..._togActive_h].forEach(role=>{
       const dz=document.getElementById('dz-'+sh.id+'-'+role.replace(/[^a-z0-9]/gi,'_'));
       if(!dz)return;
@@ -3159,7 +3154,7 @@ function hoverHighlightDZs(wk,shifts,name,freeIvs){
       ?freeIvs.some(iv=>iv.s<sh.toH*60&&iv.e>sh.fromH*60)
       :volCoversShift(wk,name,sh);
     if(!coversFree)return;
-    const _togActive_hh=(sh._togSlots||[]).filter(r=>roleDisplayLabel(r)==='Bénévole en formation'?isTrainingActive(wkey(oMon)):isSunEventActive(wkey(oMon),r));
+    const _togActive_hh=(sh._togSlots||[]).filter(r=>roleDisplayLabel(r)==='Bénévole en formation'?isTrainingActive(wkey(oMon),sh.id):isSunEventActive(wkey(oMon),r));
     [...(sh._slots||sh.roles),...(sh._optSlots||[]),..._togActive_hh].forEach(role=>{
       const dz=document.getElementById('dz-'+sh.id+'-'+role.replace(/[^a-z0-9]/gi,'_'));
       if(!dz)return;
@@ -3291,7 +3286,7 @@ function renderHoraire(){
     allRoles.forEach(role=>{
       const isOpt=(shift._optSlots||shift.optional||[]).includes(role);
       const isToggle=(shift._togSlots||[]).includes(role);
-      const isActive=!isToggle||(roleDisplayLabel(role)==='Bénévole en formation'?isTrainingActive(wk):isSunEventActive(wk,role));
+      const isActive=!isToggle||(roleDisplayLabel(role)==='Bénévole en formation'?isTrainingActive(wk,shift.id):isSunEventActive(wk,role));
       if(!isOpt&&isActive)totalReq++;
       const thisStation=roleStation(role);
       if(thisStation&&thisStation!==lastStation){
@@ -3318,7 +3313,7 @@ function renderHoraire(){
         const togLabel=document.createElement('label');togLabel.className='tog-switch';
         togLabel.title=isActive?'Désactiver ce rôle':'Activer ce rôle';
         const togInput=document.createElement('input');togInput.type='checkbox';togInput.checked=isActive;
-        togInput.addEventListener('change',async(e)=>{e.stopPropagation();if(roleDisplayLabel(role)==='Bénévole en formation'){await toggleTrainingRoleWeek(wk);}else{await toggleSundayEventRole(wk,role);}});
+        togInput.addEventListener('change',async(e)=>{e.stopPropagation();if(roleDisplayLabel(role)==='Bénévole en formation'){await toggleTrainingRoleShift(wk,shift);}else{await toggleSundayEventRole(wk,role);}});
         const togTrack=document.createElement('div');togTrack.className='tog-track';
         const togThumb=document.createElement('div');togThumb.className='tog-thumb';
         togTrack.appendChild(togThumb);
@@ -4832,7 +4827,7 @@ async function openAutoAssign(){
     const allSlots = [
       ...(sh._slots||sh.roles),
       ...(sh._optSlots||[]),
-      ...(sh._togSlots||[]).filter(r=>roleDisplayLabel(r)==='Bénévole en formation'?isTrainingActive(wk):isSunEventActive(wk,r))
+      ...(sh._togSlots||[]).filter(r=>roleDisplayLabel(r)==='Bénévole en formation'?isTrainingActive(wk,sh.id):isSunEventActive(wk,r))
     ];
     const freeSlots = allSlots.filter(r => getAssigns(wk,sh.id,r).length===0);
     let best = {}, bestScore = -1;
@@ -4925,7 +4920,7 @@ async function openAutoAssign(){
     return [
       ...(sh._slots||sh.roles),
       ...(sh._optSlots||[]),
-      ...(sh._togSlots||[]).filter(r=>roleDisplayLabel(r)==='Bénévole en formation'?isTrainingActive(wk):isSunEventActive(wk,r))
+      ...(sh._togSlots||[]).filter(r=>roleDisplayLabel(r)==='Bénévole en formation'?isTrainingActive(wk,sh.id):isSunEventActive(wk,r))
     ];
   }
   function _times(name, sh, dayId){
@@ -5147,7 +5142,7 @@ function buildPdfBlob(){
       const allRoles = [
         ...(shift._slots||shift.roles),
         ...(shift._optSlots||[]),
-        ...(shift._togSlots||[]).filter(r=>roleDisplayLabel(r)==='Bénévole en formation'?isTrainingActive(wk):isSunEventActive(wk,r))
+        ...(shift._togSlots||[]).filter(r=>roleDisplayLabel(r)==='Bénévole en formation'?isTrainingActive(wk,shift.id):isSunEventActive(wk,r))
       ].slice().sort(roleStationSort);
       allRoles.forEach(role => {
         const isOpt = (shift._optSlots||shift.optional||[]).includes(role);
