@@ -202,7 +202,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .h-grid{display:inline-block;min-width:100%;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);box-shadow:none}
 .h-head-row{display:flex;border-bottom:1px solid var(--border)}
 .h-corner{width:var(--role-col);min-width:var(--role-col);flex-shrink:0;background:var(--bg);border-right:1px solid var(--border);padding:6px 8px;font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:flex-end}
-.h-times{flex-shrink:0;background:var(--bg);position:relative;height:24px}
+.h-times{flex-shrink:0;background:var(--bg);position:relative;height:32px}
 .h-tick{position:absolute;top:0;bottom:0;border-left:1px solid var(--border-light);display:flex;align-items:flex-end;padding-bottom:4px;padding-left:3px;font-size:9px;font-family:var(--mono);color:var(--text-3)}
 .h-tick.hour{border-left-color:var(--border);color:var(--text-2);font-weight:500}
 .h-tick.half{border-left:1px dashed var(--border-light);}
@@ -3201,31 +3201,7 @@ function renderHoraire(){
   // Cacher le tooltip de préférences si visible (ex: chip supprimé pendant hover)
   {const tt=document.getElementById('chip-pref-tooltip');if(tt){tt.classList.remove('visible');}}
   const hRow=document.createElement('div');hRow.className='h-head-row';
-
-  // Corner — spans shift-label row + ticks row for 2-shift days
-  const corn=document.createElement('div');corn.className='h-corner';
-  corn.textContent='Rôle';
-  if(shifts.length>1) corn.style.height='48px';
-  hRow.appendChild(corn);
-
-  // Right column: shift labels (optional) + ticks
-  const rightCol=document.createElement('div');
-  rightCol.style.cssText='display:flex;flex-direction:column;flex:1;min-width:0;overflow:hidden';
-
-  if(shifts.length>1){
-    const shiftLabelRow=document.createElement('div');
-    shiftLabelRow.style.cssText='height:24px;position:relative;width:'+TW+'px;min-width:'+TW+'px;background:var(--bg);border-bottom:1px solid var(--border-light);box-sizing:border-box;';
-    shifts.forEach((sh,si)=>{
-      const lx=toPx(sh.fromH);
-      const lw=toPx(sh.toH)-lx;
-      const lbl=document.createElement('div');
-      lbl.style.cssText='position:absolute;left:'+lx+'px;width:'+lw+'px;height:100%;display:flex;align-items:center;padding-left:8px;font-size:10px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:.06em;box-sizing:border-box;'+(si>0?'border-left:1px solid var(--border);':'');
-      lbl.textContent=sh.label;
-      shiftLabelRow.appendChild(lbl);
-    });
-    rightCol.appendChild(shiftLabelRow);
-  }
-
+  const corn=document.createElement('div');corn.className='h-corner';corn.textContent='Rôle';hRow.appendChild(corn);
   const times=document.createElement('div');times.className='h-times';times.style.width=times.style.minWidth=TW+'px';
   for(let i=0;i<numSlots;i++){
     const totalMins=Math.round(dSH*60)+(i*30);
@@ -3241,22 +3217,11 @@ function renderHoraire(){
     }
     times.appendChild(t);
   }
-  rightCol.appendChild(times);
-  hRow.appendChild(rightCol);
-  grid.appendChild(hRow);
+  hRow.appendChild(times);grid.appendChild(hRow);
 
   let totalReq=0,totalFilled=0;
   shifts.forEach(shift=>{
     const spx=toPx(shift.fromH),sw=toPx(shift.toH)-spx;
-    if(shifts.length>1){
-      const sr=document.createElement('div');sr.className='h-shift-row';
-      const sl=document.createElement('div');sl.className='h-shift-label';sl.textContent=shift.label;
-      const sb2=document.createElement('div');sb2.className='h-shift-bar';sb2.style.width=TW+'px';
-      const ss=document.createElement('div');ss.className='h-shift-span';ss.style.left=spx+'px';ss.style.width=sw+'px';
-      ss.textContent=mStr(shift.fromH*60)+' – '+mStr(shift.toH*60);
-      sb2.appendChild(ss);sr.appendChild(sl);sr.appendChild(sb2);grid.appendChild(sr);
-    }
-
     const allRoles=[...(shift._slots||shift.roles),...(shift._optSlots||[]),...(shift._togSlots||[])].slice().sort(roleStationSort);
     let lastStation=null;
     allRoles.forEach(role=>{
