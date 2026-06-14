@@ -3222,12 +3222,14 @@ function renderHoraire(){
   let totalReq=0,totalFilled=0;
   shifts.forEach(shift=>{
     const spx=toPx(shift.fromH),sw=toPx(shift.toH)-spx;
-    const sr=document.createElement('div');sr.className='h-shift-row';
-    const sl=document.createElement('div');sl.className='h-shift-label';sl.textContent=shift.label;
-    const sb2=document.createElement('div');sb2.className='h-shift-bar';sb2.style.width=TW+'px';
-    const ss=document.createElement('div');ss.className='h-shift-span';ss.style.left=spx+'px';ss.style.width=sw+'px';
-    ss.textContent=mStr(shift.fromH*60)+' – '+mStr(shift.toH*60);
-    sb2.appendChild(ss);sr.appendChild(sl);sr.appendChild(sb2);grid.appendChild(sr);
+    if(shifts.length>1){
+      const sr=document.createElement('div');sr.className='h-shift-row';
+      const sl=document.createElement('div');sl.className='h-shift-label';sl.textContent=shift.label;
+      const sb2=document.createElement('div');sb2.className='h-shift-bar';sb2.style.width=TW+'px';
+      const ss=document.createElement('div');ss.className='h-shift-span';ss.style.left=spx+'px';ss.style.width=sw+'px';
+      ss.textContent=mStr(shift.fromH*60)+' – '+mStr(shift.toH*60);
+      sb2.appendChild(ss);sr.appendChild(sl);sr.appendChild(sb2);grid.appendChild(sr);
+    }
 
     const allRoles=[...(shift._slots||shift.roles),...(shift._optSlots||[]),...(shift._togSlots||[])].slice().sort(roleStationSort);
     let lastStation=null;
