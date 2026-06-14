@@ -1248,10 +1248,10 @@ function roleDisplayOrder(role){
   return idx>=0?idx:99;
 }
 const STATION_GROUPS=[
-  {label:'Conteneur',          pdfLabel:'Conteneur', roles:['Caissier·ère','Barista','Mise en place','Mise en place#2','Préposé·e à la vaisselle']},
-  {label:'Cuisine extérieure', pdfLabel:'Cuisine',   roles:['Pizzaiolo','Pizzaiolo#2','Préposé·e à la pâte','Cuisinier·ère','Cuisinier·ère#2','Préposé·e à la passe','Préposé·e au service']},
-  {label:'Mobile',             pdfLabel:'Mobile',    roles:['Busboy / Busgirl','Préposé·e au remplissage']},
-  {label:'Bar',                pdfLabel:'Bar',       roles:['Caissier·ère bar','Barman / Barmaid']},
+  {label:'Conteneur',          pdfLabel:'Conteneur', abbr:'CTN', roles:['Caissier·ère','Barista','Mise en place','Mise en place#2','Préposé·e à la vaisselle']},
+  {label:'Cuisine extérieure', pdfLabel:'Cuisine',   abbr:'CS',  roles:['Pizzaiolo','Pizzaiolo#2','Préposé·e à la pâte','Cuisinier·ère','Cuisinier·ère#2','Préposé·e à la passe','Préposé·e au service']},
+  {label:'Mobile',             pdfLabel:'Mobile',    abbr:'MB',  roles:['Busboy / Busgirl','Préposé·e au remplissage']},
+  {label:'Bar',                pdfLabel:'Bar',       abbr:'BR',  roles:['Caissier·ère bar','Barman / Barmaid']},
 ];
 function roleStation(role){
   const g=STATION_GROUPS.find(g=>g.roles.includes(role));
@@ -5122,6 +5122,7 @@ function buildPdfBlob(){
 
     let lastShiftId = null;
     let rowIdx = 0;
+    const usedAbbr = new Set();
     segments.forEach(seg => {
       const isNewShift = seg.shiftId !== lastShiftId;
 
@@ -5178,13 +5179,22 @@ function buildPdfBlob(){
       if (seg.pdfLabel) {
         setFill('#F0EDEA'); setDraw(C.border);
         doc.rect(margin, segStartY, cStation, segH, 'FD');
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(4);
-        setTextColor('#A8A29E');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(7);
+        setTextColor('#706A65');
+        // Choose full label or abbreviation based on available vertical space
+        const fullLabel = seg.pdfLabel.toUpperCase();
+        const abbrLabel = (STATION_GROUPS.find(g=>g.pdfLabel===seg.pdfLabel)||{}).abbr||fullLabel;
+        const fullW = doc.getTextWidth(fullLabel);
+        const useAbbr = fullW > segH * 0.85;
+        const labelToDraw = useAbbr ? abbrLabel : fullLabel;
+        if(useAbbr && abbrLabel !== fullLabel) usedAbbr.add(seg.pdfLabel);
+        // Reliable vertical centering: y = center + textWidth/2 (text flows bottom-to-top at angle:90)
+        const labelW = doc.getTextWidth(labelToDraw);
         doc.text(
-          seg.pdfLabel.toUpperCase(),
+          labelToDraw,
           margin + cStation / 2,
-          segStartY + segH / 2,
-          { angle: 90, align: 'center' }
+          segStartY + segH / 2 + labelW / 2,
+          { angle: 90 }
         );
       }
 
@@ -5234,7 +5244,18 @@ function buildPdfBlob(){
         rowIdx++;
       });
     });
-    y += 9;
+    // ── Abbreviation legend (only if any abbr were used this day) ──
+    if(usedAbbr.size>0){
+      const legendItems=STATION_GROUPS
+        .filter(g=>usedAbbr.has(g.pdfLabel))
+        .map(g=>g.abbr+' = '+g.pdfLabel);
+      const legendText=legendItems.join('   ·   ');
+      doc.setFont('helvetica','normal');doc.setFontSize(6);
+      setTextColor(C.text3);
+      doc.text(legendText, margin+cStation, y+4);
+      y+=7;
+    }
+    y+=9;
   });
 
   // ── Pied de page sur chaque page ──
