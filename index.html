@@ -1248,10 +1248,10 @@ function roleDisplayOrder(role){
   return idx>=0?idx:99;
 }
 const STATION_GROUPS=[
-  {label:'Conteneur',          roles:['Caissier·ère','Barista','Mise en place','Mise en place#2','Préposé·e à la vaisselle']},
-  {label:'Cuisine extérieure', roles:['Pizzaiolo','Pizzaiolo#2','Préposé·e à la pâte','Cuisinier·ère','Cuisinier·ère#2','Préposé·e à la passe','Préposé·e au service']},
-  {label:'Mobile',             roles:['Busboy / Busgirl','Préposé·e au remplissage']},
-  {label:'Bar',                roles:['Caissier·ère bar','Barman / Barmaid']},
+  {label:'Conteneur',          pdfLabel:'Conteneur', roles:['Caissier·ère','Barista','Mise en place','Mise en place#2','Préposé·e à la vaisselle']},
+  {label:'Cuisine extérieure', pdfLabel:'Cuisine',   roles:['Pizzaiolo','Pizzaiolo#2','Préposé·e à la pâte','Cuisinier·ère','Cuisinier·ère#2','Préposé·e à la passe','Préposé·e au service']},
+  {label:'Mobile',             pdfLabel:'Mobile',    roles:['Busboy / Busgirl','Préposé·e au remplissage']},
+  {label:'Bar',                pdfLabel:'Bar',       roles:['Caissier·ère bar','Barman / Barmaid']},
 ];
 function roleStation(role){
   const g=STATION_GROUPS.find(g=>g.roles.includes(role));
@@ -1265,6 +1265,10 @@ function roleStationSort(a,b){
   const sd=roleStationOrder(a)-roleStationOrder(b);
   if(sd!==0)return sd;
   return roleDisplayOrder(a)-roleDisplayOrder(b);
+}
+function roleStationPdfLabel(role){
+  const g=STATION_GROUPS.find(g=>g.roles.includes(role));
+  return g?g.pdfLabel:'';
 }
 function labelToRole(label){return label;}
 function roleToLabel(r){return roleDisplayLabel(r);}
@@ -4990,8 +4994,8 @@ function buildPdfBlob(){
 
   // Largeurs colonnes (paysage: ~251mm utilisable)
   const usable = pageW - margin*2;
-  const cRole = 44, cName = 60, cTime = 32;
-  const cNote = usable - cRole - cName - cTime; // reste pour la note (~115mm)
+  const cStation = 5, cRole = 39, cName = 60, cTime = 32;
+  const cNote = usable - cStation - cRole - cName - cTime;
 
   let y = margin;
 
@@ -5013,10 +5017,10 @@ function buildPdfBlob(){
     doc.rect(margin, y, usable, 6, 'FD');
     doc.setFont('helvetica','bold'); doc.setFontSize(7);
     setTextColor(C.accent);
-    doc.text('RÔLE',              margin+3,           y+4.2);
-    doc.text('BÉNÉVOLE / EMPLOYÉ',margin+cRole+3,     y+4.2);
-    doc.text('HEURES',            margin+cRole+cName+3, y+4.2);
-    doc.text('NOTE',              margin+cRole+cName+cTime+3, y+4.2);
+    doc.text('RÔLE',               margin+cStation+3,                   y+4.2);
+    doc.text('BÉNÉVOLE / EMPLOYÉ', margin+cStation+cRole+3,             y+4.2);
+    doc.text('HEURES',             margin+cStation+cRole+cName+3,       y+4.2);
+    doc.text('NOTE',               margin+cStation+cRole+cName+cTime+3, y+4.2);
     y += 6;
   }
 
@@ -5100,107 +5104,135 @@ function buildPdfBlob(){
     // En-têtes colonnes
     drawColHeaders();
 
+    const lineH = 4.2;
+    const minEntryH = 6.5;
+
+    // Pre-group rows into segments: consecutive rows with same shift + same station
+    const segments = [];
+    let _curSeg = null;
+    rows.forEach(row => {
+      const _st = roleStation(row.role);
+      const _pl = roleStationPdfLabel(row.role);
+      if (!_curSeg || _curSeg.shiftId !== row.shift.id || _curSeg.station !== _st) {
+        _curSeg = { shift: row.shift, shiftId: row.shift.id, station: _st, pdfLabel: _pl, rows: [] };
+        segments.push(_curSeg);
+      }
+      _curSeg.rows.push(row);
+    });
+
     let lastShiftId = null;
-    let lastPdfStation=null;
-    let lastPdfShiftForStation=null;
-    rows.forEach((row, ri) => {
-      // Reset station tracking on new shift
-      if(row.shift.id!==lastPdfShiftForStation){ lastPdfStation=null; lastPdfShiftForStation=row.shift.id; }
-      // ── Sous-bandeau shift ──
-      if(row.shift.id !== lastShiftId){
-        lastShiftId = row.shift.id;
-        if(ri > 0) y += 1;
-        if(y + shiftBandH + 6.5 > pageH - margin - 8){ doc.addPage(); drawPageHeader(); y=20; drawColHeaders(); }
+    let rowIdx = 0;
+    segments.forEach(seg => {
+      const isNewShift = seg.shiftId !== lastShiftId;
+
+      // White-space gap before Soir when following Jour
+      if (isNewShift && lastShiftId !== null && seg.shift.label === 'Soir') {
+        y += 5;
+      }
+
+      // Shift banner
+      if (isNewShift) {
+        lastShiftId = seg.shiftId;
+        if (y + shiftBandH + 6.5 > pageH - margin - 8) {
+          doc.addPage(); drawPageHeader(); y = 20; drawColHeaders();
+        }
         setFill('#ECEAE7'); setDraw(C.border);
         doc.rect(margin, y, usable, shiftBandH, 'FD');
-        doc.setFont('helvetica','bold'); doc.setFontSize(7);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(7);
         setTextColor(C.text2);
         doc.text(
-          row.shift.label.toUpperCase()+' — '+mStr(row.shift.fromH*60)+' – '+mStr(row.shift.toH*60),
-          margin+3, y+3.6
+          seg.shift.label.toUpperCase() + ' — ' + mStr(seg.shift.fromH * 60) + ' – ' + mStr(seg.shift.toH * 60),
+          margin + 3, y + 3.6
         );
         y += shiftBandH;
-        // ── Station divider (first role of new station, drawn after shift band if both change together) ──
-        const _st1=roleStation(row.role);
-        if(_st1&&_st1!==lastPdfStation){
-          lastPdfStation=_st1;
-          if(y+4.2>pageH-margin-8){doc.addPage();drawPageHeader();y=20;drawColHeaders();}
-          setFill('#F0EDEA');setDraw(C.border);
-          doc.rect(margin,y,usable,4.2,'FD');
-          doc.setFont('helvetica','bold');doc.setFontSize(6);
-          setTextColor('#A8A29E');
-          doc.text(_st1.toUpperCase(),margin+3,y+3);
-          y+=4.2;
-        }
       }
-      // ── Station divider (role in new station, shift band not redrawn) ──
-      const _st2=roleStation(row.role);
-      if(_st2&&_st2!==lastPdfStation){
-        lastPdfStation=_st2;
-        if(y+4.2>pageH-margin-8){doc.addPage();drawPageHeader();y=20;drawColHeaders();}
-        setFill('#F0EDEA');setDraw(C.border);
-        doc.rect(margin,y,usable,4.2,'FD');
-        doc.setFont('helvetica','bold');doc.setFontSize(6);
+
+      // Pre-calculate row heights for this segment
+      const segRowData = seg.rows.map(row => {
+        const entryData = row.entries.map(entry => {
+          const noteLines = entry.note ? doc.splitTextToSize(entry.note, cNote - 7) : [];
+          return { entry, noteLines, h: Math.max(minEntryH, noteLines.length * lineH + 2.5) };
+        });
+        const totalRowH = entryData.reduce((s, e) => s + e.h, 0);
+        return { row, entryData, totalRowH };
+      });
+      const segH = segRowData.reduce((s, r) => s + r.totalRowH, 0);
+
+      // Page break if segment doesn't fit
+      if (y + segH > pageH - margin - 8) {
+        doc.addPage(); drawPageHeader(); y = 20; drawColHeaders();
+        setFill('#ECEAE7'); setDraw(C.border);
+        doc.rect(margin, y, usable, shiftBandH, 'FD');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(7);
+        setTextColor(C.text2);
+        doc.text(
+          seg.shift.label.toUpperCase() + ' — ' + mStr(seg.shift.fromH * 60) + ' – ' + mStr(seg.shift.toH * 60),
+          margin + 3, y + 3.6
+        );
+        y += shiftBandH;
+      }
+
+      const segStartY = y;
+
+      // Station column rect + rotated label
+      if (seg.pdfLabel) {
+        setFill('#F0EDEA'); setDraw(C.border);
+        doc.rect(margin, segStartY, cStation, segH, 'FD');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(4);
         setTextColor('#A8A29E');
-        doc.text(_st2.toUpperCase(),margin+3,y+3);
-        y+=4.2;
+        doc.text(
+          seg.pdfLabel.toUpperCase(),
+          margin + cStation / 2,
+          segStartY + segH / 2,
+          { angle: 90, align: 'center' }
+        );
       }
 
-      // Hauteur de chaque sous-entrée (une par bénévole assigné)
-      const lineH = 4.2;
-      const minEntryH = 6.5;
-      const entryData = row.entries.map(entry => {
-        const noteLines = entry.note ? doc.splitTextToSize(entry.note, cNote-7) : [];
-        return {entry, noteLines, h: Math.max(minEntryH, noteLines.length*lineH+2.5)};
-      });
-      const totalRowH = entryData.reduce((s,e)=>s+e.h, 0);
+      // Draw rows shifted right by cStation
+      segRowData.forEach(({ row, entryData, totalRowH }) => {
+        setFill(rowIdx % 2 === 0 ? '#F7F5F2' : C.surface); setDraw(C.border);
+        doc.rect(margin + cStation, y, usable - cStation, totalRowH, 'FD');
 
-      if(y + totalRowH > pageH - margin - 8){ doc.addPage(); drawPageHeader(); y=20; drawColHeaders(); }
+        setDraw(C.border);
+        [cRole, cRole + cName, cRole + cName + cTime].forEach(cx => {
+          doc.line(margin + cStation + cx, y, margin + cStation + cx, y + totalRowH);
+        });
 
-      // Fond de ligne alternée (toute la hauteur)
-      setFill(ri%2===0?'#F7F5F2':C.surface); setDraw(C.border);
-      doc.rect(margin, y, usable, totalRowH, 'FD');
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
+        setTextColor(C.text2);
+        const roleText = roleLabel(row.role);
+        doc.text(doc.splitTextToSize(roleText, cRole - 5)[0], margin + cStation + 3, y + totalRowH / 2 + 1.5);
 
-      // Séparateurs verticaux de colonnes
-      setDraw(C.border);
-      [cRole, cRole+cName, cRole+cName+cTime].forEach(cx=>{
-        doc.line(margin+cx, y, margin+cx, y+totalRowH);
-      });
-
-      // Col 1 : Rôle — centré verticalement sur toute la hauteur de la ligne
-      doc.setFont('helvetica','normal');
-      doc.setFontSize(7.5);
-      setTextColor(C.text2);
-      const roleText=roleLabel(row.role);
-      doc.text(doc.splitTextToSize(roleText, cRole-5)[0], margin+3, y+totalRowH/2+1.5);
-
-      // Cols 2-4 : une sous-ligne par bénévole
-      let subY = y;
-      entryData.forEach(({entry, noteLines, h}, ei) => {
-        if(ei > 0){ setDraw(C.border); doc.line(margin+cRole, subY, margin+usable, subY); }
-        const midY = subY + h/2 + 1.5;
-        if(entry.name){
-          setTextColor(C.text);
-          doc.setFont('helvetica','normal'); doc.setFontSize(8);
-          doc.text(entry.name, margin+cRole+3, midY);
-          doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
-          setTextColor(C.text2);
-          doc.text(entry.timeStr, margin+cRole+cName+3, midY);
-          if(noteLines.length){
-            doc.setFont('helvetica','italic'); doc.setFontSize(7);
+        let subY = y;
+        entryData.forEach(({ entry, noteLines, h }, ei) => {
+          if (ei > 0) { setDraw(C.border); doc.line(margin + cStation + cRole, subY, margin + usable, subY); }
+          const midY = subY + h / 2 + 1.5;
+          if (entry.name) {
+            setTextColor(C.text);
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+            doc.text(entry.name, margin + cStation + cRole + 3, midY);
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
             setTextColor(C.text2);
-            const blockH = noteLines.length*lineH;
-            const noteStartY = subY + (h-blockH)/2 + lineH - 1;
-            noteLines.forEach((line,li)=>{ doc.text(line, margin+cRole+cName+cTime+3, noteStartY+li*lineH); });
+            doc.text(entry.timeStr, margin + cStation + cRole + cName + 3, midY);
+            if (noteLines.length) {
+              doc.setFont('helvetica', 'italic'); doc.setFontSize(7);
+              setTextColor(C.text2);
+              const blockH = noteLines.length * lineH;
+              const noteStartY = subY + (h - blockH) / 2 + lineH - 1;
+              noteLines.forEach((line, li) => {
+                doc.text(line, margin + cStation + cRole + cName + cTime + 3, noteStartY + li * lineH);
+              });
+            }
+          } else {
+            doc.setFont('helvetica', 'italic'); doc.setFontSize(7.5);
+            setTextColor(C.text2);
+            doc.text('— non assigné', margin + cStation + cRole + 3, midY);
           }
-        } else {
-          doc.setFont('helvetica','italic'); doc.setFontSize(7.5);
-          setTextColor(C.text2);
-          doc.text('— non assigné', margin+cRole+3, midY);
-        }
-        subY += h;
+          subY += h;
+        });
+        y += totalRowH;
+        rowIdx++;
       });
-      y += totalRowH;
     });
     y += 9;
   });
