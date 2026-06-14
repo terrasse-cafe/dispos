@@ -1161,17 +1161,17 @@ const DAYS=[
 ];
 const SHIFTS={
   jeudi:[{id:'j_s',label:'Soir',fromH:10,toH:21,
-    roles:['Caissier·ère','Barista','Préposé·e au remplissage','Cuisinier·ère','Préposé·e à la vaisselle'],toggleable:['Bénévole en formation']}],
+    roles:['Caissier·ère','Barista','Mise en place','Préposé·e au remplissage','Cuisinier·ère','Préposé·e à la vaisselle','Préposé·e au service'],toggleable:['Bénévole en formation']}],
   vendredi:[
     {id:'v_j',label:'Jour',fromH:10,toH:16,
-      roles:['Caissier·ère','Barista','Mise en place','Préposé·e à la vaisselle et au remplissage'],toggleable:['Bénévole en formation']},
+      roles:['Caissier·ère','Barista','Mise en place','Préposé·e au remplissage et à la vaisselle'],toggleable:['Bénévole en formation']},
     {id:'v_s',label:'Soir',fromH:16,toH:21.5,
       roles:['Caissier·ère','Barista','Préposé·e au remplissage','Préposé·e à la vaisselle','Busboy / Busgirl','Préposé·e au service','Pizzaiolo','Pizzaiolo','Préposé·e à la pâte','Cuisinier·ère','Cuisinier·ère','Préposé·e à la passe'],
       optional:['Caissier·ère bar','Barman / Barmaid'],toggleable:['Bénévole en formation'],slotFromH:{'Pizzaiolo':16}}
   ],
   samedi:[
     {id:'s_j',label:'Jour',fromH:10,toH:16,
-      roles:['Caissier·ère','Barista','Mise en place','Préposé·e à la vaisselle et au remplissage'],toggleable:['Bénévole en formation']},
+      roles:['Caissier·ère','Barista','Mise en place','Préposé·e au remplissage et à la vaisselle'],toggleable:['Bénévole en formation']},
     {id:'s_s',label:'Soir',fromH:16,toH:21.5,
       roles:['Caissier·ère','Barista','Préposé·e au remplissage','Préposé·e à la vaisselle','Busboy / Busgirl','Préposé·e au service','Pizzaiolo','Pizzaiolo','Cuisinier·ère','Cuisinier·ère','Préposé·e à la passe'],
       optional:['Caissier·ère bar','Barman / Barmaid'],toggleable:['Bénévole en formation'],slotFromH:{'Pizzaiolo':16}}
@@ -1214,7 +1214,7 @@ const ROLE_FILL_PRIORITY={
   'Cuisinier·ère#2':6,
   'Préposé·e à la pâte':7,
   'Préposé·e à la passe':8,
-  'Préposé·e à la vaisselle et au remplissage':9,
+  'Préposé·e au remplissage et à la vaisselle':9,
   'Préposé·e au remplissage':10,
   'Préposé·e à la vaisselle':11,
   'Caissier·ère bar':11,
@@ -1249,7 +1249,7 @@ function roleDisplayOrder(role){
   return idx>=0?idx:99;
 }
 const STATION_GROUPS=[
-  {label:'Conteneur',          pdfLabel:'Conteneur', abbr:'CO', roles:['Caissier·ère','Barista','Mise en place','Mise en place#2','Préposé·e à la vaisselle','Préposé·e à la vaisselle et au remplissage']},
+  {label:'Conteneur',          pdfLabel:'Conteneur', abbr:'CO', roles:['Caissier·ère','Barista','Mise en place','Mise en place#2','Préposé·e à la vaisselle','Préposé·e au remplissage et à la vaisselle']},
   {label:'Cuisine extérieure', pdfLabel:'Cuisine',   abbr:'CU', roles:['Pizzaiolo','Pizzaiolo#2','Préposé·e à la pâte','Cuisinier·ère','Cuisinier·ère#2','Préposé·e à la passe','Préposé·e au service']},
   {label:'Mobile',             pdfLabel:'Mobile',    abbr:'MO', roles:['Busboy / Busgirl','Préposé·e au remplissage']},
   {label:'Bar',                pdfLabel:'Bar',       abbr:'BR', roles:['Caissier·ère bar','Barman / Barmaid']},
@@ -2330,7 +2330,7 @@ function toggleVolPrefTooltip(e){
 
 function fillVolRoleSelects(vals){
   const ids=['vp-r1','vp-r2','vp-r3','vp-r4','vp-r5','vp-r6'];
-  const PREF_EXCLUDED=['Mise en place','Préposé·e à la vaisselle et au remplissage','Bénévole en formation'];
+  const PREF_EXCLUDED=['Mise en place','Préposé·e au remplissage et à la vaisselle','Bénévole en formation'];
   const uniqueRoles=[...new Set(ALL_ROLES.map(roleDisplayLabel))].filter(r=>!PREF_EXCLUDED.includes(r));
   ids.forEach((id,i)=>{
     const sel=document.getElementById(id);
@@ -2509,7 +2509,7 @@ function openVolPrefs(){
   if(!name)return;
   const p=directory.find(x=>x.name===name);
   const vals=p?[(p.roles[0]||''),(p.roles[1]||''),(p.roles[2]||''),(p.roles[3]||''),(p.roles[4]||''),(p.roles[5]||'')]:['','','','','',''];
-  const PREF_EXCLUDED_VOL=['Mise en place','Préposé·e à la vaisselle et au remplissage','Bénévole en formation'];
+  const PREF_EXCLUDED_VOL=['Mise en place','Préposé·e au remplissage et à la vaisselle','Bénévole en formation'];
   const uniqueRolesVol=[...new Set(ALL_ROLES.map(roleDisplayLabel))].filter(r=>!PREF_EXCLUDED_VOL.includes(r));
   volPrefList=buildRolePrefDragList('vol-pref-drag-list',vals,uniqueRolesVol);
   document.getElementById('vol-prefs-overlay').classList.add('open');
@@ -4300,7 +4300,7 @@ async function openPersonModal(id){
   document.getElementById('pm-active').checked=p?(p.active!==false):true;
   document.getElementById('pm-active-wrap').style.display=p?'flex':'none';
   setPmType(p?p.type:'vol');
-  const PREF_EXCLUDED_LOCAL=['Mise en place','Préposé·e à la vaisselle et au remplissage','Bénévole en formation'];
+  const PREF_EXCLUDED_LOCAL=['Mise en place','Préposé·e au remplissage et à la vaisselle','Bénévole en formation'];
   const uniqueRolesOrg=[...new Set(ALL_ROLES.map(roleDisplayLabel))].filter(r=>!PREF_EXCLUDED_LOCAL.includes(r));
   const vals=[(p&&p.roles[0])||'',(p&&p.roles[1])||'',(p&&p.roles[2])||'',(p&&p.roles[3])||'',(p&&p.roles[4])||'',(p&&p.roles[5])||''];
   orgPrefList=buildRolePrefDragList('org-pref-drag-list',vals,uniqueRolesOrg);
@@ -4752,7 +4752,7 @@ async function openAutoAssign(){
   function prefScore(name,role){
     const p=getPerson(name);if(!p||!p.roles)return 0;
     const dr=roleDisplayLabel(role);
-    if(dr==='Préposé·e à la vaisselle et au remplissage'){
+    if(dr==='Préposé·e au remplissage et à la vaisselle'){
       return Math.max(prefScore(name,'Préposé·e à la vaisselle'),prefScore(name,'Préposé·e au remplissage'));
     }
     const idx=p.roles.findIndex(r=>r&&(r===role||r===dr||roleDisplayLabel(r)===dr));
