@@ -1247,6 +1247,16 @@ function roleDisplayOrder(role){
   const idx=ROLE_DISPLAY_ORDER.indexOf(role);
   return idx>=0?idx:99;
 }
+const STATION_GROUPS=[
+  {label:'Conteneur',          roles:['Caissier·ère','Barista','Mise en place','Mise en place#2','Préposé·e à la vaisselle']},
+  {label:'Cuisine extérieure', roles:['Pizzaiolo','Pizzaiolo#2','Préposé·e à la pâte','Cuisinier·ère','Cuisinier·ère#2','Préposé·e à la passe','Préposé·e au service']},
+  {label:'Mobile',             roles:['Busboy / Busgirl','Préposé·e au remplissage']},
+  {label:'Bar',                roles:['Caissier·ère bar','Barman / Barmaid']},
+];
+function roleStation(role){
+  const g=STATION_GROUPS.find(g=>g.roles.includes(role));
+  return g?g.label:null;
+}
 function labelToRole(label){return label;}
 function roleToLabel(r){return roleDisplayLabel(r);}
 const VCOLS=[
@@ -3130,6 +3140,7 @@ function renderHoraire(){
     ss.textContent=mStr(shift.fromH*60)+' – '+mStr(shift.toH*60);
     sb2.appendChild(ss);sr.appendChild(sl);sr.appendChild(sb2);grid.appendChild(sr);
 
+    let lastStation=null;
     const allRoles=[...(shift._slots||shift.roles),...(shift._optSlots||[]),...(shift._togSlots||[])].slice().sort((a,b)=>
       roleDisplayOrder(a)-roleDisplayOrder(b)
     );
@@ -3138,6 +3149,14 @@ function renderHoraire(){
       const isToggle=(shift._togSlots||[]).includes(role);
       const isActive=!isToggle||isSunEventActive(wk,role);
       if(!isOpt&&isActive)totalReq++;
+      const thisStation=roleStation(role);
+      if(thisStation&&thisStation!==lastStation){
+        lastStation=thisStation;
+        const divider=document.createElement('div');
+        divider.style.cssText='display:flex;align-items:center;height:20px;padding:0 0 0 10px;background:#F0EDEA;font-size:10px;font-weight:600;letter-spacing:0.07em;color:#A8A29E;text-transform:uppercase;border-bottom:1px solid var(--border-light);width:100%;box-sizing:border-box;';
+        divider.textContent=thisStation;
+        grid.appendChild(divider);
+      }
       const row=document.createElement('div');row.className='h-role-row';
       if(isToggle&&!isActive)row.classList.add('tog-inactive');
       row.addEventListener('mouseenter',()=>row.classList.add('row-hover'));
@@ -5039,7 +5058,18 @@ function buildPdfBlob(){
     drawColHeaders();
 
     let lastShiftId = null;
+    let lastPdfStation=null;
+    let lastPdfShiftId=null;
     rows.forEach((row, ri) => {
+      // ── Station divider ──
+      if(row.shift.id!==lastPdfShiftId){ lastPdfStation=null; lastPdfShiftId=row.shift.id; }
+      const thisRowStation=roleStation(row.role);
+      if(thisRowStation&&thisRowStation!==lastPdfStation){
+        lastPdfStation=thisRowStation;
+        row._drawStation=thisRowStation;
+      } else {
+        row._drawStation=null;
+      }
       // ── Sous-bandeau shift ──
       if(row.shift.id !== lastShiftId){
         lastShiftId = row.shift.id;
@@ -5054,6 +5084,24 @@ function buildPdfBlob(){
           margin+3, y+3.6
         );
         y += shiftBandH;
+        if(row._drawStation){
+          setFill('#F0EDEA'); setDraw(C.border);
+          doc.rect(margin,y,usable,4.2,'FD');
+          doc.setFont('helvetica','bold'); doc.setFontSize(6);
+          setTextColor('#A8A29E');
+          doc.text(row._drawStation.toUpperCase(),margin+3,y+3);
+          y+=4.2;
+          row._drawStation=null;
+        }
+      }
+      if(row._drawStation){
+        if(y+4.2>pageH-margin-8){ doc.addPage(); drawPageHeader(); y=20; drawColHeaders(); }
+        setFill('#F0EDEA'); setDraw(C.border);
+        doc.rect(margin,y,usable,4.2,'FD');
+        doc.setFont('helvetica','bold'); doc.setFontSize(6);
+        setTextColor('#A8A29E');
+        doc.text(row._drawStation.toUpperCase(),margin+3,y+3);
+        y+=4.2;
       }
 
       // Hauteur de chaque sous-entrée (une par bénévole assigné)
