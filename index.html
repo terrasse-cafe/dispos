@@ -5193,7 +5193,7 @@ function buildPdfBlob(){
         const capOffset = (7 * 25.4 / 72 * 0.68) / 2;
         doc.text(
           labelToDraw,
-          margin + cStation / 2 - capOffset,
+          margin + cStation / 2 + capOffset,
           segStartY + segH / 2 + labelW / 2,
           { angle: 90 }
         );
