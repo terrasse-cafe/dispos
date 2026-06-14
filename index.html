@@ -1257,6 +1257,15 @@ function roleStation(role){
   const g=STATION_GROUPS.find(g=>g.roles.includes(role));
   return g?g.label:null;
 }
+function roleStationOrder(role){
+  const idx=STATION_GROUPS.findIndex(g=>g.roles.includes(role));
+  return idx>=0?idx:99;
+}
+function roleStationSort(a,b){
+  const sd=roleStationOrder(a)-roleStationOrder(b);
+  if(sd!==0)return sd;
+  return roleDisplayOrder(a)-roleDisplayOrder(b);
+}
 function labelToRole(label){return label;}
 function roleToLabel(r){return roleDisplayLabel(r);}
 const VCOLS=[
@@ -3140,10 +3149,8 @@ function renderHoraire(){
     ss.textContent=mStr(shift.fromH*60)+' – '+mStr(shift.toH*60);
     sb2.appendChild(ss);sr.appendChild(sl);sr.appendChild(sb2);grid.appendChild(sr);
 
+    const allRoles=[...(shift._slots||shift.roles),...(shift._optSlots||[]),...(shift._togSlots||[])].slice().sort(roleStationSort);
     let lastStation=null;
-    const allRoles=[...(shift._slots||shift.roles),...(shift._optSlots||[]),...(shift._togSlots||[])].slice().sort((a,b)=>
-      roleDisplayOrder(a)-roleDisplayOrder(b)
-    );
     allRoles.forEach(role=>{
       const isOpt=(shift._optSlots||shift.optional||[]).includes(role);
       const isToggle=(shift._togSlots||[]).includes(role);
@@ -4989,7 +4996,7 @@ function buildPdfBlob(){
         ...(shift._slots||shift.roles),
         ...(shift._optSlots||[]),
         ...(shift._togSlots||[]).filter(r=>isSunEventActive(wk,r))
-      ].slice().sort((a,b)=>roleDisplayOrder(a)-roleDisplayOrder(b));
+      ].slice().sort(roleStationSort);
       allRoles.forEach(role => {
         const isOpt = (shift._optSlots||shift.optional||[]).includes(role);
         const names2 = getAssigns(wk, shift.id, role);
@@ -5059,17 +5066,10 @@ function buildPdfBlob(){
 
     let lastShiftId = null;
     let lastPdfStation=null;
-    let lastPdfShiftId=null;
+    let lastPdfShiftForStation=null;
     rows.forEach((row, ri) => {
-      // ── Station divider ──
-      if(row.shift.id!==lastPdfShiftId){ lastPdfStation=null; lastPdfShiftId=row.shift.id; }
-      const thisRowStation=roleStation(row.role);
-      if(thisRowStation&&thisRowStation!==lastPdfStation){
-        lastPdfStation=thisRowStation;
-        row._drawStation=thisRowStation;
-      } else {
-        row._drawStation=null;
-      }
+      // Reset station tracking on new shift
+      if(row.shift.id!==lastPdfShiftForStation){ lastPdfStation=null; lastPdfShiftForStation=row.shift.id; }
       // ── Sous-bandeau shift ──
       if(row.shift.id !== lastShiftId){
         lastShiftId = row.shift.id;
@@ -5084,23 +5084,29 @@ function buildPdfBlob(){
           margin+3, y+3.6
         );
         y += shiftBandH;
-        if(row._drawStation){
-          setFill('#F0EDEA'); setDraw(C.border);
+        // ── Station divider (first role of new station, drawn after shift band if both change together) ──
+        const _st1=roleStation(row.role);
+        if(_st1&&_st1!==lastPdfStation){
+          lastPdfStation=_st1;
+          if(y+4.2>pageH-margin-8){doc.addPage();drawPageHeader();y=20;drawColHeaders();}
+          setFill('#F0EDEA');setDraw(C.border);
           doc.rect(margin,y,usable,4.2,'FD');
-          doc.setFont('helvetica','bold'); doc.setFontSize(6);
+          doc.setFont('helvetica','bold');doc.setFontSize(6);
           setTextColor('#A8A29E');
-          doc.text(row._drawStation.toUpperCase(),margin+3,y+3);
+          doc.text(_st1.toUpperCase(),margin+3,y+3);
           y+=4.2;
-          row._drawStation=null;
         }
       }
-      if(row._drawStation){
-        if(y+4.2>pageH-margin-8){ doc.addPage(); drawPageHeader(); y=20; drawColHeaders(); }
-        setFill('#F0EDEA'); setDraw(C.border);
+      // ── Station divider (role in new station, shift band not redrawn) ──
+      const _st2=roleStation(row.role);
+      if(_st2&&_st2!==lastPdfStation){
+        lastPdfStation=_st2;
+        if(y+4.2>pageH-margin-8){doc.addPage();drawPageHeader();y=20;drawColHeaders();}
+        setFill('#F0EDEA');setDraw(C.border);
         doc.rect(margin,y,usable,4.2,'FD');
-        doc.setFont('helvetica','bold'); doc.setFontSize(6);
+        doc.setFont('helvetica','bold');doc.setFontSize(6);
         setTextColor('#A8A29E');
-        doc.text(row._drawStation.toUpperCase(),margin+3,y+3);
+        doc.text(_st2.toUpperCase(),margin+3,y+3);
         y+=4.2;
       }
 
