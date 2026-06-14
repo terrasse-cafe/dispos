@@ -5017,7 +5017,16 @@ async function openAutoAssign(){
 // openPdfModal replaced by openFinaliser
 
 function exportPdfTable(){
-  const filename='horaire-cafe-'+wkey(oMon)+'.pdf';
+  const wk2=wkey(oMon);
+  const openDates=DAYS
+    .filter(d=>!(closedDays[wk2]||new Set()).has(d.id))
+    .map(d=>dayDate(oMon,d.dow));
+  const pdfYear=openDates.length?openDates[0].getFullYear():oMon.getFullYear();
+  const pdfMonths=[...new Set(openDates.map(d=>d.toLocaleDateString('fr-CA',{month:'long'})))];
+  const pdfMonth=pdfMonths.join('-');
+  const pdfDays=openDates.map(d=>d.getDate());
+  const pdfDayRange=pdfDays.length?(pdfDays[0]+(pdfDays.length>1?('-'+pdfDays[pdfDays.length-1]):'')):'';
+  const filename='Horaire du '+pdfDayRange+' '+pdfMonth+' '+pdfYear+'.pdf';
   let ownUrl=null;
   const url=_finBlobUrl||(()=>{const b=buildPdfBlob();ownUrl=URL.createObjectURL(b);return ownUrl;})();
   const a=document.createElement('a');a.href=url;a.download=filename;
@@ -5190,21 +5199,23 @@ function buildPdfBlob(){
         y += 5;
       }
 
-      // Shift banner
+      // Shift banner (only for days with multiple shifts)
       if (isNewShift) {
         lastShiftId = seg.shiftId;
-        if (y + shiftBandH + 6.5 > pageH - margin - 8) {
-          doc.addPage(); drawPageHeader(); y = 20; drawColHeaders();
+        if (shifts.length > 1) {
+          if (y + shiftBandH + 6.5 > pageH - margin - 8) {
+            doc.addPage(); drawPageHeader(); y = 20; drawColHeaders();
+          }
+          setFill('#ECEAE7'); setDraw(C.border);
+          doc.rect(margin, y, usable, shiftBandH, 'FD');
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(7);
+          setTextColor(C.text2);
+          doc.text(
+            seg.shift.label.toUpperCase() + ' — ' + mStr(seg.shift.fromH * 60) + ' – ' + mStr(seg.shift.toH * 60),
+            margin + 3, y + 3.6
+          );
+          y += shiftBandH;
         }
-        setFill('#ECEAE7'); setDraw(C.border);
-        doc.rect(margin, y, usable, shiftBandH, 'FD');
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(7);
-        setTextColor(C.text2);
-        doc.text(
-          seg.shift.label.toUpperCase() + ' — ' + mStr(seg.shift.fromH * 60) + ' – ' + mStr(seg.shift.toH * 60),
-          margin + 3, y + 3.6
-        );
-        y += shiftBandH;
       }
 
       // Pre-calculate row heights for this segment
