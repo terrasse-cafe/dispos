@@ -5190,11 +5190,12 @@ function buildPdfBlob(){
         if(useAbbr && abbrLabel !== fullLabel) usedAbbr.add(seg.pdfLabel);
         // Reliable vertical centering: y = center + textWidth/2 (text flows bottom-to-top at angle:90)
         const labelW = doc.getTextWidth(labelToDraw);
+        const capOffset = (7 * 25.4 / 72 * 0.68) / 2;
         doc.text(
           labelToDraw,
-          margin + cStation / 2,
+          margin + cStation / 2 - capOffset,
           segStartY + segH / 2 + labelW / 2,
-          { angle: 90, baseline: 'middle' }
+          { angle: 90 }
         );
       }
 
