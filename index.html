@@ -1248,10 +1248,10 @@ function roleDisplayOrder(role){
   return idx>=0?idx:99;
 }
 const STATION_GROUPS=[
-  {label:'Conteneur',          pdfLabel:'Conteneur', abbr:'CO', roles:['Caissier·ère','Barista','Mise en place','Mise en place#2','Préposé·e à la vaisselle']},
-  {label:'Cuisine extérieure', pdfLabel:'Cuisine',   abbr:'CU', roles:['Pizzaiolo','Pizzaiolo#2','Préposé·e à la pâte','Cuisinier·ère','Cuisinier·ère#2','Préposé·e à la passe','Préposé·e au service']},
-  {label:'Mobile',             pdfLabel:'Mobile',    abbr:'MO', roles:['Busboy / Busgirl','Préposé·e au remplissage']},
-  {label:'Bar',                pdfLabel:'Bar',       abbr:'BR', roles:['Caissier·ère bar','Barman / Barmaid']},
+  {label:'Conteneur',          pdfLabel:'Conteneur', abbr:'CTN', roles:['Caissier·ère','Barista','Mise en place','Mise en place#2','Préposé·e à la vaisselle']},
+  {label:'Cuisine extérieure', pdfLabel:'Cuisine',   abbr:'CS',  roles:['Pizzaiolo','Pizzaiolo#2','Préposé·e à la pâte','Cuisinier·ère','Cuisinier·ère#2','Préposé·e à la passe','Préposé·e au service']},
+  {label:'Mobile',             pdfLabel:'Mobile',    abbr:'MB',  roles:['Busboy / Busgirl','Préposé·e au remplissage']},
+  {label:'Bar',                pdfLabel:'Bar',       abbr:'BR',  roles:['Caissier·ère bar','Barman / Barmaid']},
 ];
 function roleStation(role){
   const g=STATION_GROUPS.find(g=>g.roles.includes(role));
@@ -4201,7 +4201,7 @@ async function openPersonModal(id){
   await loadPeople();
   pmCtx=id||null;
   const p=id?directory.find(x=>x.id===id):null;
-  document.getElementById('pm-title').textContent=p?displayName(p):'Ajouter une personne';
+  document.getElementById('pm-title').textContent=p?fullName(p):'Ajouter une personne';
   document.getElementById('pm-first-name').value=p?p.first_name:'';
   document.getElementById('pm-last-name').value=p?(p.last_name||''):'';
   document.getElementById('pm-email').value=p?p.email:'';
@@ -4981,7 +4981,7 @@ function buildPdfBlob(){
     accentDark:'#4E877E',
     accentLight:'#EEF5F4',
     text:'#1C1917', text2:'#57534E', text3:'#A8A29E',
-    bg:'#F7F5F2', surface:'#FFFFFF', border:'#A8A29E',
+    bg:'#F7F5F2', surface:'#FFFFFF', border:'#E2DDD8',
     green:'#16A34A', greenLight:'#F0FDF4',
     red:'#DC2626', redLight:'#FEF2F2',
     amber:'#92400E', amberLight:'#FFF7ED',
