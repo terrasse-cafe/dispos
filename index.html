@@ -2319,6 +2319,8 @@ function buildRolePrefDragList(containerId,initialRoles,availableRoles){
   if(!container)return{getValues:()=>['','','','','','']};
   container.innerHTML='';
   let dragSrcIdx=null;
+  let insertGap=null;
+
   function getValues(){
     return [...container.querySelectorAll('.pref-select')].map(s=>s.value);
   }
@@ -2333,12 +2335,40 @@ function buildRolePrefDragList(containerId,initialRoles,availableRoles){
       });
     });
   }
+  function wouldChange(src,gap){
+    return gap!==src&&gap!==src+1;
+  }
+  function clearIndicators(){
+    [...container.querySelectorAll('.pref-row')].forEach(r=>{
+      r.style.borderTop='';
+      r.style.borderBottom='';
+      r.style.marginTop='';
+    });
+  }
+  function showIndicatorAt(gap){
+    clearIndicators();
+    const rows=[...container.querySelectorAll('.pref-row')];
+    if(gap<rows.length){
+      rows[gap].style.borderTop='2px solid #FAAF5C';
+    } else {
+      rows[rows.length-1].style.borderBottom='2px solid #FAAF5C';
+    }
+  }
+  function doInsert(src,gap){
+    const rows=[...container.querySelectorAll('.pref-row')];
+    const values=rows.map(r=>r.querySelector('.pref-select').value);
+    const val=values.splice(src,1)[0];
+    const adjustedGap=gap>src?gap-1:gap;
+    values.splice(adjustedGap,0,val);
+    rows.forEach((row,i)=>{row.querySelector('.pref-select').value=values[i];});
+  }
+
   for(let i=0;i<6;i++){
     const row=document.createElement('div');
     row.className='pref-row';
     row.draggable=true;
     row.dataset.idx=i;
-    row.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:grab;user-select:none';
+    row.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:grab;user-select:none;';
     const grip=document.createElement('span');
     grip.className='pref-grip';
     grip.style.cssText='flex:0 0 24px;display:flex;align-items:center;justify-content:center;opacity:0.4;transition:opacity .15s';
@@ -2357,7 +2387,7 @@ function buildRolePrefDragList(containerId,initialRoles,availableRoles){
     sel.value=initialRoles[i]||'';
     sel.addEventListener('change',refreshDisabled);
     row.addEventListener('mouseenter',()=>grip.style.opacity='0.85');
-    row.addEventListener('mouseleave',()=>grip.style.opacity='0.4');
+    row.addEventListener('mouseleave',()=>{ if(dragSrcIdx===null)grip.style.opacity='0.4'; });
     row.addEventListener('dragstart',e=>{
       dragSrcIdx=i;
       row.style.opacity='0.4';
@@ -2365,26 +2395,32 @@ function buildRolePrefDragList(containerId,initialRoles,availableRoles){
     });
     row.addEventListener('dragend',()=>{
       row.style.opacity='1';
-      [...container.querySelectorAll('.pref-row')].forEach(r=>r.style.borderTop='');
+      clearIndicators();
+      dragSrcIdx=null;
+      insertGap=null;
+      [...container.querySelectorAll('.pref-grip')].forEach(g=>g.style.opacity='0.4');
     });
     row.addEventListener('dragover',e=>{
       e.preventDefault();
-      e.dataTransfer.dropEffect='move';
-      [...container.querySelectorAll('.pref-row')].forEach(r=>r.style.borderTop='');
-      row.style.borderTop='2px solid #FAAF5C';
+      if(dragSrcIdx===null)return;
+      const rect=row.getBoundingClientRect();
+      const gap=e.clientY<rect.top+rect.height/2?i:i+1;
+      if(!wouldChange(dragSrcIdx,gap)){
+        clearIndicators();
+        insertGap=null;
+        return;
+      }
+      insertGap=gap;
+      showIndicatorAt(gap);
     });
     row.addEventListener('drop',e=>{
       e.preventDefault();
-      if(dragSrcIdx===null||dragSrcIdx===i)return;
-      const rows=[...container.querySelectorAll('.pref-row')];
-      const srcSel=rows[dragSrcIdx].querySelector('.pref-select');
-      const dstSel=rows[i].querySelector('.pref-select');
-      const tmp=srcSel.value;
-      srcSel.value=dstSel.value;
-      dstSel.value=tmp;
-      [...container.querySelectorAll('.pref-row')].forEach(r=>r.style.borderTop='');
+      if(dragSrcIdx===null||insertGap===null||!wouldChange(dragSrcIdx,insertGap))return;
+      doInsert(dragSrcIdx,insertGap);
+      clearIndicators();
       refreshDisabled();
       dragSrcIdx=null;
+      insertGap=null;
     });
     row.appendChild(grip);
     row.appendChild(sel);
