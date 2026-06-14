@@ -2390,6 +2390,42 @@ function buildRolePrefDragList(containerId,initialRoles,availableRoles){
     });
     sel.value=initialRoles[i]||'';
     sel.addEventListener('change',refreshDisabled);
+
+    grip.addEventListener('touchstart',e=>{
+      e.preventDefault();
+      dragSrcIdx=i;
+      row.style.opacity='0.4';
+      grip.style.opacity='1';
+    },{passive:false});
+
+    grip.addEventListener('touchmove',e=>{
+      e.preventDefault();
+      if(dragSrcIdx===null)return;
+      const touch=e.touches[0];
+      const rows=[...container.querySelectorAll('.pref-row')];
+      let gap=rows.length;
+      for(let j=0;j<rows.length;j++){
+        const rect=rows[j].getBoundingClientRect();
+        if(touch.clientY<rect.top+rect.height/2){gap=j;break;}
+      }
+      if(!wouldChange(dragSrcIdx,gap)){clearIndicators();insertGap=null;return;}
+      insertGap=gap;
+      showIndicatorAt(gap);
+    },{passive:false});
+
+    grip.addEventListener('touchend',e=>{
+      e.preventDefault();
+      row.style.opacity='1';
+      if(dragSrcIdx!==null&&insertGap!==null&&wouldChange(dragSrcIdx,insertGap)){
+        doInsert(dragSrcIdx,insertGap);
+        refreshDisabled();
+      }
+      clearIndicators();
+      dragSrcIdx=null;
+      insertGap=null;
+      [...container.querySelectorAll('.pref-grip')].forEach(g=>g.style.opacity='0.4');
+    },{passive:false});
+
     row.addEventListener('mouseenter',()=>grip.style.opacity='0.85');
     row.addEventListener('mouseleave',()=>{ if(dragSrcIdx===null)grip.style.opacity='0.4'; });
     row.addEventListener('dragstart',e=>{
@@ -2442,9 +2478,13 @@ function openVolPrefs(){
   const uniqueRolesVol=[...new Set(ALL_ROLES.map(roleDisplayLabel))].filter(r=>!PREF_EXCLUDED_VOL.includes(r));
   volPrefList=buildRolePrefDragList('vol-pref-drag-list',vals,uniqueRolesVol);
   document.getElementById('vol-prefs-overlay').classList.add('open');
+  document.body.style.overflow='hidden';
+  document.body.style.touchAction='none';
 }
 function closeVolPrefs(){
   document.getElementById('vol-prefs-overlay').classList.remove('open');
+  document.body.style.overflow='';
+  document.body.style.touchAction='';
 }
 async function saveVolPrefs(){
   const name=document.getElementById('vol-select').value;
@@ -4214,8 +4254,10 @@ async function openPersonModal(id){
   orgPrefList=buildRolePrefDragList('org-pref-drag-list',vals,uniqueRolesOrg);
   document.getElementById('pm-delete').style.display=p?'inline-flex':'none';
   document.getElementById('person-overlay').classList.add('open');
+  document.body.style.overflow='hidden';
+  document.body.style.touchAction='none';
 }
-function closePersonModal(){document.getElementById('person-overlay').classList.remove('open');pmCtx=null;}
+function closePersonModal(){document.getElementById('person-overlay').classList.remove('open');pmCtx=null;document.body.style.overflow='';document.body.style.touchAction='';}
 async function clearAllPersonData(name){
   if(!name)return;
   if(!confirm(`Supprimer toutes les disponibilités et assignations de ${name} ? Cette action est irréversible.`))return;
