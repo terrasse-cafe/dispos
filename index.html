@@ -5263,7 +5263,10 @@ function buildPdfBlob(){
           const noteLines = entry.note ? doc.splitTextToSize(entry.note, cNote - 7) : [];
           return { entry, noteLines, h: Math.max(minEntryH, noteLines.length * lineH + 2.5) };
         });
-        const totalRowH = entryData.reduce((s, e) => s + e.h, 0);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
+        const roleLines_ = doc.splitTextToSize(roleLabel(row.role), cRole - 5);
+        const roleH_ = roleLines_.length > 1 ? roleLines_.length * lineH + 2 : 0;
+        const totalRowH = Math.max(entryData.reduce((s, e) => s + e.h, 0), roleH_);
         return { row, entryData, totalRowH };
       });
       const segH = segRowData.reduce((s, r) => s + r.totalRowH, 0);
@@ -5308,6 +5311,14 @@ function buildPdfBlob(){
         );
       }
 
+      // Pre-compute role line wraps for consistent rendering
+      const roleLineMap = new Map();
+      segRowData.forEach(({ row }) => {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
+        const lines = doc.splitTextToSize(roleLabel(row.role), cRole - 5);
+        roleLineMap.set(row.role, lines);
+      });
+
       // Draw rows shifted right by cStation
       segRowData.forEach(({ row, entryData, totalRowH }) => {
         setFill(rowIdx % 2 === 0 ? '#F7F5F2' : C.surface); setDraw(C.border);
@@ -5321,7 +5332,16 @@ function buildPdfBlob(){
         doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
         setTextColor(C.text2);
         const roleText = roleLabel(row.role);
-        doc.text(doc.splitTextToSize(roleText, cRole - 5)[0], margin + cStation + 3, y + totalRowH / 2 + 1.5);
+        const roleLines = roleLineMap.get(row.role) || doc.splitTextToSize(roleText, cRole - 5);
+        if (roleLines.length === 1) {
+          doc.text(roleLines[0], margin + cStation + 3, y + totalRowH / 2 + 1.5);
+        } else {
+          const blockH = roleLines.length * lineH;
+          const roleStartY = y + (totalRowH - blockH) / 2 + lineH - 1;
+          roleLines.forEach((line, li) => {
+            doc.text(line, margin + cStation + 3, roleStartY + li * lineH);
+          });
+        }
 
         let subY = y;
         entryData.forEach(({ entry, noteLines, h }, ei) => {
