@@ -3102,6 +3102,9 @@ function setAssignLocked(wk,sid,role,locked,name){
 function volPrefersRole(name,role){
   const p=getPerson(name);if(!p||!p.roles)return false;
   const dr=roleDisplayLabel(role);
+  if(dr==='Préposé·e au remplissage et à la vaisselle'){
+    return volPrefersRole(name,'Préposé·e au remplissage')||volPrefersRole(name,'Préposé·e à la vaisselle');
+  }
   return p.roles.some(r=>r&&(r===role||r===dr||roleDisplayLabel(r)===dr));
 }
 function highlightDZs(wk,shifts){
