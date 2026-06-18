@@ -1634,6 +1634,27 @@ async function toggleTrainingRoleShift(wk,sh){
   await saveTrainingRoleShifts();
   renderHoraire();
 }
+async function toggleTrainingRoleShiftPair(wk,sh0,sh1){
+  const k0=trainingKey(wk,sh0.id),k1=trainingKey(wk,sh1.id);
+  const was0=trainingRoleShifts.has(k0),was1=trainingRoleShifts.has(k1);
+  if(was0||was1){
+    if(was0){
+      trainingRoleShifts.delete(k0);
+      const n0=getAssigns(wk,sh0.id,'Bénévole en formation').slice();
+      for(const n of n0){removeAssign(wk,sh0.id,'Bénévole en formation',n);await deleteAssignment(wk,sh0.id,'Bénévole en formation',n);}
+    }
+    if(was1){
+      trainingRoleShifts.delete(k1);
+      const n1=getAssigns(wk,sh1.id,'Bénévole en formation').slice();
+      for(const n of n1){removeAssign(wk,sh1.id,'Bénévole en formation',n);await deleteAssignment(wk,sh1.id,'Bénévole en formation',n);}
+    }
+  }else{
+    trainingRoleShifts.add(k0);
+    trainingRoleShifts.add(k1);
+  }
+  await saveTrainingRoleShifts();
+  renderHoraire();
+}
 
 function applySlotOverrides() {
   Object.entries(slotOverrides).forEach(([key, val]) => {
@@ -3190,6 +3211,8 @@ function hoverHighlightDZs(wk,shifts,name,freeIvs){
   });
 }
 
+const MERGED_ROLE_NAMES=new Set(['Caissier·ère','Barista','Bénévole en formation']);
+
 /* ══════════════════════════════════════════════
    RENDER HORAIRE
 ══════════════════════════════════════════════ */
@@ -3282,11 +3305,347 @@ function renderHoraire(){
   grid.appendChild(hRow);
 
   let totalReq=0,totalFilled=0;
+  const mergedRoleMap=new Map();
+  if(shifts.length>1){
+    MERGED_ROLE_NAMES.forEach(rn=>{
+      const sh0=shifts[0],sh1=shifts[1];
+      const has=sh=>[...(sh._slots||sh.roles),...(sh._optSlots||[]),...(sh._togSlots||[])].some(r=>roleDisplayLabel(r)===rn);
+      if(has(sh0)&&has(sh1))mergedRoleMap.set(rn,[sh0,sh1]);
+    });
+  }
+  const mergedRendered=new Set();
+  function renderMergedRow(role,sh0,sh1){
+    const rdn=roleDisplayLabel(role);
+    const isBenev=rdn==='Bénévole en formation';
+    function shIsOpt(sh){return(sh._optSlots||sh.optional||[]).includes(role);}
+    function shIsToggle(sh){return(sh._togSlots||[]).includes(role);}
+    function shIsActive(sh){const t=shIsToggle(sh);return!t||(isBenev?isTrainingActive(wk,sh.id):isSunEventActive(wk,role));}
+    const act0=shIsActive(sh0),act1=shIsActive(sh1);
+    if(!shIsOpt(sh0)&&act0)totalReq++;
+    if(!shIsOpt(sh1)&&act1)totalReq++;
+    const row=document.createElement('div');row.className='h-role-row';
+    if((shIsToggle(sh0)||shIsToggle(sh1))&&!act0&&!act1)row.classList.add('tog-inactive');
+    row.addEventListener('mouseenter',()=>row.classList.add('row-hover'));
+    row.addEventListener('mouseleave',()=>row.classList.remove('row-hover'));
+    row.addEventListener('dragenter',()=>{if(draggingVol&&(volCoversShift(wk,draggingVol,sh0)||volCoversShift(wk,draggingVol,sh1))&&!row.classList.contains('tog-inactive'))row.classList.add('row-hover');});
+    row.addEventListener('dragleave',e=>{if(!row.contains(e.relatedTarget))row.classList.remove('row-hover');});
+    row.addEventListener('drop',()=>row.classList.remove('row-hover'));
+    const ncWrap=document.createElement('div');ncWrap.className='h-role-name-wrap';
+    const nc=document.createElement('div');nc.className='h-role-name';
+    nc.textContent=rdn;
+    if(shIsToggle(sh0)||shIsToggle(sh1))nc.title=rdn;
+    ncWrap.appendChild(nc);
+    if(isBenev&&(shIsToggle(sh0)||shIsToggle(sh1))){
+      const anyActive=act0||act1;
+      const togWrap=document.createElement('div');togWrap.className='tog-switch-wrap';
+      const togLabel=document.createElement('label');togLabel.className='tog-switch';
+      togLabel.title=anyActive?'Désactiver ce rôle':'Activer ce rôle';
+      const togInput=document.createElement('input');togInput.type='checkbox';togInput.checked=anyActive;
+      togInput.addEventListener('change',async(e)=>{e.stopPropagation();await toggleTrainingRoleShiftPair(wk,sh0,sh1);});
+      const togTrack=document.createElement('div');togTrack.className='tog-track';
+      const togThumb=document.createElement('div');togThumb.className='tog-thumb';
+      togTrack.appendChild(togThumb);
+      togLabel.appendChild(togInput);togLabel.appendChild(togTrack);
+      togWrap.appendChild(togLabel);
+      ncWrap.appendChild(togWrap);
+    }
+    row.appendChild(ncWrap);
+    const tl=document.createElement('div');tl.className='h-timeline';tl.style.width=tl.style.minWidth=TW+'px';
+    let maxRowH=40;
+    const builtDZs=[sh0,sh1].map(sh=>{
+      const isOpt=shIsOpt(sh);
+      const isActive=shIsActive(sh);
+      const dz=document.createElement('div');dz.className='h-dz';
+      const dzFromH=(sh.slotFromH&&sh.slotFromH[rdn]!=null)?sh.slotFromH[rdn]:sh.fromH;
+      const dzToH=(sh.slotToH&&sh.slotToH[rdn]!=null)?sh.slotToH[rdn]:sh.toH;
+      dz.style.left=toPx(dzFromH)+'px';dz.style.width=(toPx(dzToH)-toPx(dzFromH))+'px';
+      dz.id='dz-'+sh.id+'-'+role.replace(/[^a-z0-9]/gi,'_');
+      if(!isActive){
+        dz.classList.add('empty');
+        const ph=document.createElement('span');ph.className='dz-ph';ph.textContent='—';dz.appendChild(ph);
+        return dz;
+      }
+      const assignedList=getAssigns(wk,sh.id,role);
+      const hasAny=assignedList.length>0;
+      if(hasAny){
+        if(!isOpt&&isActive)totalFilled++;
+        dz.classList.add('filled');
+        dz.style.background='transparent';
+        dz.style.borderColor='var(--border)';
+        const CHIP_H_BASE=26,CHIP_H_NOTE=42;
+        const chipData=assignedList.map(assignedName=>{
+          const emp=isEmp(assignedName);
+          const col=emp?EMP_COL:(vcols[assignedName]||VCOLS[0]);
+          const ct=getAssignTimes(wk,sh.id,role,assignedName);
+          const rng=emp?null:volDayRange(wk,assignedName);
+          const empSched=emp?empSchedule(assignedName,curDay):null;
+          let aSH,aEH;
+          if(ct){aSH=Math.max(ct.s/60,dzFromH);aEH=Math.min(ct.e/60,dzToH);}
+          else if(empSched){aSH=Math.max(empSched.s/60,dzFromH);aEH=Math.min(empSched.e/60,dzToH);}
+          else if(emp){aSH=dzFromH;aEH=dzToH;}
+          else if(rng){aSH=rng.startMins/60;aEH=rng.endMins/60;}
+          else{aSH=dzFromH;aEH=dzToH;}
+          const noteVal=getAssignNote(wk,sh.id,role,assignedName);
+          const chipH=noteVal?CHIP_H_NOTE:CHIP_H_BASE;
+          const assignedQuota=emp?null:volQuota(wk,assignedName);
+          const assignedUsed=emp?0:volWeekShiftCount(wk,assignedName);
+          const isOverQuota=!emp&&assignedQuota!==99&&assignedUsed>assignedQuota;
+          const sm=ct?ct.s:empSched?empSched.s:(rng?Math.max(rng.startMins,dzFromH*60):dzFromH*60);
+          const em2=ct?ct.e:empSched?empSched.e:(rng?Math.min(rng.endMins,dzToH*60):dzToH*60);
+          return{assignedName,emp,col,aSH,aEH,noteVal,chipH,isOverQuota,sm,em2};
+        });
+        chipData.sort((a,b)=>a.aSH-b.aSH);
+        const earlyStart=Math.min(dzFromH,...chipData.map(cd=>cd.aSH));
+        if(earlyStart<effectiveDSH)effectiveDSH=Math.floor(earlyStart*2)/2;
+        const lateEnd=Math.max(dzToH,...chipData.map(cd=>cd.aEH));
+        const dzVisualLeft=Math.max(earlyStart,dSH);
+        const dzVisualRight=Math.min(lateEnd,dEH);
+        if(earlyStart<dzFromH||lateEnd>dzToH){
+          dz.style.left=toPx(dzVisualLeft)+'px';
+          dz.style.width=(toPx(dzVisualRight)-toPx(dzVisualLeft))+'px';
+        }
+        const totalH=chipData.reduce((s,cd)=>s+cd.chipH,0)+Math.max(0,chipData.length-1)*2;
+        const rowH=Math.max(40,totalH+14);
+        if(rowH>maxRowH)maxRowH=rowH;
+        dz.style.top='3px';dz.style.bottom='3px';
+        const hatchPat='repeating-linear-gradient(-45deg,var(--border) 0px,var(--border) 1px,var(--bg) 1px,var(--bg) 7px)';
+        const covIvs=chipData.map(cd=>({s:cd.aSH,e:cd.aEH})).sort((a,b)=>a.s-b.s);
+        const covUnion=[];
+        for(const iv of covIvs){
+          if(covUnion.length&&iv.s<=covUnion[covUnion.length-1].e)covUnion[covUnion.length-1].e=Math.max(covUnion[covUnion.length-1].e,iv.e);
+          else covUnion.push({s:iv.s,e:iv.e});
+        }
+        const uncovIvs=[];let ucCur=earlyStart;
+        for(const iv of covUnion){if(iv.s>ucCur)uncovIvs.push({s:ucCur,e:iv.s});ucCur=Math.max(ucCur,iv.e);}
+        if(ucCur<lateEnd)uncovIvs.push({s:ucCur,e:lateEnd});
+        if(uncovIvs.length>0){
+          dz.style.backgroundImage=uncovIvs.map(()=>hatchPat).join(',');
+          dz.style.backgroundSize=uncovIvs.map(u=>`${Math.round(toPx(u.e)-toPx(u.s))}px 100%`).join(',');
+          dz.style.backgroundPosition=uncovIvs.map(u=>`${Math.round(toPx(u.s)-toPx(earlyStart))}px 0`).join(',');
+          dz.style.backgroundRepeat=uncovIvs.map(()=>'no-repeat').join(',');
+        }
+        let chipTopCur=2;
+        chipData.forEach(cd=>{
+          const{assignedName,emp,col,aSH,aEH,noteVal,chipH,isOverQuota,sm,em2}=cd;
+          const chipBorderColor=isOverQuota?'#DC2626':'#CEC9C4';
+          const chipBorderWidth=isOverQuota?'2px':'1.5px';
+          const shiftDur=dzVisualRight-dzVisualLeft;
+          const clippedSH=Math.max(aSH,dzVisualLeft);
+          const clippedEH=Math.min(aEH,dzVisualRight);
+          const leftPct=((clippedSH-dzVisualLeft)/shiftDur*100).toFixed(3);
+          const wPct=((clippedEH-clippedSH)/shiftDur*100).toFixed(3);
+          const hGapL=(clippedSH<=dzVisualLeft+0.001)?3:0;
+          const hGapR=(clippedEH>=dzVisualRight-0.001)?3:0;
+          const chipLeft=hGapL?`calc(${leftPct}% + ${hGapL}px)`:`${leftPct}%`;
+          const chipWidth=(hGapL+hGapR)?`calc(${wPct}% - ${hGapL+hGapR}px)`:`${wPct}%`;
+          const chipPxW=Math.round((clippedEH-clippedSH)*2*dynCOL);
+          const isLocked=getAssignLocked(wk,sh.id,role,assignedName);
+          const _lockOffset=isLocked?20:0;
+          const contentW=chipPxW-42-_lockOffset;
+          let chipLevel;
+          if(contentW>=200)chipLevel=0;
+          else if(contentW>=150)chipLevel=1;
+          else if(contentW>=100)chipLevel=2;
+          else if(contentW>=60)chipLevel=3;
+          else if(contentW>=35)chipLevel=4;
+          else chipLevel=5;
+          const _ci=(!emp&&!past)?getDispoChangeInfo(wk,assignedName,sh.id,role,sh,curDay):null;
+          const chip=document.createElement('div');chip.className='avail-chip';
+          if(past)chip.classList.add('past');
+          chip.style.top=chipTopCur+'px';
+          chip.style.height=chipH+'px';
+          chip.style.bottom='auto';
+          chip.style.left=chipLeft;
+          chip.style.width=chipWidth;
+          chip.style.background=_ci?'#FFFBEB':'var(--surface)';
+          chip.style.border=`${chipBorderWidth} solid ${chipBorderColor}`;
+          if(aSH<dzFromH||aEH>dzToH){chip.style.borderStyle='dashed';chip.style.opacity='0.85';}
+          const covWrap=document.createElement('div');covWrap.className='chip-covered-content';
+          const inner=document.createElement('div');inner.className='avail-chip-inner';
+          inner.style.paddingRight='28px';
+          inner.style.overflow='hidden';
+          inner.style.minWidth='0';
+          if(isLocked){
+            const lockIcon=document.createElement('span');
+            lockIcon.className='chip-lock';
+            lockIcon.innerHTML='<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4.66667 7.33337V4.66671C4.66667 3.78265 5.01786 2.93481 5.64298 2.30968C6.2681 1.68456 7.11595 1.33337 8 1.33337C8.88406 1.33337 9.7319 1.68456 10.357 2.30968C10.9821 2.93481 11.3333 3.78265 11.3333 4.66671V7.33337M3.33333 7.33337H12.6667C13.403 7.33337 14 7.93033 14 8.66671V13.3334C14 14.0698 13.403 14.6667 12.6667 14.6667H3.33333C2.59695 14.6667 2 14.0698 2 13.3334V8.66671C2 7.93033 2.59695 7.33337 3.33333 7.33337Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+            inner.appendChild(lockIcon);
+          }
+          const nm=document.createElement('span');nm.className='chip-name';
+          const _pch=getPerson(assignedName);
+          if(chipLevel<=1){nm.textContent=_pch?fullName(_pch):assignedName;}
+          else if(chipLevel<=3){nm.textContent=_pch?shortName(_pch):assignedName;}
+          else{nm.textContent=_pch?initials(_pch):assignedName.slice(0,2).toUpperCase();}
+          nm.style.overflow='hidden';
+          nm.style.textOverflow='ellipsis';
+          nm.style.whiteSpace='nowrap';
+          nm.style.minWidth='0';
+          nm.style.flexShrink='1';
+          inner.appendChild(nm);
+          const tm=document.createElement('span');tm.className='chip-time';
+          const rawCt=getAssignTimes(wk,sh.id,role,assignedName);
+          let tmS=sm,tmE=em2;
+          if(emp){
+            const es=empSchedule(assignedName,curDay);
+            const rct=rawCt;
+            const dayObj_=DAYS.find(d=>d.id===curDay);
+            const gridStartMins_=dayObj_?((day.gridH!==undefined?day.gridH:dayObj_.oH)*60+dayObj_.oM):600;
+            tmS=(es&&es.s<gridStartMins_&&rct&&rct.s===gridStartMins_)?es.s:(rct?rct.s:sm);
+            tmE=rct?rct.e:(es?Math.min(es.e,sh.toH*60):em2);
+          }
+          tm.textContent=mStr(tmS)+'–'+mStr(tmE);
+          tm.style.flexShrink='0';
+          tm.style.whiteSpace='nowrap';
+          if(chipLevel<3){
+            inner.appendChild(tm);
+            if(_ci&&!emp&&!past){const _wi=document.createElement('span');_wi.style.cssText='display:inline-flex;align-items:center;flex-shrink:0;margin-left:3px;';_wi.innerHTML='<svg width="13" height="13" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 1.5L10.5 10H1.5L6 1.5Z" stroke="#F59E0B" stroke-width="1.3" stroke-linejoin="round"/><line x1="6" y1="5" x2="6" y2="7.5" stroke="#F59E0B" stroke-width="1.3" stroke-linecap="round"/><circle cx="6" cy="9" r="0.6" fill="#F59E0B"/></svg>';inner.appendChild(_wi);}
+          }
+          const spacer=document.createElement('span');spacer.className='chip-spacer';inner.appendChild(spacer);
+          if(emp&&chipLevel===0){
+            const espan=document.createElement('span');espan.className='chip-quota';
+            espan.style.color='var(--text-2)';espan.textContent='EMP';inner.appendChild(espan);
+          }
+          if(!emp){
+            const cq=volQuota(wk,assignedName);const cu=volWeekShiftCount(wk,assignedName);
+            if(cq!==99&&cq>0&&chipLevel<=4){
+              const qspan=document.createElement('span');qspan.className='chip-quota';
+              qspan.style.color=isOverQuota?'#B91C1C':'var(--text-2)';qspan.textContent=cu+'/'+cq;inner.appendChild(qspan);
+            }
+          }
+          covWrap.appendChild(inner);
+          const x=document.createElement('span');x.className='chip-x';
+          x.innerHTML='<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9.79096 1.21967C10.0838 0.926977 10.5587 0.926902 10.8515 1.21967C11.1443 1.5125 11.1442 1.98731 10.8515 2.28022L7.09565 6.0351L10.8515 9.79096C11.1443 10.0839 11.1444 10.5587 10.8515 10.8515C10.5587 11.1444 10.0839 11.1443 9.79096 10.8515L6.0351 7.09565L2.28022 10.8515C1.98732 11.1444 1.51256 11.1444 1.21967 10.8515C0.926842 10.5586 0.926799 10.0838 1.21967 9.79096L4.97455 6.0351L1.21967 2.28022C0.926777 1.98732 0.926777 1.51256 1.21967 1.21967C1.51256 0.926777 1.98732 0.926777 2.28022 1.21967L6.0351 4.97455L9.79096 1.21967Z" fill="#57534E"/></svg>';
+          if(!past)x.addEventListener('click',ev=>{
+            ev.stopPropagation();
+            const _ot=getAssignTimes(wk,sh.id,role,assignedName);
+            const _on=getAssignNote(wk,sh.id,role,assignedName);
+            const _ol=getAssignLocked(wk,sh.id,role,assignedName);
+            pushUndo([{type:'add',wk,sid:sh.id,role,name:assignedName,times:_ot,note:_on,locked:_ol}]);
+            removeAssign(wk,sh.id,role,assignedName);
+            deleteAssignment(wk,sh.id,role,assignedName);
+            renderHoraire();
+          });
+          else x.style.display='none';
+          covWrap.appendChild(x);
+          if(noteVal){
+            const noteLine=document.createElement('div');noteLine.className='chip-note';
+            noteLine.textContent=noteVal;covWrap.appendChild(noteLine);
+          }
+          chip.appendChild(covWrap);
+          if(!past)chip.addEventListener('click',ev=>{if(x.contains(ev.target))return;openTP(ev,assignedName,sh.id,role,sh,wk);});
+          if(!past){
+            chip.draggable=true;
+            chip.addEventListener('dragstart',ev=>{
+              ev.stopPropagation();
+              draggingVol=assignedName;
+              draggingFromRole={shiftId:sh.id,role,name:assignedName};
+              draggingVolFreeIvs=null;
+              ev.dataTransfer.setData('text/plain',assignedName);
+              ev.dataTransfer.effectAllowed='move';
+              setTimeout(()=>chip.style.opacity='.35',0);
+              highlightDZs(wk,shifts);
+            });
+            chip.addEventListener('dragend',()=>{
+              chip.style.opacity='';
+              draggingVol=null;draggingFromRole=null;draggingVolFreeIvs=null;clearDZHighlights();
+              const tt=document.getElementById('chip-pref-tooltip');
+              if(tt){clearTimeout(chip._ttTimer);tt.classList.remove('visible');}
+            });
+          }
+          {
+            const prefs=(getPerson(assignedName)?.roles||[]).filter(r=>r).map(r=>roleDisplayLabel(r));
+            if(prefs.length){
+              const tt=document.getElementById('chip-pref-tooltip');
+              chip.addEventListener('mouseenter',()=>{
+                chip._ttTimer=setTimeout(()=>{
+                  tt.textContent='Rôles préférés : '+prefs.map((r,i)=>i===0?r:r.charAt(0).toLowerCase()+r.slice(1)).join(', ');
+                  const rect=chip.getBoundingClientRect();
+                  tt.style.left=rect.left+'px';
+                  tt.style.top=(rect.top-6)+'px';
+                  tt.style.transform='translateY(-100%)';
+                  tt.classList.add('visible');
+                },400);
+              });
+              chip.addEventListener('mouseleave',()=>{
+                clearTimeout(chip._ttTimer);
+                tt.classList.remove('visible');
+              });
+            }
+          }
+          dz.appendChild(chip);
+          chipTopCur+=chipH+2;
+        });
+      } else {
+        dz.classList.add('empty');
+        const ph=document.createElement('span');ph.className='dz-ph';
+        ph.textContent=past?'—':'— glissez ici';dz.appendChild(ph);
+      }
+      if(!past){
+        dz.addEventListener('dragover',e=>{
+          if(!draggingVol)return;
+          if(draggingFromRole&&draggingFromRole.shiftId===sh.id&&draggingFromRole.role===role)return;
+          if(!volCoversShift(wk,draggingVol,sh)){e.dataTransfer.dropEffect='none';return;}
+          const isReassign=!!(draggingFromRole&&draggingFromRole.shiftId===sh.id);
+          if(!isEmp(draggingVol)&&!isReassign&&volAssignedToShift(wk,draggingVol,sh)){e.dataTransfer.dropEffect='none';return;}
+          e.preventDefault();e.dataTransfer.dropEffect='move';dz.classList.add('dok');
+        });
+        dz.addEventListener('dragleave',e=>{if(!dz.contains(e.relatedTarget))dz.classList.remove('dok');});
+        dz.addEventListener('drop',e=>{
+          dz.classList.remove('dok');
+          const name=e.dataTransfer.getData('text/plain');
+          if(!name||!volCoversShift(wk,name,sh))return;
+          if(draggingFromRole&&draggingFromRole.shiftId===sh.id&&draggingFromRole.role===role)return;
+          const isReassign=!!(draggingFromRole&&draggingFromRole.shiftId===sh.id);
+          if(!isEmp(name)&&!isReassign&&volAssignedToShift(wk,name,sh))return;
+          e.preventDefault();
+          const _ue=[];
+          if(draggingFromRole&&!(draggingFromRole.shiftId===sh.id&&draggingFromRole.role===role)){
+            const _ot=getAssignTimes(wk,draggingFromRole.shiftId,draggingFromRole.role,name);
+            const _on=getAssignNote(wk,draggingFromRole.shiftId,draggingFromRole.role,name);
+            const _ol=getAssignLocked(wk,draggingFromRole.shiftId,draggingFromRole.role,name);
+            _ue.push({type:'add',wk,sid:draggingFromRole.shiftId,role:draggingFromRole.role,name,times:_ot,note:_on,locked:_ol});
+            removeAssign(wk,draggingFromRole.shiftId,draggingFromRole.role,name);
+            deleteAssignment(wk,draggingFromRole.shiftId,draggingFromRole.role,name);
+          }
+          if(doAssign(wk,sh,role,name)){
+            _ue.unshift({type:'remove',wk,sid:sh.id,role,name,locked:true});
+            pushUndo(_ue);
+            renderHoraire();
+          }
+        });
+      }
+      return dz;
+    });
+    row.style.minHeight=maxRowH+'px';
+    tl.style.height=maxRowH+'px';
+    builtDZs.forEach(dz=>tl.appendChild(dz));
+    row.appendChild(tl);
+    grid.appendChild(row);
+  }
   shifts.forEach(shift=>{
     const spx=toPx(shift.fromH),sw=toPx(shift.toH)-spx;
     const allRoles=[...(shift._slots||shift.roles),...(shift._optSlots||[]),...(shift._togSlots||[])].slice().sort(roleStationSort);
     let lastStation=null;
     allRoles.forEach(role=>{
+      const _mRdn=roleDisplayLabel(role);
+      if(mergedRoleMap.has(_mRdn)){
+        const ts=roleStation(role);
+        if(ts&&ts!==lastStation){
+          lastStation=ts;
+          if(!mergedRendered.has(_mRdn)){
+            const divider=document.createElement('div');
+            divider.style.cssText='display:flex;align-items:center;height:20px;padding:0 0 0 10px;background:#F0EDEA;font-size:10px;font-weight:600;letter-spacing:0.07em;color:#A8A29E;text-transform:uppercase;border-bottom:1px solid var(--border-light);width:100%;box-sizing:border-box;';
+            divider.textContent=ts;
+            grid.appendChild(divider);
+          }
+        }
+        if(!mergedRendered.has(_mRdn)){
+          mergedRendered.add(_mRdn);
+          const[_ms0,_ms1]=mergedRoleMap.get(_mRdn);
+          renderMergedRow(role,_ms0,_ms1);
+        }
+        return;
+      }
       const isOpt=(shift._optSlots||shift.optional||[]).includes(role);
       const isToggle=(shift._togSlots||[]).includes(role);
       const isActive=!isToggle||(roleDisplayLabel(role)==='Bénévole en formation'?isTrainingActive(wk,shift.id):isSunEventActive(wk,role));
