@@ -1249,9 +1249,9 @@ function roleDisplayOrder(role){
   return idx>=0?idx:99;
 }
 const STATION_GROUPS=[
-  {label:'Conteneur',          pdfLabel:'Conteneur', abbr:'CO', roles:['Caissier·ère','Barista','Mise en place','Mise en place#2','Préposé·e à la vaisselle','Préposé·e au remplissage et à la vaisselle']},
+  {label:'Conteneur',          pdfLabel:'Conteneur', abbr:'CO', roles:['Caissier·ère','Barista','Mise en place','Mise en place#2','Préposé·e à la vaisselle']},
   {label:'Cuisine extérieure', pdfLabel:'Cuisine',   abbr:'CU', roles:['Pizzaiolo','Pizzaiolo#2','Préposé·e à la pâte','Cuisinier·ère','Cuisinier·ère#2','Préposé·e à la passe','Préposé·e au service']},
-  {label:'Mobile',             pdfLabel:'Mobile',    abbr:'MO', roles:['Busboy / Busgirl','Préposé·e au remplissage']},
+  {label:'Mobile',             pdfLabel:'Mobile',    abbr:'MO', roles:['Busboy / Busgirl','Préposé·e au remplissage','Préposé·e au remplissage et à la vaisselle']},
   {label:'Bar',                pdfLabel:'Bar',       abbr:'BR', roles:['Caissier·ère bar','Barman / Barmaid']},
   {label:'Formation',          pdfLabel:'Formation', abbr:'FO', roles:['Bénévole en formation']},
 ];
@@ -3584,7 +3584,8 @@ function renderHoraire(){
         dz.addEventListener('dragover',e=>{
           if(!draggingVol)return;
           if(draggingFromRole&&draggingFromRole.shiftId===sh.id&&draggingFromRole.role===role)return;
-          if(!volCoversShift(wk,draggingVol,sh)){e.dataTransfer.dropEffect='none';return;}
+          const ov=isEmp(draggingVol)?{s:sh.fromH*60,e:sh.toH*60}:overlapFor(wk,draggingVol,sh,curDay);
+          if(!ov){e.dataTransfer.dropEffect='none';return;}
           const isReassign=!!(draggingFromRole&&draggingFromRole.shiftId===sh.id);
           if(!isEmp(draggingVol)&&!isReassign&&volAssignedToShift(wk,draggingVol,sh)){e.dataTransfer.dropEffect='none';return;}
           e.preventDefault();e.dataTransfer.dropEffect='move';dz.classList.add('dok');
@@ -3593,7 +3594,8 @@ function renderHoraire(){
         dz.addEventListener('drop',e=>{
           dz.classList.remove('dok');
           const name=e.dataTransfer.getData('text/plain');
-          if(!name||!volCoversShift(wk,name,sh))return;
+          const _ov=isEmp(name)?{s:sh.fromH*60,e:sh.toH*60}:overlapFor(wk,name,sh,curDay);
+          if(!name||!_ov)return;
           if(draggingFromRole&&draggingFromRole.shiftId===sh.id&&draggingFromRole.role===role)return;
           const isReassign=!!(draggingFromRole&&draggingFromRole.shiftId===sh.id);
           if(!isEmp(name)&&!isReassign&&volAssignedToShift(wk,name,sh))return;
