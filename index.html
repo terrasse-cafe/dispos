@@ -3313,7 +3313,6 @@ function renderHoraire(){
       if(has(sh0)&&has(sh1))mergedRoleMap.set(rn,[sh0,sh1]);
     });
   }
-  const mergedRendered=new Set();
   function renderMergedRow(role,sh0,sh1){
     const rdn=roleDisplayLabel(role);
     const isBenev=rdn==='Bénévole en formation';
@@ -3624,42 +3623,44 @@ function renderHoraire(){
     row.appendChild(tl);
     grid.appendChild(row);
   }
+  const renderEntries=[];
+  const seenMerged=new Set();
   shifts.forEach(shift=>{
-    const spx=toPx(shift.fromH),sw=toPx(shift.toH)-spx;
-    const allRoles=[...(shift._slots||shift.roles),...(shift._optSlots||[]),...(shift._togSlots||[])].slice().sort(roleStationSort);
-    let lastStation=null;
+    const allRoles=[...(shift._slots||shift.roles),...(shift._optSlots||[]),...(shift._togSlots||[])];
     allRoles.forEach(role=>{
-      const _mRdn=roleDisplayLabel(role);
-      if(mergedRoleMap.has(_mRdn)){
-        const ts=roleStation(role);
-        if(ts&&ts!==lastStation){
-          lastStation=ts;
-          if(!mergedRendered.has(_mRdn)){
-            const divider=document.createElement('div');
-            divider.style.cssText='display:flex;align-items:center;height:20px;padding:0 0 0 10px;background:#F0EDEA;font-size:10px;font-weight:600;letter-spacing:0.07em;color:#A8A29E;text-transform:uppercase;border-bottom:1px solid var(--border-light);width:100%;box-sizing:border-box;';
-            divider.textContent=ts;
-            grid.appendChild(divider);
-          }
-        }
-        if(!mergedRendered.has(_mRdn)){
-          mergedRendered.add(_mRdn);
-          const[_ms0,_ms1]=mergedRoleMap.get(_mRdn);
-          renderMergedRow(role,_ms0,_ms1);
-        }
-        return;
+      const rdn=roleDisplayLabel(role);
+      if(mergedRoleMap.has(rdn)){
+        if(!seenMerged.has(rdn)){seenMerged.add(rdn);renderEntries.push({role,shift,isMerged:true,mergeKey:rdn});}
+      }else{
+        renderEntries.push({role,shift,isMerged:false,mergeKey:null});
       }
+    });
+  });
+  renderEntries.sort((a,b)=>{
+    const sa=roleStationOrder(roleDisplayLabel(a.role));
+    const sb=roleStationOrder(roleDisplayLabel(b.role));
+    if(sa!==sb)return sa-sb;
+    return roleFillPriority(roleDisplayLabel(a.role))-roleFillPriority(roleDisplayLabel(b.role));
+  });
+  let lastStation=null;
+  renderEntries.forEach(({role,shift,isMerged,mergeKey})=>{
+    const rdn=roleDisplayLabel(role);
+    const thisStation=roleStation(rdn);
+    if(thisStation&&thisStation!==lastStation){
+      lastStation=thisStation;
+      const divider=document.createElement('div');
+      divider.style.cssText='display:flex;align-items:center;height:20px;padding:0 0 0 10px;background:#F0EDEA;font-size:10px;font-weight:600;letter-spacing:0.07em;color:#A8A29E;text-transform:uppercase;border-bottom:1px solid var(--border-light);width:100%;box-sizing:border-box;';
+      divider.textContent=thisStation;
+      grid.appendChild(divider);
+    }
+    if(isMerged){
+      const[_ms0,_ms1]=mergedRoleMap.get(mergeKey);
+      renderMergedRow(role,_ms0,_ms1);
+    } else {
       const isOpt=(shift._optSlots||shift.optional||[]).includes(role);
       const isToggle=(shift._togSlots||[]).includes(role);
-      const isActive=!isToggle||(roleDisplayLabel(role)==='Bénévole en formation'?isTrainingActive(wk,shift.id):isSunEventActive(wk,role));
+      const isActive=!isToggle||(rdn==='Bénévole en formation'?isTrainingActive(wk,shift.id):isSunEventActive(wk,role));
       if(!isOpt&&isActive)totalReq++;
-      const thisStation=roleStation(role);
-      if(thisStation&&thisStation!==lastStation){
-        lastStation=thisStation;
-        const divider=document.createElement('div');
-        divider.style.cssText='display:flex;align-items:center;height:20px;padding:0 0 0 10px;background:#F0EDEA;font-size:10px;font-weight:600;letter-spacing:0.07em;color:#A8A29E;text-transform:uppercase;border-bottom:1px solid var(--border-light);width:100%;box-sizing:border-box;';
-        divider.textContent=thisStation;
-        grid.appendChild(divider);
-      }
       const row=document.createElement('div');row.className='h-role-row';
       if(isToggle&&!isActive)row.classList.add('tog-inactive');
       row.addEventListener('mouseenter',()=>row.classList.add('row-hover'));
@@ -3976,7 +3977,7 @@ function renderHoraire(){
         });
       }
       tl.appendChild(dz);row.appendChild(tl);grid.appendChild(row);
-    });
+    }
   });
 
   // Closed day overlay — remove any previous before adding
