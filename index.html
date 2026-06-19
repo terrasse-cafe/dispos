@@ -411,6 +411,9 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
 .rappel-acc-chevron.open{transform:rotate(180deg)}
 .rappel-textarea{width:100%;box-sizing:border-box;margin-top:10px;padding:10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:13px;font-family:inherit;resize:vertical;line-height:1.5}
 .rappel-textarea:focus{outline:none;border-color:var(--accent)}
+.vol-panel-header{padding:6px 10px;background:var(--bg);border-bottom:1px solid var(--border);flex-shrink:0;}
+.vol-panel-title{font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;}
+.h-dz.dz-ok{border-color:var(--accent-dark);background:#DBE8E5;border-style:solid}
 </style>
 </head>
 <body>
@@ -627,12 +630,25 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
       </div>
       <div>
         <div class="vol-panel">
-          <div class="vp-head">Bénévoles — <span id="h-day-lbl">—</span></div>
+          <div class="vp-head">Disponibles — <span id="h-day-lbl">—</span></div>
           <div class="vol-cards" id="vol-cards"></div>
           <div class="emp-section">
             <div class="emp-sec-lbl">Employés</div>
             <div class="emp-cards" id="emp-cards"></div>
           </div>
+        </div>
+        <div class="vol-panel" id="late-panel" style="margin-top:10px">
+          <div class="vol-panel-header" style="display:flex;align-items:center;justify-content:space-between">
+            <span class="vol-panel-title">Ajouter un bénévole</span>
+          </div>
+          <div style="padding:6px 8px 4px">
+            <div style="position:relative">
+              <svg style="position:absolute;left:9px;top:50%;transform:translateY(-50%);opacity:.45;pointer-events:none" width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="5" stroke="#1C1917" stroke-width="1.5"/><path d="M10.5 10.5L14 14" stroke="#1C1917" stroke-width="1.5" stroke-linecap="round"/></svg>
+              <input id="late-search" type="text" placeholder="Rechercher" autocomplete="off"
+                style="width:100%;box-sizing:border-box;padding:6px 8px 6px 28px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;outline:none;background:var(--surface);color:var(--text)">
+            </div>
+          </div>
+          <div id="late-cards" class="vol-cards" style="max-height:200px;overflow-y:auto;padding:4px 8px 8px"></div>
         </div>
         <div class="hint-box">Glissez les cartes dans les zones.<br>Employés couvrent le shift complet.</div>
       </div>
@@ -918,6 +934,9 @@ alter table people add column if not exists pin text default '';
 
 -- Migration : ajouter la colonne locked pour distinguer assignations manuelles / auto
 alter table assignments add column if not exists locked boolean not null default false;
+
+-- Migration : ajouter la colonne late pour les assignations tardives
+alter table assignments add column if not exists late boolean not null default false;
 
 -- Activer la sécurité par ligne (RLS) avec accès public en lecture/écriture
 -- (pour usage interne sans authentification)
@@ -1351,6 +1370,7 @@ let curDay='vendredi';
 let draggingVol=null;
 let draggingFromRole=null; // {shiftId, role, name} quand on drag depuis un bloc assigné
 let draggingVolFreeIvs=null; // plages libres résiduelles au moment du drag depuis une vol-card
+let draggingLate=false; // true quand on drag depuis le panneau "Ajouter un bénévole"
 let undoStack=[]; // max 20 entrées — chaque entrée est un tableau d'actions inverses
 let redoStack=[];
 let _finBlobUrl=null;
@@ -1541,6 +1561,7 @@ async function loadAssignments(wk) {
     }
     if (r.note) assigns[wk][k+'__n__'+r.person_name] = r.note;
     if (r.locked) assigns[wk][k+'__l__'+r.person_name] = true;
+    if (r.late) assigns[wk][k+'__late__'+r.person_name] = true;
     if (r.updated_at && r.person_name) {
       assignUpdatedAt[wk][akey(r.shift_id,r.role)+'||'+r.person_name] = r.updated_at;
     }
@@ -1669,7 +1690,7 @@ function applySlotOverrides() {
   });
 }
 
-async function saveAssignment(wk, shiftId, role, name, startMins, endMins, note=null, locked=false) {
+async function saveAssignment(wk, shiftId, role, name, startMins, endMins, note=null, locked=false, late=false) {
   if (!sb) return;
   const row = {
     week_key: wk,
@@ -1680,6 +1701,7 @@ async function saveAssignment(wk, shiftId, role, name, startMins, endMins, note=
     end_mins: endMins ?? null,
     note: note ?? null,
     locked: locked,
+    late: late,
     updated_at: new Date().toISOString()
   };
   // Unique sur (week_key, shift_id, role, person_name)
@@ -1741,6 +1763,8 @@ function subscribeRealtime(wk) {
           else delete assigns[wk][k+'__n__'+r.person_name];
           if (r.locked) assigns[wk][k+'__l__'+r.person_name] = true;
           else delete assigns[wk][k+'__l__'+r.person_name];
+          if (r.late) assigns[wk][k+'__late__'+r.person_name] = true;
+          else delete assigns[wk][k+'__late__'+r.person_name];
         }
         renderHoraire();
       }
@@ -3093,6 +3117,7 @@ function removeAssign(wk,sid,role,name){
   delete assigns[wk][akey(sid,role)+'__t__'+name];
   delete assigns[wk][akey(sid,role)+'__n__'+name];
   delete assigns[wk][akey(sid,role)+'__l__'+name];
+  delete assigns[wk][akey(sid,role)+'__late__'+name];
 }
 // Compat setAssign: remplace tout le tableau par un seul nom (ou supprime si null)
 function setAssign(wk,sid,role,name){
@@ -3101,7 +3126,7 @@ function setAssign(wk,sid,role,name){
   if(name===null){
     // Supprimer toutes les entrées liées à ce rôle
     const arr=getAssigns(wk,sid,role);
-    arr.forEach(n=>{delete assigns[wk][akey(sid,role)+'__t__'+n];delete assigns[wk][akey(sid,role)+'__n__'+n];});
+    arr.forEach(n=>{delete assigns[wk][akey(sid,role)+'__t__'+n];delete assigns[wk][akey(sid,role)+'__n__'+n];delete assigns[wk][akey(sid,role)+'__late__'+n];});
     delete assigns[wk][k];
   } else {
     assigns[wk][k]=[name];
@@ -3119,6 +3144,11 @@ function setAssignLocked(wk,sid,role,locked,name){
   if(locked)assigns[wk][akey(sid,role)+'__l__'+name]=true;
   else delete assigns[wk][akey(sid,role)+'__l__'+name];
 }
+function getAssignLate(wk,sid,role,name){return !!((assigns[wk]||{})[akey(sid,role)+'__late__'+name]);}
+function setAssignLate(wk,sid,role,val,name){
+  const k=akey(sid,role)+'__late__'+name;
+  if(val)(assigns[wk]=assigns[wk]||{})[k]=true;else delete(assigns[wk]||{})[k];
+}
 
 function volPrefersRole(name,role){
   const p=getPerson(name);if(!p||!p.roles)return false;
@@ -3129,6 +3159,10 @@ function volPrefersRole(name,role){
   return p.roles.some(r=>r&&(r===role||r===dr||roleDisplayLabel(r)===dr));
 }
 function highlightDZs(wk,shifts){
+  if(draggingLate){
+    document.querySelectorAll('.h-dz:not(.filled)').forEach(dz=>{dz.classList.add('dz-ok');});
+    return;
+  }
   shifts.forEach(sh=>{
     const fromRole=draggingFromRole;
     // Plage spécifique de la card draguée (singleIv si card fragmentée)
@@ -3166,7 +3200,7 @@ function highlightDZs(wk,shifts){
 }
 function clearDZHighlights(){
   document.querySelectorAll('.h-dz').forEach(dz=>{
-    dz.classList.remove('dv','di','dok','da','hv','ha','hvo');
+    dz.classList.remove('dv','di','dok','da','hv','ha','hvo','dz-ok');
     if(dz._hoverCssText!==undefined){dz.style.cssText=dz._hoverCssText;delete dz._hoverCssText;}
   });
 }
@@ -3426,8 +3460,9 @@ function renderHoraire(){
         let chipTopCur=2;
         chipData.forEach(cd=>{
           const{assignedName,emp,col,aSH,aEH,noteVal,chipH,isOverQuota,sm,em2}=cd;
-          const chipBorderColor=isOverQuota?'#DC2626':'#CEC9C4';
-          const chipBorderWidth=isOverQuota?'2px':'1.5px';
+          const isLate=getAssignLate(wk,sh.id,role,assignedName);
+          const chipBorderColor=isLate?'#7C3AED':(isOverQuota?'#DC2626':'#CEC9C4');
+          const chipBorderWidth=isLate?'2px':(isOverQuota?'2px':'1.5px');
           const shiftDur=dzVisualRight-dzVisualLeft;
           const clippedSH=Math.max(aSH,dzVisualLeft);
           const clippedEH=Math.min(aEH,dzVisualRight);
@@ -3582,6 +3617,7 @@ function renderHoraire(){
       if(!past){
         dz.addEventListener('dragover',e=>{
           if(!draggingVol)return;
+          if(draggingLate){e.preventDefault();e.dataTransfer.dropEffect='move';dz.classList.add('dok');return;}
           if(draggingFromRole&&draggingFromRole.shiftId===sh.id&&draggingFromRole.role===role)return;
           const ov=isEmp(draggingVol)?{s:sh.fromH*60,e:sh.toH*60}:overlapFor(wk,draggingVol,sh,curDay);
           if(!ov){e.dataTransfer.dropEffect='none';return;}
@@ -3593,6 +3629,17 @@ function renderHoraire(){
         dz.addEventListener('drop',e=>{
           dz.classList.remove('dok');
           const name=e.dataTransfer.getData('text/plain');
+          if(draggingLate){
+            e.preventDefault();
+            if(!name)return;
+            addAssign(wk,sh.id,role,name);
+            setAssignTimes(wk,sh.id,role,sh.fromH*60,sh.toH*60,name);
+            setAssignLate(wk,sh.id,role,true,name);
+            pushUndo([{type:'remove',wk,sid:sh.id,role,name,locked:false}]);
+            saveAssignment(wk,sh.id,role,name,sh.fromH*60,sh.toH*60,null,false,true);
+            renderHoraire();
+            return;
+          }
           const _ov=isEmp(name)?{s:sh.fromH*60,e:sh.toH*60}:overlapFor(wk,name,sh,curDay);
           if(!name||!_ov)return;
           if(draggingFromRole&&draggingFromRole.shiftId===sh.id&&draggingFromRole.role===role)return;
@@ -3777,8 +3824,9 @@ function renderHoraire(){
         let chipTopCur=2;
         chipData.forEach((cd)=>{
           const {assignedName,emp,col,aSH,aEH,noteVal,chipH,isOverQuota,sm,em2}=cd;
-          const chipBorderColor=isOverQuota?'#DC2626':'#CEC9C4';
-          const chipBorderWidth=isOverQuota?'2px':'1.5px';
+          const isLate=getAssignLate(wk,shift.id,role,assignedName);
+          const chipBorderColor=isLate?'#7C3AED':(isOverQuota?'#DC2626':'#CEC9C4');
+          const chipBorderWidth=isLate?'2px':(isOverQuota?'2px':'1.5px');
 
           const shiftDur=dzVisualRight-dzVisualLeft;
           const clippedSH=Math.max(aSH,dzVisualLeft);
@@ -3941,6 +3989,7 @@ function renderHoraire(){
       if(!past){
         dz.addEventListener('dragover',e=>{
           if(!draggingVol)return;
+          if(draggingLate){e.preventDefault();e.dataTransfer.dropEffect='move';dz.classList.add('dok');return;}
           // Depuis chip du même rôle → ignorer
           if(draggingFromRole&&draggingFromRole.shiftId===shift.id&&draggingFromRole.role===role)return;
           if(!volCoversShift(wk,draggingVol,shift)){e.dataTransfer.dropEffect='none';return;}
@@ -3953,6 +4002,17 @@ function renderHoraire(){
         dz.addEventListener('drop',e=>{
           dz.classList.remove('dok');
           const name=e.dataTransfer.getData('text/plain');
+          if(draggingLate){
+            e.preventDefault();
+            if(!name)return;
+            addAssign(wk,shift.id,role,name);
+            setAssignTimes(wk,shift.id,role,shift.fromH*60,shift.toH*60,name);
+            setAssignLate(wk,shift.id,role,true,name);
+            pushUndo([{type:'remove',wk,sid:shift.id,role,name,locked:false}]);
+            saveAssignment(wk,shift.id,role,name,shift.fromH*60,shift.toH*60,null,false,true);
+            renderHoraire();
+            return;
+          }
           if(!name||!volCoversShift(wk,name,shift))return;
           if(draggingFromRole&&draggingFromRole.shiftId===shift.id&&draggingFromRole.role===role)return;
           // Réassignation depuis un chip du même shift → autoriser même si déjà sur ce shift
@@ -4044,14 +4104,15 @@ function overlapMins(wk,name,shift){
 }
 
 function volWeekShiftCount(wk, name) {
-  // Nombre de shifts distincts assignés cette semaine, hors jours fermés
+  // Nombre de shifts distincts assignés cette semaine, hors jours fermés, hors assignations tardives
   const wkClosed=closedDays[wk]||new Set();
   const seen = new Set();
   DAYS.forEach(day => {
-    if(wkClosed.has(day.id))return; // ignorer les jours fermés
+    if(wkClosed.has(day.id))return;
     (SHIFTS[day.id]||[]).forEach(sh => {
       const allR = [...(sh._slots||sh.roles),...(sh._optSlots||[]),...(sh._togSlots||[])];
-      if (allR.some(r => getAssigns(wk,sh.id,r).includes(name))) seen.add(sh.id);
+      const hasNonLate = allR.some(r => getAssigns(wk,sh.id,r).includes(name) && !getAssignLate(wk,sh.id,r,name));
+      if (hasNonLate) seen.add(sh.id);
     });
   });
   return seen.size;
@@ -4269,6 +4330,53 @@ function buildCards(wk,shifts){
     });
   });
   if(!anyE)ep.innerHTML='<div class="no-avail" style="color:var(--green)">&#10003; Tous les employés placés</div>';
+
+  const lateCards=document.getElementById('late-cards');
+  function renderLateCards(query){
+    lateCards.innerHTML='';
+    const q=query.trim().toLowerCase();
+    if(q.length<2)return;
+    const allVols=directory.filter(p=>p.type==='vol'&&p.active!==false);
+    const matches=allVols.filter(p=>{
+      const fn=fullName(p).toLowerCase();
+      const ln=(p.last_name||'').toLowerCase();
+      const fn2=(p.first_name||'').toLowerCase();
+      return fn.includes(q)||ln.startsWith(q)||fn2.startsWith(q);
+    });
+    if(!matches.length){lateCards.innerHTML='<div style="font-size:11px;color:var(--text-3);padding:6px 4px">Aucun résultat</div>';return;}
+    matches.forEach(p=>{
+      const card=document.createElement('div');
+      card.className='vol-card';
+      card.draggable=!isPastDay();
+      card.style.cssText='border:2px solid #7C3AED;cursor:grab;';
+      card.style.background='var(--surface)';
+      const nm=document.createElement('div');nm.className='vc-name';nm.textContent=fullName(p);
+      card.appendChild(nm);
+      if(!isPastDay()){
+        card.addEventListener('dragstart',ev=>{
+          ev.stopPropagation();
+          draggingVol=p.name;draggingFromRole=null;draggingVolFreeIvs=null;draggingLate=true;
+          ev.dataTransfer.setData('text/plain',p.name);ev.dataTransfer.effectAllowed='move';
+          setTimeout(()=>card.style.opacity='.35',0);
+          highlightDZs(wk,shifts);
+        });
+        card.addEventListener('dragend',()=>{
+          card.style.opacity='';
+          draggingVol=null;draggingFromRole=null;draggingVolFreeIvs=null;draggingLate=false;
+          clearDZHighlights();
+        });
+      }
+      lateCards.appendChild(card);
+    });
+  }
+  const _lsEl=document.getElementById('late-search');
+  if(_lsEl){
+    renderLateCards(_lsEl.value);
+    if(!_lsEl._lateListenerAttached){
+      _lsEl.addEventListener('input',e=>renderLateCards(e.target.value));
+      _lsEl._lateListenerAttached=true;
+    }
+  }
 }
 
 
@@ -4690,7 +4798,7 @@ async function clearAllPersonData(name){
     Object.keys(assigns[wk]).forEach(k=>{
       if(k.includes('||')&&Array.isArray(assigns[wk][k])){
         assigns[wk][k]=assigns[wk][k].filter(n=>n!==name);
-      } else if(k.endsWith('__t__'+name)||k.endsWith('__n__'+name)||k.endsWith('__l__'+name)){
+      } else if(k.endsWith('__t__'+name)||k.endsWith('__n__'+name)||k.endsWith('__l__'+name)||k.endsWith('__late__'+name)){
         delete assigns[wk][k];
       }
     });
@@ -4713,7 +4821,7 @@ async function deletePersonFromModal(){
   Object.keys(assigns).forEach(wk=>{
     Object.keys(assigns[wk]).forEach(k=>{
       if(k.includes('||')&&Array.isArray(assigns[wk][k])){assigns[wk][k]=assigns[wk][k].filter(n=>n!==nom);}
-      else if(k.endsWith('__t__'+nom)||k.endsWith('__n__'+nom)||k.endsWith('__l__'+nom)){delete assigns[wk][k];}
+      else if(k.endsWith('__t__'+nom)||k.endsWith('__n__'+nom)||k.endsWith('__l__'+nom)||k.endsWith('__late__'+nom)){delete assigns[wk][k];}
     });
   });
   await deletePerson_db(pmCtx);
@@ -4779,7 +4887,7 @@ async function savePerson(){
       keys.forEach(k=>{
         const v=d[k];
         if(Array.isArray(v)){const i=v.indexOf(oldName);if(i!==-1)v[i]=newName;return;}
-        for(const sfx of['__t__','__n__','__l__']){
+        for(const sfx of['__t__','__n__','__l__','__late__']){
           if(k.endsWith(sfx+oldName)){d[k.slice(0,-oldName.length)+newName]=v;delete d[k];break;}
         }
       });
