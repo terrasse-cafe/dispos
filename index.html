@@ -229,7 +229,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .h-role-row.tog-inactive.row-hover .h-role-name{font-weight:400;color:var(--text-2)}
 .h-timeline{flex:1;position:relative;background:var(--bg);overflow:visible}
 .h-dz{position:absolute;top:3px;bottom:3px;border:2px dashed var(--border);border-radius:6px;display:flex;align-items:center;padding:0 10px;transition:border-color .1s,background .1s;cursor:default;overflow:hidden}
-.h-dz.empty{background:transparent}.h-dz.filled{border-style:solid}
+.h-dz.empty{background:#F0EDEA}.h-dz.filled{border-style:solid}
 .dz-ph{font-size:11px;color:var(--text-3)}
 .h-dz.dv,.h-dz.hv{border-color:var(--accent-dark);background:#DBE8E5;border-style:solid}
 .h-dz.dv{box-shadow:0 0 0 2px #DBE8E5}
@@ -3165,7 +3165,19 @@ function volPrefersRole(name,role){
 }
 function highlightDZs(wk,shifts){
   if(draggingLate){
-    document.querySelectorAll('.h-dz:not(.filled)').forEach(dz=>{dz.classList.add('dz-ok');});
+    document.querySelectorAll('.h-dz').forEach(dz=>{
+      if(dz.classList.contains('filled'))return;
+      let matchedRole=null;
+      shifts.forEach(sh=>{
+        const allR=[...(sh._slots||sh.roles),...(sh._optSlots||[]),...(sh._togSlots||[])];
+        allR.forEach(r=>{
+          if('dz-'+sh.id+'-'+r.replace(/[^a-z0-9]/gi,'_')===dz.id)matchedRole=r;
+        });
+      });
+      const pref=matchedRole?volPrefersRole(draggingVol,matchedRole):false;
+      dz.classList.toggle('dv',pref);
+      dz.classList.toggle('da',!pref);
+    });
     return;
   }
   shifts.forEach(sh=>{
