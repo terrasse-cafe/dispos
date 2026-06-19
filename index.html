@@ -11,7 +11,7 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
 :root{
-  --bg:#F7F5F2;--surface:#fff;--border:#E2DDD8;--border-light:#EDE9E4;
+  --bg:#F7F5F2;--surface:#fff;--border:#C8C2BB;--border-light:#D6D0CA;
   --text:#1C1917;--text-2:#57534E;--text-3:#706A65;
   --accent:#A6C5BD;--accent-dark:#6FA39A;--accent-text:#1C1917;
   --accent-light:#EEF5F4;
@@ -650,7 +650,6 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
           </div>
           <div id="late-cards" class="vol-cards" style="max-height:200px;overflow-y:auto;padding:4px 8px 8px"></div>
         </div>
-        <div class="hint-box">Glissez les cartes dans les zones.<br>Employés couvrent le shift complet.</div>
       </div>
     </div>
   </div>
@@ -3397,7 +3396,7 @@ function renderHoraire(){
       dz.id='dz-'+sh.id+'-'+role.replace(/[^a-z0-9]/gi,'_');
       if(!isActive){
         dz.classList.add('empty');
-        const ph=document.createElement('span');ph.className='dz-ph';ph.textContent='—';dz.appendChild(ph);
+        const ph=document.createElement('span');ph.className='dz-ph';dz.appendChild(ph);
         return dz;
       }
       const assignedList=getAssigns(wk,sh.id,role);
@@ -3619,8 +3618,7 @@ function renderHoraire(){
         });
       } else {
         dz.classList.add('empty');
-        const ph=document.createElement('span');ph.className='dz-ph';
-        ph.textContent=past?'—':'— glissez ici';dz.appendChild(ph);
+        const ph=document.createElement('span');ph.className='dz-ph';dz.appendChild(ph);
       }
       if(!past){
         dz.addEventListener('dragover',e=>{
@@ -3995,8 +3993,7 @@ function renderHoraire(){
         row.style.minHeight='40px';
         tl.style.height='40px';
         dz.classList.add('empty');
-        const ph=document.createElement('span');ph.className='dz-ph';
-        ph.textContent=past?'—':'— glissez ici';dz.appendChild(ph);
+        const ph=document.createElement('span');ph.className='dz-ph';dz.appendChild(ph);
       }
 
       // Drop zone — accepte toujours un nouveau bénévole (occupé ou non)
