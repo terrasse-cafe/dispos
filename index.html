@@ -200,11 +200,11 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .h-layout > div:last-child{align-self:start;position:sticky;top:52px}
 .h-scroll{overflow-x:auto}
 .h-grid{display:inline-block;min-width:100%;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);box-shadow:none}
-.h-head-row{display:flex;border-bottom:1px solid var(--border)}
-.h-corner{width:var(--role-col);min-width:var(--role-col);flex-shrink:0;background:var(--bg);border-right:1px solid var(--border);padding:6px 8px;font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center}
-.h-times{flex-shrink:0;background:var(--bg);position:relative;height:24px}
-.h-tick{position:absolute;top:0;bottom:0;border-left:1px solid var(--border-light);display:flex;align-items:flex-end;padding-bottom:4px;padding-left:3px;font-size:9px;font-family:var(--mono);color:var(--text-3)}
-.h-tick.hour{border-left-color:var(--border);color:var(--text-2);font-weight:500}
+.h-head-row{display:flex;border-bottom:1px solid var(--border);background:#E8E2DB}
+.h-corner{width:var(--role-col);min-width:var(--role-col);flex-shrink:0;background:#E8E2DB;border-right:1px solid var(--border);padding:6px 8px;font-size:10px;font-weight:600;color:#57534E;text-transform:uppercase;letter-spacing:.06em;display:flex;align-items:center}
+.h-times{flex-shrink:0;background:#E8E2DB;position:relative;height:24px}
+.h-tick{position:absolute;top:0;bottom:0;border-left:1px solid var(--border-light);display:flex;align-items:flex-end;padding-bottom:4px;padding-left:3px;font-size:9px;font-family:var(--mono);color:#706A65}
+.h-tick.hour{border-left-color:var(--border);color:#57534E;font-weight:500}
 .h-tick.half{border-left:1px dashed var(--border-light);}
 .h-shift-row{display:flex;background:var(--bg);border-top:1px solid var(--border);border-bottom:1px solid var(--border-light)}
 .h-shift-label{width:var(--role-col);min-width:var(--role-col);flex-shrink:0;padding:4px 8px;font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;border-right:1px solid var(--border);display:flex;align-items:center}
@@ -3325,12 +3325,12 @@ function renderHoraire(){
 
   if(shifts.length>1){
     const shiftLabelRow=document.createElement('div');
-    shiftLabelRow.style.cssText='height:24px;position:relative;width:'+TW+'px;min-width:'+TW+'px;background:var(--bg);border-bottom:1px solid var(--border-light);box-sizing:border-box;';
+    shiftLabelRow.style.cssText='height:24px;position:relative;width:'+TW+'px;min-width:'+TW+'px;background:#E8E2DB;border-bottom:1px solid var(--border-light);box-sizing:border-box;';
     shifts.forEach((sh,si)=>{
       const lx=toPx(sh.fromH);
       const lw=toPx(sh.toH)-lx;
       const lbl=document.createElement('div');
-      lbl.style.cssText='position:absolute;left:'+lx+'px;width:'+lw+'px;height:100%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:.06em;box-sizing:border-box;'+(si>0?'border-left:1px solid var(--border);':'');
+      lbl.style.cssText='position:absolute;left:'+lx+'px;width:'+lw+'px;height:100%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#57534E;text-transform:uppercase;letter-spacing:.06em;box-sizing:border-box;'+(si>0?'border-left:1px solid var(--border);':'');
       lbl.textContent=sh.label;
       shiftLabelRow.appendChild(lbl);
     });
@@ -3719,7 +3719,7 @@ function renderHoraire(){
     if(thisStation&&thisStation!==lastStation){
       lastStation=thisStation;
       const divider=document.createElement('div');
-      divider.style.cssText='display:flex;align-items:center;height:20px;padding:0 0 0 10px;background:#F0EDEA;font-size:10px;font-weight:600;letter-spacing:0.07em;color:#A8A29E;text-transform:uppercase;border-bottom:1px solid var(--border-light);width:100%;box-sizing:border-box;';
+      divider.style.cssText='display:flex;align-items:center;height:20px;padding:0 0 0 10px;background:#E3DDD7;font-size:10px;font-weight:600;letter-spacing:0.07em;color:#57534E;text-transform:uppercase;border-bottom:1px solid var(--border-light);width:100%;box-sizing:border-box;';
       divider.textContent=thisStation;
       grid.appendChild(divider);
     }
