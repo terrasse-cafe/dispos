@@ -639,7 +639,7 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
         </div>
         <div class="vol-panel" id="late-panel" style="margin-top:10px">
           <div class="vol-panel-header" style="display:flex;align-items:center;justify-content:space-between">
-            <span class="vol-panel-title">Ajouter un bénévole</span>
+            <span class="vol-panel-title">Ajout manuel</span>
           </div>
           <div style="padding:6px 8px 4px">
             <div style="position:relative">
@@ -1375,7 +1375,7 @@ let curDay='vendredi';
 let draggingVol=null;
 let draggingFromRole=null; // {shiftId, role, name} quand on drag depuis un bloc assigné
 let draggingVolFreeIvs=null; // plages libres résiduelles au moment du drag depuis une vol-card
-let draggingLate=false; // true quand on drag depuis le panneau "Ajouter un bénévole"
+let draggingLate=false; // true quand on drag depuis le panneau "Ajout manuel" ou une chip tardive
 let undoStack=[]; // max 20 entrées — chaque entrée est un tableau d'actions inverses
 let redoStack=[];
 let _finBlobUrl=null;
@@ -3418,6 +3418,13 @@ function renderHoraire(){
       if(has(sh0)&&has(sh1))mergedRoleMap.set(rn,[sh0,sh1]);
     });
   }
+  function lateDefaultHours(name,sh){
+    const dayId=Object.keys(SHIFTS).find(d=>(SHIFTS[d]||[]).some(s=>s.id===sh.id));
+    const day=DAYS.find(d=>d.id===dayId);
+    if(!day)return{s:sh.fromH*60,e:sh.toH*60};
+    const defaultS=isEmp(name)?sh.fromH*60:(day.oH*60+(day.oM||0));
+    return{s:defaultS,e:sh.toH*60};
+  }
   function renderMergedRow(role,sh0,sh1){
     const rdn=roleDisplayLabel(role);
     const isBenev=rdn==='Bénévole en formation';
@@ -3651,6 +3658,7 @@ function renderHoraire(){
               draggingVol=assignedName;
               draggingFromRole={shiftId:sh.id,role,name:assignedName};
               draggingVolFreeIvs=null;
+              draggingLate=isLate;
               ev.dataTransfer.setData('text/plain',assignedName);
               ev.dataTransfer.effectAllowed='move';
               setTimeout(()=>chip.style.opacity='.35',0);
@@ -3658,7 +3666,7 @@ function renderHoraire(){
             });
             chip.addEventListener('dragend',()=>{
               chip.style.opacity='';
-              draggingVol=null;draggingFromRole=null;draggingVolFreeIvs=null;clearDZHighlights();
+              draggingVol=null;draggingFromRole=null;draggingVolFreeIvs=null;draggingLate=false;clearDZHighlights();
               const tt=document.getElementById('chip-pref-tooltip');
               if(tt){clearTimeout(chip._ttTimer);tt.classList.remove('visible');}
             });
@@ -3708,11 +3716,23 @@ function renderHoraire(){
           if(draggingLate){
             e.preventDefault();
             if(!name)return;
+            let lateS,lateE;
+            if(draggingFromRole&&draggingFromRole.shiftId===sh.id){
+              const et=getAssignTimes(wk,draggingFromRole.shiftId,draggingFromRole.role,name);
+              lateS=et?.s??lateDefaultHours(name,sh).s;
+              lateE=et?.e??lateDefaultHours(name,sh).e;
+            }else{
+              const def=lateDefaultHours(name,sh);lateS=def.s;lateE=def.e;
+            }
+            if(draggingFromRole&&!(draggingFromRole.shiftId===sh.id&&draggingFromRole.role===role)){
+              removeAssign(wk,draggingFromRole.shiftId,draggingFromRole.role,name);
+              deleteAssignment(wk,draggingFromRole.shiftId,draggingFromRole.role,name);
+            }
             addAssign(wk,sh.id,role,name);
-            setAssignTimes(wk,sh.id,role,sh.fromH*60,sh.toH*60,name);
+            setAssignTimes(wk,sh.id,role,lateS,lateE,name);
             setAssignLate(wk,sh.id,role,true,name);
             pushUndo([{type:'remove',wk,sid:sh.id,role,name,locked:false}]);
-            saveAssignment(wk,sh.id,role,name,sh.fromH*60,sh.toH*60,null,false,true);
+            saveAssignment(wk,sh.id,role,name,lateS,lateE,null,false,true);
             renderHoraire();
             return;
           }
@@ -4024,6 +4044,7 @@ function renderHoraire(){
               draggingVol=assignedName;
               draggingFromRole={shiftId:shift.id,role,name:assignedName};
               draggingVolFreeIvs=null;
+              draggingLate=isLate;
               ev.dataTransfer.setData('text/plain',assignedName);
               ev.dataTransfer.effectAllowed='move';
               setTimeout(()=>chip.style.opacity='.35',0);
@@ -4031,7 +4052,7 @@ function renderHoraire(){
             });
             chip.addEventListener('dragend',()=>{
               chip.style.opacity='';
-              draggingVol=null;draggingFromRole=null;draggingVolFreeIvs=null;clearDZHighlights();
+              draggingVol=null;draggingFromRole=null;draggingVolFreeIvs=null;draggingLate=false;clearDZHighlights();
               const tt=document.getElementById('chip-pref-tooltip');
               if(tt){clearTimeout(chip._ttTimer);tt.classList.remove('visible');}
             });
@@ -4086,11 +4107,23 @@ function renderHoraire(){
           if(draggingLate){
             e.preventDefault();
             if(!name)return;
+            let lateS,lateE;
+            if(draggingFromRole&&draggingFromRole.shiftId===shift.id){
+              const et=getAssignTimes(wk,draggingFromRole.shiftId,draggingFromRole.role,name);
+              lateS=et?.s??lateDefaultHours(name,shift).s;
+              lateE=et?.e??lateDefaultHours(name,shift).e;
+            }else{
+              const def=lateDefaultHours(name,shift);lateS=def.s;lateE=def.e;
+            }
+            if(draggingFromRole&&!(draggingFromRole.shiftId===shift.id&&draggingFromRole.role===role)){
+              removeAssign(wk,draggingFromRole.shiftId,draggingFromRole.role,name);
+              deleteAssignment(wk,draggingFromRole.shiftId,draggingFromRole.role,name);
+            }
             addAssign(wk,shift.id,role,name);
-            setAssignTimes(wk,shift.id,role,shift.fromH*60,shift.toH*60,name);
+            setAssignTimes(wk,shift.id,role,lateS,lateE,name);
             setAssignLate(wk,shift.id,role,true,name);
             pushUndo([{type:'remove',wk,sid:shift.id,role,name,locked:false}]);
-            saveAssignment(wk,shift.id,role,name,shift.fromH*60,shift.toH*60,null,false,true);
+            saveAssignment(wk,shift.id,role,name,lateS,lateE,null,false,true);
             renderHoraire();
             return;
           }
@@ -4417,8 +4450,8 @@ function buildCards(wk,shifts){
     lateCards.innerHTML='';
     const q=query.trim().toLowerCase();
     if(q.length<2)return;
-    const allVols=directory.filter(p=>p.type==='vol'&&p.active!==false);
-    const matches=allVols.filter(p=>{
+    const allMembers=directory.filter(p=>p.active!==false);
+    const matches=allMembers.filter(p=>{
       const fn=fullName(p).toLowerCase();
       const ln=(p.last_name||'').toLowerCase();
       const fn2=(p.first_name||'').toLowerCase();
@@ -4531,9 +4564,9 @@ function openTP(e,name,sid,role,shift,wk){
     const dzToH2 = (shift.slotToH && shift.slotToH[roleDisplayLabel(role)] != null)
       ? shift.slotToH[roleDisplayLabel(role)] : shift.toH;
     if (isLateAssign) {
-      fromMin = dzFromH2 * 60;
-      fromMax = dzToH2 * 60 - 30;
-      toMax   = dzToH2 * 60;
+      fromMin = shift.fromH * 60;
+      fromMax = shift.toH * 60 - 30;
+      toMax   = shift.toH * 60;
     } else {
       const rng2 = volDayRange(wk, name);
       fromMin = rng2 ? Math.max(rng2.startMins, dzFromH2 * 60) : dzFromH2 * 60;
