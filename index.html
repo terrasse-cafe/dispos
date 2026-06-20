@@ -2644,6 +2644,9 @@ function isWeekLocked(wk){
   return new Date()>=lockTime;
 }
 
+const SVG_SUN='<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#cp-sun)"><path d="M6 0.5V1.5M6 10.5V11.5M2.11 2.11L2.82 2.82M9.18 9.18L9.89 9.89M0.5 6H1.5M10.5 6H11.5M2.11 9.89L2.82 9.18M9.18 2.82L9.89 2.11M8.5 6C8.5 7.38071 7.38071 8.5 6 8.5C4.61929 8.5 3.5 7.38071 3.5 6C3.5 4.61929 4.61929 3.5 6 3.5C7.38071 3.5 8.5 4.61929 8.5 6Z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></g><defs><clipPath id="cp-sun"><rect width="12" height="12" fill="white"/></clipPath></defs></svg>';
+const SVG_MOON='<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#cp-moon)"><path d="M10.5 6.395C10.4213 7.2461 10.1019 8.0572 9.57907 8.73339C9.05627 9.40958 8.3517 9.9229 7.5478 10.2133C6.74391 10.5036 5.87394 10.5591 5.0397 10.373C4.20546 10.187 3.44145 9.76727 2.83706 9.16289C2.23268 8.5585 1.81292 7.79449 1.6269 6.96025C1.44089 6.12601 1.49631 5.25604 1.78668 4.45215C2.07705 3.64825 2.59037 2.94368 3.26656 2.42088C3.94275 1.89807 4.75385 1.57865 5.60495 1.5C5.10666 2.17413 4.86688 3.00472 4.92922 3.84071C4.99156 4.67669 5.35188 5.46253 5.94465 6.0553C6.53742 6.64807 7.32326 7.00839 8.15924 7.07073C8.99523 7.13308 9.82582 6.89329 10.5 6.395Z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></g><defs><clipPath id="cp-moon"><rect width="12" height="12" fill="white"/></clipPath></defs></svg>';
+
 function computePlacesForShift(wk,sh){
   const FORMATION='Bénévole en formation';
   let roles=[...(sh._slots||sh.roles)].filter(r=>roleDisplayLabel(r)!==FORMATION);
@@ -2663,13 +2666,11 @@ function computePlacesForShift(wk,sh){
   }
   const wkData=avail[wk]||{};
   let volCount=0;
-  if(dayId){
-    Object.keys(wkData).forEach(name=>{
-      if(isEmp(name))return;
-      const rng=volDayRangeFor(wk,name,dayId);if(!rng)return;
-      if(rng.startMins<sh.toH*60&&rng.endMins>sh.fromH*60)volCount++;
-    });
-  }
+  Object.keys(wkData).forEach(name=>{
+    if(isEmp(name))return;
+    const rng=volDayRangeFor(wk,name,dayId);if(!rng)return;
+    if(rng.startMins<sh.toH*60&&rng.endMins>sh.fromH*60)volCount++;
+  });
   return Math.max(0,totalRoles-empCount-volCount);
 }
 
@@ -2701,34 +2702,32 @@ function renderB(){
       toggleLabel.style.pointerEvents='none';
       const badge=document.createElement('span');
       badge.textContent=t('closed_day');
-      badge.style.cssText='background:#FDA1A1;color:#1C1917;font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;letter-spacing:0.03em;white-space:nowrap;';
+      badge.style.cssText='display:inline-flex;align-items:center;background:#FDA1A1;color:#1C1917;font-size:11px;font-weight:600;padding:2px 7px;border-radius:4px;letter-spacing:0.03em;white-space:nowrap;';
       head.appendChild(title);head.appendChild(badge);
     } else {
       head.appendChild(title);head.appendChild(toggleLabel);
     }
     card.appendChild(head);
-    const badgeRow=document.createElement('div');
-    badgeRow.style.cssText='display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;';
-    const dayShifts=SHIFTS[day.id]||[];
     if(!isClosed){
+      const dayShifts=SHIFTS[day.id]||[];
+      const hasMultiple=dayShifts.length>1;
+      const badgeRow=document.createElement('div');
+      badgeRow.style.cssText='display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;';
       dayShifts.forEach(sh=>{
         const places=computePlacesForShift(wk,sh);
         const badge=document.createElement('span');
-        const hasMultipleShifts=dayShifts.length>1;
-        const icon=hasMultipleShifts?(sh.label==='Jour'?'☀︎ ':'☽ '):'';
-        if(places===0){
-          badge.textContent=icon+'COMPLET';
-          badge.style.cssText='display:inline-flex;align-items:center;background:#FDA1A1;color:#1C1917;font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;letter-spacing:0.03em;white-space:nowrap;';
-        }else if(places>=4){
-          badge.textContent=icon+places+(places===1?' place':' places');
-          badge.style.cssText='display:inline-flex;align-items:center;background:var(--accent);color:#1C1917;font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;letter-spacing:0.03em;white-space:nowrap;';
-        }else{
-          badge.textContent=icon+places+(places===1?' place':' places');
-          badge.style.cssText='display:inline-flex;align-items:center;background:transparent;border:1px solid var(--border);color:var(--text-2);font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;letter-spacing:0.03em;white-space:nowrap;';
-        }
+        const icon=hasMultiple?(sh.label==='Jour'?SVG_SUN:SVG_MOON):SVG_SUN;
+        const placesTxt=places===0?'COMPLET':places+(places===1?' place':' places');
+        badge.innerHTML=icon+' '+placesTxt;
+        const colorCss=places===0
+          ?'background:#FDA1A1;color:#1C1917;'
+          :places>=4
+            ?'background:var(--accent);color:#1C1917;'
+            :'background:transparent;border:1px solid var(--border);color:var(--text-2);';
+        badge.style.cssText='display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 7px;border-radius:4px;letter-spacing:0.03em;white-space:nowrap;'+colorCss;
         badgeRow.appendChild(badge);
       });
-      if(badgeRow.children.length>0)card.appendChild(badgeRow);
+      card.appendChild(badgeRow);
     }
     const body=document.createElement('div');body.className='b-day-card-body';body.style.display=enabled?'grid':'none';
     const fromField=document.createElement('div');fromField.className='b-field';fromField.innerHTML='<label>'+t('from_lbl')+'</label>';
