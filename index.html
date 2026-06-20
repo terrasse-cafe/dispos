@@ -3422,7 +3422,8 @@ function renderHoraire(){
     const dayId=Object.keys(SHIFTS).find(d=>(SHIFTS[d]||[]).some(s=>s.id===sh.id));
     const day=DAYS.find(d=>d.id===dayId);
     if(!day)return{s:sh.fromH*60,e:sh.toH*60};
-    const defaultS=isEmp(name)?sh.fromH*60:(day.oH*60+(day.oM||0));
+    const isJour=sh.label==='Jour';
+    const defaultS=isEmp(name)?sh.fromH*60:isJour?(day.oH*60+(day.oM||0)):sh.fromH*60;
     return{s:defaultS,e:sh.toH*60};
   }
   function renderMergedRow(role,sh0,sh1){
