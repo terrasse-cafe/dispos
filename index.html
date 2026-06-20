@@ -4552,28 +4552,26 @@ function openTP(e,name,sid,role,shift,wk){
   const containers = document.querySelectorAll('.tp-fields > div');
 
   let fromMin, fromMax, toMax;
-  if(emp){
+  const isLateAssign = getAssignLate(wk, sid, role, name);
+  if (emp && !isLateAssign) {
     const empDayId = Object.keys(SHIFTS).find(d=>(SHIFTS[d]||[]).some(s=>s.id===sid)) || curDay;
     const es = empSchedule(name, empDayId);
     fromMin = es ? Math.max(es.s, shift.fromH*60) : shift.fromH*60;
     fromMax = es ? es.e - 30 : null;
     toMax   = es ? Math.min(es.e, shift.toH*60) : shift.toH*60;
+  } else if (isLateAssign) {
+    fromMin = shift.fromH * 60;
+    fromMax = shift.toH * 60 - 30;
+    toMax   = shift.toH * 60;
   } else {
-    const isLateAssign = getAssignLate(wk, sid, role, name);
     const dzFromH2 = (shift.slotFromH && shift.slotFromH[roleDisplayLabel(role)] != null)
       ? shift.slotFromH[roleDisplayLabel(role)] : shift.fromH;
     const dzToH2 = (shift.slotToH && shift.slotToH[roleDisplayLabel(role)] != null)
       ? shift.slotToH[roleDisplayLabel(role)] : shift.toH;
-    if (isLateAssign) {
-      fromMin = shift.fromH * 60;
-      fromMax = shift.toH * 60 - 30;
-      toMax   = shift.toH * 60;
-    } else {
-      const rng2 = volDayRange(wk, name);
-      fromMin = rng2 ? Math.max(rng2.startMins, dzFromH2 * 60) : dzFromH2 * 60;
-      fromMax = rng2 ? Math.min(rng2.endMins, dzToH2 * 60) - 30 : dzToH2 * 60 - 30;
-      toMax   = rng2 ? Math.min(rng2.endMins, dzToH2 * 60) : dzToH2 * 60;
-    }
+    const rng2 = volDayRange(wk, name);
+    fromMin = rng2 ? Math.max(rng2.startMins, dzFromH2 * 60) : dzFromH2 * 60;
+    fromMax = rng2 ? Math.min(rng2.endMins, dzToH2 * 60) - 30 : dzToH2 * 60 - 30;
+    toMax   = rng2 ? Math.min(rng2.endMins, dzToH2 * 60) : dzToH2 * 60;
   }
 
   const safeStart = Math.max(fromMin, Math.min(startVal, toMax - 30));
