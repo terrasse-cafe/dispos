@@ -2644,6 +2644,35 @@ function isWeekLocked(wk){
   return new Date()>=lockTime;
 }
 
+function computePlacesForShift(wk,sh){
+  const FORMATION='Bénévole en formation';
+  let roles=[...(sh._slots||sh.roles)].filter(r=>roleDisplayLabel(r)!==FORMATION);
+  (sh._optSlots||[]).forEach(r=>{if(roleDisplayLabel(r)!==FORMATION)roles.push(r);});
+  (sh._togSlots||[]).forEach(r=>{
+    const lbl=roleDisplayLabel(r);if(lbl===FORMATION)return;
+    if(isTrainingActive(wk,sh.id)||isSunEventActive(wk,r))roles.push(r);
+  });
+  const totalRoles=roles.length;
+  const dayId=Object.keys(SHIFTS).find(d=>(SHIFTS[d]||[]).some(s=>s.id===sh.id));
+  let empCount=0;
+  if(dayId){
+    directory.filter(p=>p.type==='emp'&&p.active!==false).forEach(p=>{
+      const es=empSchedule(p.name,dayId);if(!es)return;
+      if(es.s<sh.toH*60&&es.e>sh.fromH*60)empCount++;
+    });
+  }
+  const wkData=avail[wk]||{};
+  let volCount=0;
+  if(dayId){
+    Object.keys(wkData).forEach(name=>{
+      if(isEmp(name))return;
+      const rng=volDayRangeFor(wk,name,dayId);if(!rng)return;
+      if(rng.startMins<sh.toH*60&&rng.endMins>sh.fromH*60)volCount++;
+    });
+  }
+  return Math.max(0,totalRoles-empCount-volCount);
+}
+
 function renderB(){
   const wk=wkey(bMon);
   if(!bSel[wk])bSel[wk]={};
@@ -2678,6 +2707,29 @@ function renderB(){
       head.appendChild(title);head.appendChild(toggleLabel);
     }
     card.appendChild(head);
+    const badgeRow=document.createElement('div');
+    badgeRow.style.cssText='display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;';
+    const dayShifts=SHIFTS[day.id]||[];
+    if(!isClosed){
+      dayShifts.forEach(sh=>{
+        const places=computePlacesForShift(wk,sh);
+        const badge=document.createElement('span');
+        const hasMultipleShifts=dayShifts.length>1;
+        const icon=hasMultipleShifts?(sh.label==='Jour'?'☀︎ ':'☽ '):'';
+        if(places===0){
+          badge.textContent=icon+'COMPLET';
+          badge.style.cssText='display:inline-flex;align-items:center;background:#FDA1A1;color:#1C1917;font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;letter-spacing:0.03em;white-space:nowrap;';
+        }else if(places>=4){
+          badge.textContent=icon+places+(places===1?' place':' places');
+          badge.style.cssText='display:inline-flex;align-items:center;background:var(--accent);color:#1C1917;font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;letter-spacing:0.03em;white-space:nowrap;';
+        }else{
+          badge.textContent=icon+places+(places===1?' place':' places');
+          badge.style.cssText='display:inline-flex;align-items:center;background:transparent;border:1px solid var(--border);color:var(--text-2);font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;letter-spacing:0.03em;white-space:nowrap;';
+        }
+        badgeRow.appendChild(badge);
+      });
+      if(badgeRow.children.length>0)card.appendChild(badgeRow);
+    }
     const body=document.createElement('div');body.className='b-day-card-body';body.style.display=enabled?'grid':'none';
     const fromField=document.createElement('div');fromField.className='b-field';fromField.innerHTML='<label>'+t('from_lbl')+'</label>';
     let fromSel=buildTimeSelect(day,'from',dayData?dayData.from:undefined);fromField.appendChild(fromSel);
