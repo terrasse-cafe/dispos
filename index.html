@@ -692,39 +692,24 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M9.79096 1.21967C10.0838 0.926977 10.5587 0.926902 10.8515 1.21967C11.1443 1.5125 11.1442 1.98731 10.8515 2.28022L7.09565 6.0351L10.8515 9.79096C11.1443 10.0839 11.1444 10.5587 10.8515 10.8515C10.5587 11.1444 10.0839 11.1443 9.79096 10.8515L6.0351 7.09565L2.28022 10.8515C1.98732 11.1444 1.51256 11.1444 1.21967 10.8515C0.926842 10.5586 0.926799 10.0838 1.21967 9.79096L4.97455 6.0351L1.21967 2.28022C0.926777 1.98732 0.926777 1.51256 1.21967 1.21967C1.51256 0.926777 1.98732 0.926777 2.28022 1.21967L6.0351 4.97455L9.79096 1.21967Z" fill="currentColor"/></svg>
       </button>
     </div>
-    <div class="rappel-accordion" id="rappel-acc-sun">
-      <div class="rappel-acc-header" onclick="toggleRappelAcc('sun')">
-        <span style="font-weight:600;font-size:14px">Dimanche</span>
-        <div style="display:flex;align-items:center;gap:10px">
-          <label class="toggle-switch" onclick="event.stopPropagation()">
-            <input type="checkbox" id="rappel-toggle-sun" onchange="syncRappelToggle('sun',this.checked)"/>
-            <span class="toggle-track"></span>
-          </label>
-          <svg class="rappel-acc-chevron" id="rappel-chev-sun" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </div>
-      </div>
-      <div class="rappel-acc-body" id="rappel-body-sun">
-        <textarea id="rappel-text-sun" class="rappel-textarea" rows="7" placeholder="Texte du courriel…"></textarea>
-      </div>
-    </div>
-    <div class="rappel-accordion" id="rappel-acc-tue" style="margin-top:8px">
-      <div class="rappel-acc-header" onclick="toggleRappelAcc('tue')">
+    <div style="border:1px solid var(--border);border-radius:8px;padding:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <span style="font-weight:600;font-size:14px">Mardi</span>
-        <div style="display:flex;align-items:center;gap:10px">
-          <label class="toggle-switch" onclick="event.stopPropagation()">
-            <input type="checkbox" id="rappel-toggle-tue" onchange="syncRappelToggle('tue',this.checked)"/>
-            <span class="toggle-track"></span>
-          </label>
-          <svg class="rappel-acc-chevron" id="rappel-chev-tue" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="tuesday-reminder-toggle"/>
+          <span class="toggle-track"></span>
+        </label>
       </div>
-      <div class="rappel-acc-body" id="rappel-body-tue">
-        <textarea id="rappel-text-tue" class="rappel-textarea" rows="7" placeholder="Texte du courriel…"></textarea>
+      <p style="margin:0 0 14px;font-size:13px;color:var(--text-2);line-height:1.5">Un courriel est envoyé chaque mardi à 9h aux bénévoles qui n'ont pas encore soumis leurs disponibilités.</p>
+      <div style="margin-bottom:10px">
+        <label style="display:block;font-size:11px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:5px">Sujet</label>
+        <input type="text" id="reminder-subject-input" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;outline:none;color:var(--text)"/>
       </div>
+      <textarea id="reminder-body-input" class="rappel-textarea" rows="7" placeholder="Corps du courriel…"></textarea>
     </div>
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:1.2rem">
       <button class="btn btn-outlined" onclick="closeRappels()">Annuler</button>
-      <button class="btn btn-secondary" onclick="saveRappels()">Enregistrer</button>
+      <button class="btn btn-secondary" onclick="saveReminderSettings()">Enregistrer</button>
     </div>
   </div>
 </div>
@@ -2903,63 +2888,47 @@ async function submitAvail(){
 /* ══════════════════════════════════════════════
    ORGANISATRICE
 ══════════════════════════════════════════════ */
-const RAPPEL_DEFAULTS = {
-  sun: `Bonjour à tous,\n\nLa semaine prochaine au Terrasse Café approche ! Merci de remplir vos disponibilités ici :\nhttps://terrasse-cafe.github.io/dispos/\n\nBonne semaine,\nL'équipe organisatrice`,
-  tue: `Bonjour à tous,\n\nUn petit rappel pour remplir vos disponibilités pour la semaine prochaine :\nhttps://terrasse-cafe.github.io/dispos/\n\nMerci et à bientôt,\nL'équipe organisatrice`
-};
-
-async function loadRappelsState() {
+async function loadReminderSettings() {
   if (!sb) return;
-  const keys = ['sunday_reminder_enabled','sunday_reminder_text','tuesday_reminder_enabled','tuesday_reminder_text'];
-  const { data } = await sb.from('org_config').select('key,value').in('key', keys);
-  const map = {};
-  (data||[]).forEach(r => map[r.key] = r.value);
-  const sunToggle = document.getElementById('rappel-toggle-sun');
-  if (sunToggle) sunToggle.checked = (map['sunday_reminder_enabled'] ?? 'true') === 'true';
-  const sunText = document.getElementById('rappel-text-sun');
-  if (sunText) sunText.value = map['sunday_reminder_text'] ?? RAPPEL_DEFAULTS.sun;
-  const tueToggle = document.getElementById('rappel-toggle-tue');
-  if (tueToggle) tueToggle.checked = (map['tuesday_reminder_enabled'] ?? 'false') === 'true';
-  const tueText = document.getElementById('rappel-text-tue');
-  if (tueText) tueText.value = map['tuesday_reminder_text'] ?? RAPPEL_DEFAULTS.tue;
+  const { data } = await sb.from('org_config').select('key, value').in('key', ['reminder_subject', 'reminder_body', 'tuesday_reminder_enabled']);
+  if (!data) return;
+  data.forEach(row => {
+    if (row.key === 'reminder_subject') {
+      const el = document.getElementById('reminder-subject-input');
+      if (el) el.value = row.value;
+    }
+    if (row.key === 'reminder_body') {
+      const el = document.getElementById('reminder-body-input');
+      if (el) el.value = row.value;
+    }
+    if (row.key === 'tuesday_reminder_enabled') {
+      const toggle = document.getElementById('tuesday-reminder-toggle');
+      if (toggle) toggle.checked = row.value === 'true';
+    }
+  });
+}
+
+async function saveReminderSettings() {
+  if (!sb) return;
+  const subject = document.getElementById('reminder-subject-input')?.value ?? '';
+  const body = document.getElementById('reminder-body-input')?.value ?? '';
+  const enabled = document.getElementById('tuesday-reminder-toggle')?.checked ?? true;
+  await sb.from('org_config').upsert([
+    { key: 'reminder_subject', value: subject },
+    { key: 'reminder_body', value: body },
+    { key: 'tuesday_reminder_enabled', value: enabled ? 'true' : 'false' }
+  ], { onConflict: 'key' });
+  closeRappels();
 }
 
 function openRappels() {
-  loadRappelsState().then(() => {
+  loadReminderSettings().then(() => {
     document.getElementById('rappels-overlay').classList.add('open');
   });
 }
 
 function closeRappels() {
   document.getElementById('rappels-overlay').classList.remove('open');
-}
-
-function toggleRappelAcc(day) {
-  const body = document.getElementById('rappel-body-' + day);
-  const chev = document.getElementById('rappel-chev-' + day);
-  body.classList.toggle('open');
-  chev.classList.toggle('open');
-}
-
-function syncRappelToggle(day, checked) {
-  if (checked) {
-    const body = document.getElementById('rappel-body-' + day);
-    const chev = document.getElementById('rappel-chev-' + day);
-    body.classList.add('open');
-    chev.classList.add('open');
-  }
-}
-
-async function saveRappels() {
-  if (!sb) return;
-  const rows = [
-    { key: 'sunday_reminder_enabled',  value: document.getElementById('rappel-toggle-sun').checked ? 'true' : 'false' },
-    { key: 'sunday_reminder_text',     value: document.getElementById('rappel-text-sun').value },
-    { key: 'tuesday_reminder_enabled', value: document.getElementById('rappel-toggle-tue').checked ? 'true' : 'false' },
-    { key: 'tuesday_reminder_text',    value: document.getElementById('rappel-text-tue').value },
-  ];
-  await sb.from('org_config').upsert(rows, { onConflict: 'key' });
-  closeRappels();
 }
 
 function filterDirectory(query) {
@@ -4803,7 +4772,6 @@ document.addEventListener('click',()=>{
    RÉPERTOIRE
 ══════════════════════════════════════════════ */
 function renderDir(){
-  loadRappelsState();
   const tbody=document.getElementById('dir-tbody');tbody.innerHTML='';
   directory.forEach(p=>{
     const inactive=p.active===false;
