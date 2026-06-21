@@ -1552,7 +1552,7 @@ async function loadAssignments(wk) {
   if (!sb) return;
   const { data, error } = await sb.from('assignments').select('*').eq('week_key', wk);
   if (error) { console.error('loadAssignments:', error); return; }
-  if (!assigns[wk]) assigns[wk] = {};
+  assigns[wk] = {};
   assignUpdatedAt[wk] = {};
   data.forEach(r => {
     if (!r.person_name) return;
