@@ -1772,6 +1772,7 @@ function subscribeRealtime(wk) {
           else delete assigns[wk][k+'__late__'+r.person_name];
         }
         renderHoraire();
+        if(document.getElementById('b-week-section')?.style.display!=='none')renderB();
       }
     )
     .subscribe();
