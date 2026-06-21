@@ -1788,8 +1788,15 @@ function subscribeRealtimeVol(wk){
   realtimeVolSub=sb.channel('cafe-realtime-vol')
     .on('postgres_changes',{event:'*',schema:'public',table:'assignments',filter:`week_key=eq.${wk}`},
       async payload=>{
+        console.log('[VOL-REALTIME] événement reçu:',payload.eventType,payload);
         await loadAssignments(wk);
-        if(document.getElementById('b-week-section')?.style.display!=='none')renderB();
+        console.log('[VOL-REALTIME] assignations rechargées');
+        const bSection=document.getElementById('b-week-section');
+        console.log('[VOL-REALTIME] b-week-section display:',bSection?.style.display);
+        if(bSection?.style.display!=='none'){
+          console.log('[VOL-REALTIME] appel renderB()');
+          renderB();
+        }
       }
     )
     .subscribe();
@@ -1823,6 +1830,7 @@ async function bootOrgData() {
 
 async function bootVolData(wk) {
   if (!sb) return;
+  console.log('[VOL-BOOT] bootVolData appelé pour wk:',wk);
   const prevWk=wkey(addWeeks(new Date(wk+'T12:00:00'),-1));
   await Promise.all([
     loadAvail(wk),
@@ -1832,7 +1840,9 @@ async function bootVolData(wk) {
     loadTrainingRoleShifts(),
     loadAssignments(wk),
   ]);
+  console.log('[VOL-BOOT] données chargées, souscription realtime...');
   subscribeRealtimeVol(wk);
+  console.log('[VOL-BOOT] souscription realtime OK');
 }
 
 async function loadClosedDaysForVol(){
