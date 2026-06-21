@@ -2673,7 +2673,24 @@ function computePlacesForShift(wk,sh){
     const rng=volDayRangeFor(wk,name,dayId);if(!rng)return;
     if(rng.startMins<sh.toH*60&&rng.endMins>sh.fromH*60)volCount++;
   });
-  return Math.max(0,totalRoles-empCount-volCount);
+  let lateCount=0;
+  const allRolesInShift=[...(sh._slots||sh.roles),...(sh._optSlots||[]),...(sh._togSlots||[])];
+  const alreadyCounted=new Set();
+  allRolesInShift.forEach(role=>{
+    getAssigns(wk,sh.id,role).forEach(name=>{
+      if(!getAssignLate(wk,sh.id,role,name))return;
+      if(alreadyCounted.has(name))return;
+      alreadyCounted.add(name);
+      if(isEmp(name)){
+        const es=empSchedule(name,dayId);
+        if(!es||!(es.s<sh.toH*60&&es.e>sh.fromH*60))lateCount++;
+      }else{
+        const rng=volDayRangeFor(wk,name,dayId);
+        if(!rng||!(rng.startMins<sh.toH*60&&rng.endMins>sh.fromH*60))lateCount++;
+      }
+    });
+  });
+  return Math.max(0,totalRoles-empCount-volCount-lateCount);
 }
 
 function renderB(){
