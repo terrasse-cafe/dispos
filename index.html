@@ -3520,7 +3520,7 @@ function renderHoraire(){
         const rowH=Math.max(40,totalH+14);
         if(rowH>maxRowH)maxRowH=rowH;
         dz.style.top='3px';dz.style.bottom='3px';
-        const hatchPat='repeating-linear-gradient(-45deg,var(--border) 0px,var(--border) 1px,var(--bg) 1px,var(--bg) 7px)';
+        const hatchPat='repeating-linear-gradient(-45deg,var(--border) 0px,var(--border) 1px,#F0EDEA 1px,#F0EDEA 7px)';
         const covIvs=chipData.map(cd=>({s:cd.aSH,e:cd.aEH})).sort((a,b)=>a.s-b.s);
         const covUnion=[];
         for(const iv of covIvs){
@@ -3901,7 +3901,7 @@ function renderHoraire(){
         dz.style.top='3px';dz.style.bottom='3px';
 
         // Hachures uniquement sur les portions non couvertes du bloc rôle
-        const hatchPat='repeating-linear-gradient(-45deg,var(--border) 0px,var(--border) 1px,var(--bg) 1px,var(--bg) 7px)';
+        const hatchPat='repeating-linear-gradient(-45deg,var(--border) 0px,var(--border) 1px,#F0EDEA 1px,#F0EDEA 7px)';
         const covIvs=chipData.map(cd=>({s:cd.aSH,e:cd.aEH})).sort((a,b)=>a.s-b.s);
         const covUnion=[];
         for(const iv of covIvs){
