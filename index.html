@@ -2655,12 +2655,13 @@ const SVG_SUN='<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns
 const SVG_MOON='<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#cp-moon)"><path d="M10.5 6.395C10.4213 7.2461 10.1019 8.0572 9.57907 8.73339C9.05627 9.40958 8.3517 9.9229 7.5478 10.2133C6.74391 10.5036 5.87394 10.5591 5.0397 10.373C4.20546 10.187 3.44145 9.76727 2.83706 9.16289C2.23268 8.5585 1.81292 7.79449 1.6269 6.96025C1.44089 6.12601 1.49631 5.25604 1.78668 4.45215C2.07705 3.64825 2.59037 2.94368 3.26656 2.42088C3.94275 1.89807 4.75385 1.57865 5.60495 1.5C5.10666 2.17413 4.86688 3.00472 4.92922 3.84071C4.99156 4.67669 5.35188 5.46253 5.94465 6.0553C6.53742 6.64807 7.32326 7.00839 8.15924 7.07073C8.99523 7.13308 9.82582 6.89329 10.5 6.395Z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></g><defs><clipPath id="cp-moon"><rect width="12" height="12" fill="white"/></clipPath></defs></svg>';
 
 function computePlacesForShift(wk,sh){
-  const FORMATION='Bénévole en formation';
-  let roles=[...(sh._slots||sh.roles)].filter(r=>roleDisplayLabel(r)!==FORMATION);
-  (sh._optSlots||[]).forEach(r=>{if(roleDisplayLabel(r)!==FORMATION)roles.push(r);});
+  let roles=[...(sh._slots||sh.roles)];
+  (sh._optSlots||[]).forEach(r=>roles.push(r));
   (sh._togSlots||[]).forEach(r=>{
-    const lbl=roleDisplayLabel(r);if(lbl===FORMATION)return;
-    if(isTrainingActive(wk,sh.id)||isSunEventActive(wk,r))roles.push(r);
+    const lbl=roleDisplayLabel(r);
+    const isFormation=lbl==='Bénévole en formation';
+    if(isFormation){if(isTrainingActive(wk,sh.id))roles.push(r);return;}
+    if(isSunEventActive(wk,r))roles.push(r);
   });
   const totalRoles=roles.length;
   const dayId=Object.keys(SHIFTS).find(d=>(SHIFTS[d]||[]).some(s=>s.id===sh.id));
