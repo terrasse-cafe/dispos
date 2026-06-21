@@ -1758,6 +1758,9 @@ function subscribeRealtime(wk) {
         if (!assigns[wk]) assigns[wk] = {};
         if (payload.eventType === 'DELETE' && old) {
           removeAssign(wk, old.shift_id, old.role, old.person_name);
+          const _dk=akey(old.shift_id,old.role);const _dn=old.person_name;
+          delete assigns[wk][_dk+'__t__'+_dn];delete assigns[wk][_dk+'__n__'+_dn];
+          delete assigns[wk][_dk+'__l__'+_dn];delete assigns[wk][_dk+'__late__'+_dn];
         } else if (r && r.person_name) {
           const k = akey(r.shift_id, r.role);
           const arr = Array.isArray(assigns[wk][k]) ? assigns[wk][k] : (assigns[wk][k] ? [assigns[wk][k]] : []);
