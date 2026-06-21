@@ -3203,6 +3203,7 @@ function setAssignLocked(wk,sid,role,locked,name){
   else delete assigns[wk][akey(sid,role)+'__l__'+name];
 }
 function getAssignLate(wk,sid,role,name){return !!((assigns[wk]||{})[akey(sid,role)+'__late__'+name]);}
+function isLockedOrLate(wk,sid,role,name){return getAssignLocked(wk,sid,role,name)||getAssignLate(wk,sid,role,name);}
 function setAssignLate(wk,sid,role,val,name){
   const k=akey(sid,role)+'__late__'+name;
   if(val)(assigns[wk]=assigns[wk]||{})[k]=true;else delete(assigns[wk]||{})[k];
@@ -5302,7 +5303,7 @@ async function openAutoAssign(){
     (SHIFTS[day.id]||[]).forEach(sh=>{
       [...(sh._slots||sh.roles),...(sh._optSlots||[])].forEach(role=>{
         getAssigns(wk,sh.id,role).slice().forEach(name=>{
-          if(!getAssignLocked(wk,sh.id,role,name)){
+          if(!isLockedOrLate(wk,sh.id,role,name)){
             cleared.push({wk,shiftId:sh.id,role,name,
               times:getAssignTimes(wk,sh.id,role,name),
               note:getAssignNote(wk,sh.id,role,name)});
@@ -5313,7 +5314,7 @@ async function openAutoAssign(){
   });
   cleared.forEach(d=>removeAssign(d.wk,d.shiftId,d.role,d.name));
   await Promise.all(cleared.map(d=>deleteAssignment(d.wk,d.shiftId,d.role,d.name)));
-  const lockedTrueCount=Object.keys(assigns[wk]||{}).filter(k=>k.includes('__l__')).length;
+  const lockedTrueCount=Object.keys(assigns[wk]||{}).filter(k=>k.includes('__l__')||k.includes('__late__')).length;
   console.log(`[auto-assign] supprimées locked:false=${cleared.length} | restantes locked:true=${lockedTrueCount}`);
 
   // ── Étape 2 : comptage depuis les assignations verrouillées restantes ──
@@ -5564,6 +5565,7 @@ async function openAutoAssign(){
         let cand=null, bestGain=-1;
         for(const filled of slots){
           const nm=occ[filled]; if(!nm) continue;
+          if(isLockedOrLate(wk,sh.id,filled,nm)) continue;
           const pf=roleFillPriority(roleDisplayLabel(filled));
           if(pe>=pf) continue;
           const psNew=prefScore(nm,empty), psOld=prefScore(nm,filled);
@@ -5583,6 +5585,7 @@ async function openAutoAssign(){
         for(const cur of slots){
           const E=occ[cur];
           if(!E || !isEmp(E)) continue;
+          if(isLockedOrLate(wk,sh.id,cur,E)) continue;
           if(prefScore(E,empty)===0) continue;
           const V=Object.keys(wkData).find(n=>
             !isEmp(n) && n!==E &&
@@ -5613,6 +5616,7 @@ async function openAutoAssign(){
           const r1=filledRoles[i], r2=filledRoles[j];
           const n1=occ[r1], n2=occ[r2];
           if(!n1||!n2) continue;
+          if(isLockedOrLate(wk,sh.id,r1,n1)||isLockedOrLate(wk,sh.id,r2,n2)) continue;
           if(prefScore(n1,r2)===0 || prefScore(n2,r1)===0) continue;
           const curScore=prefScore(n1,r1)+prefScore(n2,r2);
           const swpScore=prefScore(n1,r2)+prefScore(n2,r1);
