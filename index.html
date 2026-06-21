@@ -1787,23 +1787,8 @@ function subscribeRealtimeVol(wk){
   if(realtimeVolSub){sb.removeChannel(realtimeVolSub);realtimeVolSub=null;}
   realtimeVolSub=sb.channel('cafe-realtime-vol')
     .on('postgres_changes',{event:'*',schema:'public',table:'assignments',filter:`week_key=eq.${wk}`},
-      payload=>{
-        if(!assigns[wk])assigns[wk]={};
-        const old=payload.old;const r=payload.new;
-        if(payload.eventType==='DELETE'&&old){
-          removeAssign(wk,old.shift_id,old.role,old.person_name);
-          const _dk=akey(old.shift_id,old.role);const _dn=old.person_name;
-          delete assigns[wk][_dk+'__t__'+_dn];delete assigns[wk][_dk+'__n__'+_dn];
-          delete assigns[wk][_dk+'__l__'+_dn];delete assigns[wk][_dk+'__late__'+_dn];
-        }else if(r&&r.person_name){
-          const k=akey(r.shift_id,r.role);
-          const arr=Array.isArray(assigns[wk][k])?assigns[wk][k]:(assigns[wk][k]?[assigns[wk][k]]:[]);
-          if(!arr.includes(r.person_name))arr.push(r.person_name);
-          assigns[wk][k]=arr;
-          if(r.start_mins!=null)assigns[wk][k+'__t__'+r.person_name]={s:r.start_mins,e:r.end_mins};
-          if(r.late)assigns[wk][k+'__late__'+r.person_name]=true;
-          else delete assigns[wk][k+'__late__'+r.person_name];
-        }
+      async payload=>{
+        await loadAssignments(wk);
         if(document.getElementById('b-week-section')?.style.display!=='none')renderB();
       }
     )
