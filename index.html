@@ -685,7 +685,7 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
 
 <!-- DIALOG RAPPELS -->
 <div class="overlay" id="rappels-overlay" onclick="if(event.target===this)closeRappels()">
-  <div class="modal-box" style="width:480px;max-width:95vw;background:var(--bg)">
+  <div class="modal-box" style="width:480px;max-width:95vw">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:1rem">
       <div style="font-size:15px;font-weight:600;flex:1">Rappel</div>
       <label class="toggle-switch">
@@ -695,13 +695,15 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
       <span class="toggle-label">Actif</span>
       <button onclick="closeRappels()" style="border:none;background:none;cursor:pointer;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text-3);transition:color .1s;padding:0" title="Fermer" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text-3)'"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M9.79096 1.21967C10.0838 0.926977 10.5587 0.926902 10.8515 1.21967C11.1443 1.5125 11.1442 1.98731 10.8515 2.28022L7.09565 6.0351L10.8515 9.79096C11.1443 10.0839 11.1444 10.5587 10.8515 10.8515C10.5587 11.1444 10.0839 11.1443 9.79096 10.8515L6.0351 7.09565L2.28022 10.8515C1.98732 11.1444 1.51256 11.1444 1.21967 10.8515C0.926842 10.5586 0.926799 10.0838 1.21967 9.79096L4.97455 6.0351L1.21967 2.28022C0.926777 1.98732 0.926777 1.51256 1.21967 1.21967C1.51256 0.926777 1.98732 0.926777 2.28022 1.21967L6.0351 4.97455L9.79096 1.21967Z" fill="currentColor"/></svg></button>
     </div>
-    <p style="font-size:13px;color:var(--text-2);margin-bottom:1rem;padding:10px 12px;background:var(--bg);border-radius:var(--radius-sm)">Un courriel est envoyé chaque mardi à 9h aux bénévoles qui n'ont pas encore soumis leurs disponibilités.</p>
-    <div style="margin-bottom:10px">
-      <label style="display:block;font-size:11px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:5px">Sujet</label>
-      <input type="text" id="reminder-subject-input" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;outline:none;color:var(--text)"/>
+    <div style="background:var(--bg);margin:0 -1.5rem;padding:1rem 1.5rem">
+      <p style="font-size:13px;color:var(--text-2);margin:0 0 1rem">Un courriel est envoyé chaque mardi à 9h aux bénévoles qui n'ont pas encore soumis leurs disponibilités.</p>
+      <div style="margin-bottom:10px">
+        <label style="display:block;font-size:11px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:5px">Sujet</label>
+        <input type="text" id="reminder-subject-input" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;outline:none;color:var(--text)"/>
+      </div>
+      <textarea id="reminder-body-input" class="rappel-textarea" rows="7" placeholder="Corps du courriel…"></textarea>
+      <p style="font-size:12px;color:var(--text-3);margin-top:6px;font-style:italic">Un bouton "Soumettre mes disponibilités" est automatiquement ajouté à la fin du courriel.</p>
     </div>
-    <textarea id="reminder-body-input" class="rappel-textarea" rows="7" placeholder="Corps du courriel…"></textarea>
-    <p style="font-size:12px;color:var(--text-3);margin-top:6px;font-style:italic">Un bouton "Soumettre mes disponibilités" est automatiquement ajouté à la fin du courriel.</p>
     <div class="modal-btns">
       <button class="btn btn-outlined" onclick="closeRappels()">Annuler</button>
       <button class="btn btn-secondary" onclick="saveReminderSettings()">Enregistrer</button>
