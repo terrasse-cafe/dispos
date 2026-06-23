@@ -4437,7 +4437,7 @@ function buildCards(wk,shifts){
     if(!emp){
       const qw=document.createElement('div');qw.className='vc-quota';
       if(quota===99){
-        if(isVolRecurring(wk,name,curDay)&&usedShifts===0){
+        if(isVolRecurring(wk,name,curDay)){
           // récurrent pur sans shifts assignés — l'icône suffit
         } else {
           const frac=document.createElement('span');
