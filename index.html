@@ -5045,14 +5045,19 @@ async function savePerson(){
   const roles=orgPrefList?orgPrefList.getValues():['','','','','',''];
   const active=document.getElementById('pm-active').checked;
   const existingPin=pmCtx?(directory.find(x=>x.id===pmCtx)||{}).pin||'':'';
+  const existing=pmCtx?directory.find(x=>x.id===pmCtx):null;
   let schedule_json={};
   PM_SCHED_DAYS.forEach(({id:dayId})=>{
     const st=pmScheduleState[dayId];
-    schedule_json[dayId]=st?{on:st.on,s:st.s,e:st.e}:{on:false,s:600,e:1260};
+    if(st){
+      schedule_json[dayId]={on:st.on,s:st.s,e:st.e};
+    } else {
+      const existing_sj=(existing&&existing.schedule_json)?existing.schedule_json[dayId]:null;
+      schedule_json[dayId]=existing_sj||{on:false,s:600,e:1260};
+    }
   });
   const personData={id:pmCtx||null,first_name,last_name,email,type,roles,pin:type==='vol'?existingPin:'',active,schedule_json};
   personData.name=displayName(personData);
-  const existing=pmCtx?directory.find(x=>x.id===pmCtx):null;
   const oldName=existing?existing.name:'';
   const newName=personData.name;
   const nameChanged=!!(pmCtx&&oldName&&oldName!==newName);
@@ -5094,10 +5099,10 @@ async function savePerson(){
   if(existing){existing.first_name=first_name;existing.last_name=last_name;existing.name=newName;existing.email=email;existing.type=type;existing.roles=roles;existing.pin=personData.pin;existing.active=active;existing.schedule_json=schedule_json;}
   else{directory.push(personData);}
 
+  await loadPeople();
   rebuildVcols();populateVolSelect();renderDir();
   closePersonModal();
   if(nameChanged){renderB();renderHoraire();}
-  await loadPeople();
 }
 
 /* ══════════════════════════════════════════════
