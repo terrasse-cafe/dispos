@@ -4239,7 +4239,11 @@ function renderHoraire(){
 ══════════════════════════════════════════════ */
 function volTotalAvailMins(wk,name){
   const slots=((avail[wk]||{})[name]||{}).slots||{};
-  let count=0;for(const k of Object.keys(slots)){if(k.startsWith(curDay+'_'))count++;}return count*30;
+  let count=0;for(const k of Object.keys(slots)){if(k.startsWith(curDay+'_'))count++;}
+  if(count>0)return count*30;
+  const recur=volRecurSchedule(wk,name,curDay);
+  if(recur)return recur.e-recur.s;
+  return 0;
 }
 function volAssignedMins(wk,name){
   const shifts=SHIFTS[curDay]||[];let total=0;
