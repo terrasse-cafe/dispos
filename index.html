@@ -1325,6 +1325,20 @@ function empSchedule(name, dayId){
   if(!per||!per.id)return null;
   return dayS[Number(per.id)]||null;
 }
+function volRecurSchedule(wk,name,dayId){
+  if((avail[wk]||{})[name])return null;
+  const p=getPerson(name);
+  if(!p||p.type!=='vol'||!p.schedule_json)return null;
+  const d=p.schedule_json[dayId];
+  if(!d||d.on===false||d.s==null||d.e==null)return null;
+  return{s:d.s,e:d.e};
+}
+function isVolRecurring(wk,name,dayId){return volRecurSchedule(wk,name,dayId)!==null;}
+function hasRecurSchedule(name){
+  const p=getPerson(name);
+  if(!p||p.type!=='vol'||!p.schedule_json)return false;
+  return Object.values(p.schedule_json).some(d=>d&&d.on!==false&&d.s!=null&&d.e!=null);
+}
 const GSH=11,GEH=22,TOTAL_SLOTS=(GEH-GSH)*2;
 
 /* ══════════════════════════════════════════════
@@ -2330,6 +2344,16 @@ function restoreWeekState(name, wk) {
     bSel[wk]={};
     const inherited=findLastQuota(name, wk);
     bShiftsDesired=inherited!==null?inherited:0;
+    const p=getPerson(name);
+    if(p&&p.schedule_json){
+      DAYS.forEach(day=>{
+        const d=p.schedule_json[day.id];
+        if(!d||d.on===false||d.s==null||d.e==null)return;
+        bSel[wk][day.id]={from:d.s,to:d.e};
+      });
+      const activeDays=Object.values(p.schedule_json).filter(d=>d&&d.on!==false&&d.s!=null&&d.e!=null).length;
+      if(activeDays>0){bShiftsDesired=activeDays;bShiftMemory[name]=activeDays;}
+    }
   }
 }
 
@@ -3144,7 +3168,11 @@ function volDayRange(wk,name){
   const closeS=Math.round((day.cH*60+day.cM-GSH*60)/30);
   let first=null,last=null;
   for(let s=openS;s<closeS;s++){if(slots[skey(curDay,s)]){if(first===null)first=s;last=s+1;}}
-  if(first===null)return null;
+  if(first===null){
+    const recur=volRecurSchedule(wk,name,curDay);
+    if(recur)return{startMins:recur.s,endMins:recur.e};
+    return null;
+  }
   return{startMins:GSH*60+first*30,endMins:GSH*60+last*30};
 }
 function volCoversShift(wk,name,shift){
@@ -3646,6 +3674,11 @@ function renderHoraire(){
               const qspan=document.createElement('span');qspan.className='chip-quota';
               qspan.style.color=isOverQuota?'#B91C1C':'var(--text-2)';qspan.textContent=cu+'/'+cq;inner.appendChild(qspan);
             }
+            if(isVolRecurring(wk,assignedName,curDay)){
+              const ri=document.createElement('span');ri.innerHTML=RECUR_ICON;
+              ri.style.cssText='display:inline-flex;align-items:center;flex-shrink:0;color:var(--accent-dark);margin-left:2px';
+              ri.title='Récurrent';inner.appendChild(ri);
+            }
           }
           covWrap.appendChild(inner);
           const x=document.createElement('span');x.className='chip-x';
@@ -4032,6 +4065,11 @@ function renderHoraire(){
               const qspan=document.createElement('span');qspan.className='chip-quota';
               qspan.style.color=isOverQuota?'#B91C1C':'var(--text-2)';qspan.textContent=cu+'/'+cq;inner.appendChild(qspan);
             }
+            if(isVolRecurring(wk,assignedName,curDay)){
+              const ri=document.createElement('span');ri.innerHTML=RECUR_ICON;
+              ri.style.cssText='display:inline-flex;align-items:center;flex-shrink:0;color:var(--accent-dark);margin-left:2px';
+              ri.title='Récurrent';inner.appendChild(ri);
+            }
           }
           covWrap.appendChild(inner);
           const x=document.createElement('span');x.className='chip-x';
@@ -4399,6 +4437,11 @@ function buildCards(wk,shifts){
         frac.title=usedShifts+' shift'+(usedShifts>1?'s':'')+' assigné'+(usedShifts>1?'s':'')+' sur '+quota+' demandé'+(quota>1?'s':'');
         qw.appendChild(frac);
       }
+      if(isVolRecurring(wk,name,curDay)){
+        const ri=document.createElement('span');ri.innerHTML=RECUR_ICON;
+        ri.style.cssText='display:inline-flex;align-items:center;flex-shrink:0;color:var(--accent-dark);margin-left:2px';
+        ri.title='Récurrent';qw.appendChild(ri);
+      }
       if(qw.children.length)row1.appendChild(qw);
     }
     if(!isPast_){
@@ -4413,7 +4456,9 @@ function buildCards(wk,shifts){
     card.addEventListener('dragend',()=>{card.classList.remove('dragging');draggingVol=null;draggingFromRole=null;draggingVolFreeIvs=null;clearDZHighlights();document.getElementById('vol-cards').style.outline='';document.getElementById('emp-cards').style.outline='';});
     return card;
   }
-  const vols=Object.keys(wkData).filter(n=>!isEmp(n)&&Object.keys(wkData[n].slots||{}).some(k=>k.startsWith(curDay+'_')));
+  const volsFromAvail=Object.keys(wkData).filter(n=>!isEmp(n)&&Object.keys(wkData[n].slots||{}).some(k=>k.startsWith(curDay+'_')));
+  const volsRecur=directory.filter(p=>p.type==='vol'&&p.active!==false&&isVolRecurring(wk,p.name,curDay)&&!volsFromAvail.includes(p.name)).map(p=>p.name);
+  const vols=[...volsFromAvail,...volsRecur];
   // Sort: 1) shifts restants + quota non atteint, 2) quota atteint (plein), 3) quota dépassé (rouge), 4) plus d'heures libres
   function volSortPriority(name){
     const q=volQuota(wk,name);
@@ -5230,7 +5275,11 @@ function volDayRangeFor(wk,name,dayId){
   const closeS=Math.round((day.cH*60+day.cM-GSH*60)/30);
   let first=null,last=null;
   for(let s=openS;s<closeS;s++){if(slots[skey(dayId,s)]){if(first===null)first=s;last=s+1;}}
-  if(first===null)return null;
+  if(first===null){
+    const recur=volRecurSchedule(wk,name,dayId);
+    if(recur)return{startMins:recur.s,endMins:recur.e};
+    return null;
+  }
   return{startMins:GSH*60+first*30,endMins:GSH*60+last*30};
 }
 function overlapFor(wk,name,shift,dayId){
@@ -5310,6 +5359,10 @@ async function openAutoAssign(){
   }
 
   const wkData=avail[wk]||{};
+  const allVolNames=[...new Set([
+    ...Object.keys(wkData),
+    ...directory.filter(p=>p.type==='vol'&&p.active!==false&&hasRecurSchedule(p.name)).map(p=>p.name)
+  ])];
   const today=new Date();today.setHours(0,0,0,0);
 
   // ── Étape 1 : collecter et effacer toutes les assignations non-verrouillées ──
@@ -5505,7 +5558,7 @@ async function openAutoAssign(){
   // ══ PASSE B — Bénévoles, par ordre de priorité de rôle ══
   rolesQueue.forEach(({sh, role, dayId})=>{
     if(getAssigns(wk,sh.id,role).length>0)return; // 1 personne max par rôle en auto-assign
-    const candidates=Object.keys(wkData).filter(n=>
+    const candidates=allVolNames.filter(n=>
       !isEmp(n)&&
       !quotaReached(n)&&
       !alreadyOnShift(n,dayId,sh.id)&&
@@ -5605,7 +5658,7 @@ async function openAutoAssign(){
           if(!E || !isEmp(E)) continue;
           if(isLockedOrLate(wk,sh.id,cur,E)) continue;
           if(prefScore(E,empty)===0) continue;
-          const V=Object.keys(wkData).find(n=>
+          const V=allVolNames.find(n=>
             !isEmp(n) && n!==E &&
             !quotaReached(n) &&
             !alreadyOnShift(n,dayId,sh.id) &&
