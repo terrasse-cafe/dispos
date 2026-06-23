@@ -3172,18 +3172,22 @@ function setDayOpen(open){
 
 /* ── avail helpers ── */
 function volDayRange(wk,name){
-  const slots=((avail[wk]||{})[name]||{}).slots||{};
-  const day=DAYS.find(d=>d.id===curDay);
-  const openS=Math.round((day.oH*60+day.oM-GSH*60)/30);
-  const closeS=Math.round((day.cH*60+day.cM-GSH*60)/30);
-  let first=null,last=null;
-  for(let s=openS;s<closeS;s++){if(slots[skey(curDay,s)]){if(first===null)first=s;last=s+1;}}
-  if(first===null){
-    const recur=volRecurSchedule(wk,name,curDay);
-    if(recur)return{startMins:recur.s,endMins:recur.e};
-    return null;
+  const entry=(avail[wk]||{})[name];
+  if(entry){
+    const slots=entry.slots||{};
+    const day=DAYS.find(d=>d.id===curDay);if(!day)return null;
+    const openS=Math.round((day.oH*60+(day.oM||0)-GSH*60)/30);
+    const closeS=Math.round((day.cH*60+(day.cM||0)-GSH*60)/30);
+    let first=null,last=null;
+    for(let s=openS;s<closeS;s++){if(slots[skey(curDay,s)]){if(first===null)first=s;last=s+1;}}
+    if(first===null)return null;
+    return{startMins:GSH*60+first*30,endMins:GSH*60+last*30};
   }
-  return{startMins:GSH*60+first*30,endMins:GSH*60+last*30};
+  const p=getPerson(name);
+  if(!p||p.type!=='vol'||!p.schedule_json)return null;
+  const d=p.schedule_json[curDay];
+  if(!d||d.on===false||d.s==null||d.e==null)return null;
+  return{startMins:d.s,endMins:d.e};
 }
 function volCoversShift(wk,name,shift){
   if(isEmp(name))return true;
@@ -5326,18 +5330,22 @@ function sendOutlook(){
    AUTO-ASSIGN
 ══════════════════════════════════════════════ */
 function volDayRangeFor(wk,name,dayId){
-  const slots=((avail[wk]||{})[name]||{}).slots||{};
-  const day=DAYS.find(d=>d.id===dayId);if(!day)return null;
-  const openS=Math.round((day.oH*60+day.oM-GSH*60)/30);
-  const closeS=Math.round((day.cH*60+day.cM-GSH*60)/30);
-  let first=null,last=null;
-  for(let s=openS;s<closeS;s++){if(slots[skey(dayId,s)]){if(first===null)first=s;last=s+1;}}
-  if(first===null){
-    const recur=volRecurSchedule(wk,name,dayId);
-    if(recur)return{startMins:recur.s,endMins:recur.e};
-    return null;
+  const entry=(avail[wk]||{})[name];
+  if(entry){
+    const slots=entry.slots||{};
+    const day=DAYS.find(d=>d.id===dayId);if(!day)return null;
+    const openS=Math.round((day.oH*60+(day.oM||0)-GSH*60)/30);
+    const closeS=Math.round((day.cH*60+(day.cM||0)-GSH*60)/30);
+    let first=null,last=null;
+    for(let s=openS;s<closeS;s++){if(slots[skey(dayId,s)]){if(first===null)first=s;last=s+1;}}
+    if(first===null)return null;
+    return{startMins:GSH*60+first*30,endMins:GSH*60+last*30};
   }
-  return{startMins:GSH*60+first*30,endMins:GSH*60+last*30};
+  const p=getPerson(name);
+  if(!p||p.type!=='vol'||!p.schedule_json)return null;
+  const d=p.schedule_json[dayId];
+  if(!d||d.on===false||d.s==null||d.e==null)return null;
+  return{startMins:d.s,endMins:d.e};
 }
 function overlapFor(wk,name,shift,dayId){
   const r=volDayRangeFor(wk,name,dayId);if(!r)return null;
