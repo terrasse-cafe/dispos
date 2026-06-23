@@ -262,10 +262,10 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 .vol-panel{border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);box-shadow:none;overflow:hidden;max-height:calc(100vh - 52px);display:flex;flex-direction:column;transition:outline .1s}
 .vol-cards{transition:outline .1s}
 .emp-cards{transition:outline .1s}
-.vp-head{padding:6px 10px;background:var(--bg);border-bottom:1px solid var(--border);font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;flex-shrink:0}
+.vp-head{padding:6px 10px;background:#E3DDD7;border-bottom:1px solid var(--border);font-size:10px;font-weight:600;color:#57534E;text-transform:uppercase;letter-spacing:.06em;flex-shrink:0}
 .vol-cards{padding:4px;display:flex;flex-direction:column;gap:3px;overflow-y:auto;flex:1;min-height:0}
-.emp-section{border-top:1px solid var(--border);flex-shrink:0}
-.emp-sec-lbl{padding:5px 10px 3px;font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;background:var(--bg)}
+.emp-section{margin-top:10px;flex-shrink:0}
+.emp-sec-lbl{padding:5px 10px 3px;font-size:10px;font-weight:600;color:#57534E;text-transform:uppercase;letter-spacing:.06em;background:#E3DDD7}
 .emp-cards{padding:4px;display:flex;flex-direction:column;gap:3px;}
 .vol-card{border-radius:var(--radius-sm);padding:5px 8px;cursor:grab;border:1.5px solid var(--border);user-select:none;transition:transform .1s,box-shadow .1s,opacity .15s}
 .vol-card:hover{transform:translateY(-1px);box-shadow:var(--shadow-md)}
@@ -411,8 +411,8 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
 .rappel-acc-chevron.open{transform:rotate(180deg)}
 .rappel-textarea{width:100%;box-sizing:border-box;margin-top:10px;padding:10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:13px;font-family:inherit;resize:vertical;line-height:1.5}
 .rappel-textarea:focus{outline:none;border-color:var(--accent)}
-.vol-panel-header{padding:6px 10px;background:var(--bg);border-bottom:1px solid var(--border);flex-shrink:0;}
-.vol-panel-title{font-size:10px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;}
+.vol-panel-header{padding:6px 10px;background:#E3DDD7;border-bottom:1px solid var(--border);flex-shrink:0;}
+.vol-panel-title{font-size:10px;font-weight:600;color:#57534E;text-transform:uppercase;letter-spacing:.06em;}
 .h-dz.dz-ok{border-color:var(--accent-dark);background:#DBE8E5;border-style:solid}
 </style>
 </head>
@@ -630,7 +630,7 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
       </div>
       <div>
         <div class="vol-panel">
-          <div class="vp-head">Disponibles — <span id="h-day-lbl">—</span></div>
+          <div class="vp-head">Bénévoles disponibles</div>
           <div class="vol-cards" id="vol-cards"></div>
           <div class="emp-section">
             <div class="emp-sec-lbl">Employés</div>
@@ -3380,7 +3380,6 @@ function renderHoraire(){
   const wk=wkey(oMon),wkData=avail[wk]||{};
   const day=DAYS.find(d=>d.id===curDay);
   const shifts=SHIFTS[curDay]||[];
-  document.getElementById('h-day-lbl').textContent=day.label;
   const dSH=(day.gridH!==undefined?day.gridH:day.oH)+day.oM/60;
   const dEH=shifts.length?Math.max(...shifts.map(s=>s.toH)):day.cH+day.cM/60;
   const numSlots=Math.round((dEH-dSH)*2);
@@ -4428,11 +4427,15 @@ function buildCards(wk,shifts){
     if(!emp){
       const qw=document.createElement('div');qw.className='vc-quota';
       if(quota===99){
-        const frac=document.createElement('span');
-        frac.style.cssText='font-size:10px;font-family:var(--mono);font-weight:600;opacity:.7;color:var(--text-2)';
-        frac.textContent=usedShifts>0?usedShifts+'/\u221e':'\u221e';
-        frac.title='Peu importe le nombre de shifts';
-        qw.appendChild(frac);
+        if(isVolRecurring(wk,name,curDay)&&usedShifts===0){
+          // récurrent pur sans shifts assignés — l'icône suffit
+        } else {
+          const frac=document.createElement('span');
+          frac.style.cssText='font-size:10px;font-family:var(--mono);font-weight:600;opacity:.7;color:var(--text-2)';
+          frac.textContent=usedShifts>0?usedShifts+'/\u221e':'\u221e';
+          frac.title='Peu importe le nombre de shifts';
+          qw.appendChild(frac);
+        }
       } else if(quota>0){
         const fracColor=quotaOver?'#B91C1C':'var(--text-2)';
         const frac=document.createElement('span');
@@ -4441,9 +4444,10 @@ function buildCards(wk,shifts){
         frac.title=usedShifts+' shift'+(usedShifts>1?'s':'')+' assigné'+(usedShifts>1?'s':'')+' sur '+quota+' demandé'+(quota>1?'s':'');
         qw.appendChild(frac);
       }
+      const recurColor=quotaOver?'#B91C1C':'var(--text-2)';
       if(isVolRecurring(wk,name,curDay)){
         const ri=document.createElement('span');ri.innerHTML=RECUR_ICON;
-        ri.style.cssText='display:inline-flex;align-items:center;flex-shrink:0;color:var(--accent-dark);margin-left:2px';
+        ri.style.cssText='display:inline-flex;align-items:center;flex-shrink:0;color:'+recurColor+';margin-left:2px';
         ri.title='Récurrent';qw.appendChild(ri);
       }
       if(qw.children.length)row1.appendChild(qw);
