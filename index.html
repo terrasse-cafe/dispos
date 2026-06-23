@@ -4284,6 +4284,11 @@ function volAssignedToShift(wk,name,shift,testIv=null){
   });
 }
 function overlapMins(wk,name,shift){
+  if(draggingVolFreeIvs&&draggingVolFreeIvs.length===1){
+    const iv=draggingVolFreeIvs[0];
+    const s=Math.max(iv.s,shift.fromH*60);const e=Math.min(iv.e,shift.toH*60);
+    if(e<=s)return null;return{s,e};
+  }
   const r=volDayRange(wk,name);if(!r)return null;
   const s=Math.max(r.startMins,shift.fromH*60);const e=Math.min(r.endMins,shift.toH*60);
   if(e<=s)return null;return{s,e};
@@ -4607,7 +4612,8 @@ function doAssign(wk,shift,role,name){
       saveAssignment(wk,shift.id,role,name,null,null,null,true);
     }
   } else {
-    if(volAssignedToShift(wk,name,shift)){alert(name+' est déjà assigné(e) à ce shift.');return false;}
+    const dragIv=draggingVolFreeIvs&&draggingVolFreeIvs.length===1?draggingVolFreeIvs[0]:null;
+    if(volAssignedToShift(wk,name,shift,dragIv)){alert(name+' est déjà assigné(e) à ce shift sur cette plage horaire.');return false;}
     const ov=overlapMins(wk,name,shift);
     if(!ov){alert(name+' n\'est pas disponible sur ce shift.');return false;}
     addAssign(wk,shift.id,role,name);
