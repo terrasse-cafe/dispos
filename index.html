@@ -2660,6 +2660,7 @@ function isWeekLocked(wk){
 
 const SVG_SUN='<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#cp-sun)"><path d="M6 0.5V1.5M6 10.5V11.5M2.11 2.11L2.82 2.82M9.18 9.18L9.89 9.89M0.5 6H1.5M10.5 6H11.5M2.11 9.89L2.82 9.18M9.18 2.82L9.89 2.11M8.5 6C8.5 7.38071 7.38071 8.5 6 8.5C4.61929 8.5 3.5 7.38071 3.5 6C3.5 4.61929 4.61929 3.5 6 3.5C7.38071 3.5 8.5 4.61929 8.5 6Z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></g><defs><clipPath id="cp-sun"><rect width="12" height="12" fill="white"/></clipPath></defs></svg>';
 const SVG_MOON='<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#cp-moon)"><path d="M10.5 6.395C10.4213 7.2461 10.1019 8.0572 9.57907 8.73339C9.05627 9.40958 8.3517 9.9229 7.5478 10.2133C6.74391 10.5036 5.87394 10.5591 5.0397 10.373C4.20546 10.187 3.44145 9.76727 2.83706 9.16289C2.23268 8.5585 1.81292 7.79449 1.6269 6.96025C1.44089 6.12601 1.49631 5.25604 1.78668 4.45215C2.07705 3.64825 2.59037 2.94368 3.26656 2.42088C3.94275 1.89807 4.75385 1.57865 5.60495 1.5C5.10666 2.17413 4.86688 3.00472 4.92922 3.84071C4.99156 4.67669 5.35188 5.46253 5.94465 6.0553C6.53742 6.64807 7.32326 7.00839 8.15924 7.07073C8.99523 7.13308 9.82582 6.89329 10.5 6.395Z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></g><defs><clipPath id="cp-moon"><rect width="12" height="12" fill="white"/></clipPath></defs></svg>';
+const RECUR_ICON=`<svg width="13" height="13" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#rc)"><path d="M11.3333 6.00002L14 3.33335L11.3333 0.666687M14 3.33335L4.66667 3.33335C3.95942 3.33335 3.28115 3.61431 2.78105 4.1144C2.28095 4.6145 2 5.29278 2 6.00002V7.33335M4.66667 10L2 12.6667L4.66667 15.3334M2 12.6667L11.3333 12.6667C12.0406 12.6667 12.7189 12.3857 13.219 11.8856C13.719 11.3855 14 10.7073 14 10V8.66669" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></g><defs><clipPath id="rc"><rect width="16" height="16" fill="white"/></clipPath></defs></svg>`;
 
 function computePlacesForShift(wk,sh){
   let roles=[...(sh._slots||sh.roles)];
@@ -4828,6 +4829,12 @@ const EMP_DAY_CONFIG=[
   {id:'samedi',   label:'Samedi',   defS:600,defE:1290,maxE:1290},
   {id:'dimanche', label:'Dimanche', defS:600,defE:1020,maxE:1020},
 ];
+const VOL_DAY_CONFIG=[
+  {id:'jeudi',    label:'Jeudi',    minS:900,defS:900, defE:1260,maxE:1260},
+  {id:'vendredi', label:'Vendredi', minS:660,defS:660, defE:1290,maxE:1290},
+  {id:'samedi',   label:'Samedi',   minS:660,defS:660, defE:1290,maxE:1290},
+  {id:'dimanche', label:'Dimanche', minS:660,defS:660, defE:1020,maxE:1020},
+];
 let pmScheduleState={};
 function buildEmpSelect(minM,maxM,savedVal){
   const sel=document.createElement('select');
@@ -4839,14 +4846,17 @@ function buildEmpSelect(minM,maxM,savedVal){
   }
   return sel;
 }
-function buildEmpScheduleUI(container,existingScheduleJson){
+function buildEmpScheduleUI(container,existingScheduleJson,dayConfig,defaultOn){
+  const cfgList=dayConfig||EMP_DAY_CONFIG;
+  const defOn=defaultOn!==undefined?defaultOn:true;
   container.innerHTML='';
   pmScheduleState={};
-  EMP_DAY_CONFIG.forEach(cfg=>{
+  cfgList.forEach(cfg=>{
     const sj=existingScheduleJson?existingScheduleJson[cfg.id]:null;
-    const isOn=sj?sj.on!==false:true;
-    const sVal=sj&&sj.s!=null?Math.round(Math.min(Math.max(sj.s,600),cfg.maxE)/30)*30:cfg.defS;
-    const eVal=sj&&sj.e!=null?Math.round(Math.min(Math.max(sj.e,600),cfg.maxE)/30)*30:cfg.defE;
+    const isOn=sj?sj.on!==false:defOn;
+    const minS=cfg.minS??600;
+    const sVal=sj&&sj.s!=null?Math.round(Math.min(Math.max(sj.s,minS),cfg.maxE)/30)*30:cfg.defS;
+    const eVal=sj&&sj.e!=null?Math.round(Math.min(Math.max(sj.e,minS),cfg.maxE)/30)*30:cfg.defE;
     pmScheduleState[cfg.id]={on:isOn,s:sVal,e:eVal};
     const card=document.createElement('div');card.className='b-day-card'+(isOn?' active':'');
     card.style.marginBottom='10px';
@@ -4861,9 +4871,9 @@ function buildEmpScheduleUI(container,existingScheduleJson){
     card.appendChild(head);
     const body=document.createElement('div');body.className='b-day-card-body';body.style.display=isOn?'grid':'none';
     const fromField=document.createElement('div');fromField.className='b-field';fromField.innerHTML='<label>De</label>';
-    let sSel=buildEmpSelect(600,cfg.maxE,sVal);fromField.appendChild(sSel);
+    let sSel=buildEmpSelect(minS,cfg.maxE,sVal);fromField.appendChild(sSel);
     const toField=document.createElement('div');toField.className='b-field';toField.innerHTML='<label>À</label>';
-    let eSel=buildEmpSelect(600,cfg.maxE,eVal);toField.appendChild(eSel);
+    let eSel=buildEmpSelect(minS,cfg.maxE,eVal);toField.appendChild(eSel);
     body.appendChild(fromField);body.appendChild(toField);
     card.appendChild(body);
     function saveState(){pmScheduleState[cfg.id]={on:chk.checked,s:parseInt(sSel.value),e:parseInt(eSel.value)};}
@@ -4877,12 +4887,14 @@ function buildEmpScheduleUI(container,existingScheduleJson){
     container.appendChild(card);
   });
 }
-function populatePmHoraire(p){
+function populatePmHoraire(p,type){
   const container=document.getElementById('pm-panel-horaire');
+  const isEmp=(type||'emp')==='emp';
+  const dayConfig=isEmp?EMP_DAY_CONFIG:VOL_DAY_CONFIG;
   let sj=null;
   if(p&&p.schedule_json){
     sj=p.schedule_json;
-  } else if(p&&p.id){
+  } else if(p&&p.id&&isEmp){
     sj={};
     EMP_DAY_CONFIG.forEach(cfg=>{
       const dayS=EMP_SCHEDULES[cfg.id];
@@ -4890,7 +4902,7 @@ function populatePmHoraire(p){
       sj[cfg.id]=empEntry?{on:true,s:empEntry.s,e:empEntry.e}:{on:false,s:cfg.defS,e:cfg.defE};
     });
   }
-  buildEmpScheduleUI(container,sj);
+  buildEmpScheduleUI(container,sj,dayConfig,isEmp?true:false);
 }
 function setPmType(val){
   document.getElementById('pm-type').value=val;
@@ -4898,14 +4910,9 @@ function setPmType(val){
   document.getElementById('pm-pill-emp').classList.toggle('active',val==='emp');
   const p=pmCtx?directory.find(x=>x.id===pmCtx):null;
   document.getElementById('pm-reset-pin').style.display=(p&&val==='vol'&&p.pin)?'inline-flex':'none';
-  document.getElementById('pm-tabs').style.display=val==='emp'?'flex':'none';
-  if(val==='vol'){
-    document.getElementById('pm-panel-general').style.display='';
-    document.getElementById('pm-panel-horaire').style.display='none';
-  } else {
-    populatePmHoraire(p);
-    switchPmTab('general');
-  }
+  document.getElementById('pm-tabs').style.display='flex';
+  populatePmHoraire(p,val);
+  switchPmTab('general');
 }
 async function openPersonModal(id){
   // Recharger depuis Supabase pour avoir les ids à jour
@@ -4919,6 +4926,7 @@ async function openPersonModal(id){
   document.getElementById('pm-active').checked=p?(p.active!==false):true;
   document.getElementById('pm-active-wrap').style.display=p?'flex':'none';
   setPmType(p?p.type:'vol');
+  switchPmTab('general');
   const PREF_EXCLUDED_LOCAL=['Mise en place','Préposé·e au remplissage et à la vaisselle','Bénévole en formation'];
   const uniqueRolesOrg=[...new Set(ALL_ROLES.map(roleDisplayLabel))].filter(r=>!PREF_EXCLUDED_LOCAL.includes(r));
   const vals=[(p&&p.roles[0])||'',(p&&p.roles[1])||'',(p&&p.roles[2])||'',(p&&p.roles[3])||'',(p&&p.roles[4])||'',(p&&p.roles[5])||''];
@@ -4992,14 +5000,11 @@ async function savePerson(){
   const roles=orgPrefList?orgPrefList.getValues():['','','','','',''];
   const active=document.getElementById('pm-active').checked;
   const existingPin=pmCtx?(directory.find(x=>x.id===pmCtx)||{}).pin||'':'';
-  let schedule_json=null;
-  if(type==='emp'){
-    schedule_json={};
-    PM_SCHED_DAYS.forEach(({id:dayId})=>{
-      const st=pmScheduleState[dayId];
-      schedule_json[dayId]=st?{on:st.on,s:st.s,e:st.e}:{on:false,s:600,e:1260};
-    });
-  }
+  let schedule_json={};
+  PM_SCHED_DAYS.forEach(({id:dayId})=>{
+    const st=pmScheduleState[dayId];
+    schedule_json[dayId]=st?{on:st.on,s:st.s,e:st.e}:{on:false,s:600,e:1260};
+  });
   const personData={id:pmCtx||null,first_name,last_name,email,type,roles,pin:type==='vol'?existingPin:'',active,schedule_json};
   personData.name=displayName(personData);
   const existing=pmCtx?directory.find(x=>x.id===pmCtx):null;
