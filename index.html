@@ -4600,33 +4600,28 @@ function doAssign(wk,shift,role,name){
   if(isEmp(name)){
     const empDayId=Object.keys(SHIFTS).find(d=>(SHIFTS[d]||[]).some(s=>s.id===shift.id))||curDay;
     const es=empSchedule(name,empDayId);
+    let s,e;
+    if(draggingVolFreeIvs&&draggingVolFreeIvs.length===1){
+      const iv=draggingVolFreeIvs[0];
+      s=Math.max(iv.s,shift.fromH*60);
+      e=Math.min(iv.e,shift.toH*60);
+    } else if(es){
+      s=Math.max(es.s,shift.fromH*60);
+      e=Math.min(es.e,shift.toH*60);
+    } else {
+      return false;
+    }
+    if(e<=s)return false;
     addAssign(wk,shift.id,role,name);
     setAssignLocked(wk,shift.id,role,true,name);
-    if(es){
-      let s,e;
-      if(draggingVolFreeIvs&&draggingVolFreeIvs.length===1){
-        const iv=draggingVolFreeIvs[0];
-        s=Math.max(iv.s,shift.fromH*60);
-        e=Math.min(iv.e,shift.toH*60);
-      } else {
-        s=Math.max(es.s,shift.fromH*60);
-        e=Math.min(es.e,shift.toH*60);
-      }
-      if(e>s){
-        setAssignTimes(wk,shift.id,role,s,e,name);
-        saveAssignment(wk,shift.id,role,name,s,e,null,true);
-      } else {
-        saveAssignment(wk,shift.id,role,name,null,null,null,true);
-      }
-    } else {
-      saveAssignment(wk,shift.id,role,name,null,null,null,true);
-    }
+    setAssignTimes(wk,shift.id,role,s,e,name);
+    saveAssignment(wk,shift.id,role,name,s,e,null,true);
   } else {
     const dragIv=draggingVolFreeIvs&&draggingVolFreeIvs.length===1?draggingVolFreeIvs[0]:null;
     const alreadyAssigned=volAssignedToShift(wk,name,shift,dragIv);
-    if(alreadyAssigned){alert(name+' est déjà assigné(e) à ce shift sur cette plage horaire.');return false;}
+    if(alreadyAssigned){return false;}
     const ov=overlapMins(wk,name,shift);
-    if(!ov){alert(name+' n\'est pas disponible sur ce shift.');return false;}
+    if(!ov){return false;}
     addAssign(wk,shift.id,role,name);
     setAssignTimes(wk,shift.id,role,ov.s,ov.e,name);
     setAssignLocked(wk,shift.id,role,true,name);
