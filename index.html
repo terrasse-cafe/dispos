@@ -4770,7 +4770,16 @@ function openTP(e,name,sid,role,shift,wk){
   tpCtx.dispoCase=_ci2?_ci2.case:null;
   tpCtx.newDispoS=_ci2?.newS??null;
   tpCtx.newDispoE=_ci2?.newE??null;
-  if(_ci2&&_ci2.case===5){
+  if(_ci2&&_ci2.isLate){
+    _notice.style.display='block';
+    if(_ci2.case===5){
+      _notice.textContent='Le bénévole a indiqué dans l\'app qu\'il n\'est pas disponible ce jour.';
+    } else {
+      _notice.textContent='Le bénévole a indiqué dans l\'app être disponible de '+mStr(_ci2.newS)+' à '+mStr(_ci2.newE)+'.';
+    }
+    _tpStart.disabled=false;
+    _tpEnd.disabled=false;
+  } else if(_ci2&&_ci2.case===5){
     _notice.style.display='block';
     _notice.textContent='Ce bénévole n\'est plus disponible pour ce créneau';
     _tpStart.disabled=true;
@@ -4800,7 +4809,7 @@ function _tpCleanup(){
 }
 function closeTP(){
   if(!tpCtx){document.getElementById('time-pop').classList.remove('open');return;}
-  if(tpCtx.dispoCase===5){
+  if(tpCtx.dispoCase===5&&!getAssignLate(tpCtx.wk,tpCtx.sid,tpCtx.role,tpCtx.name)){
     document.getElementById('time-pop').classList.remove('open');
     _tpCleanup();tpCtx=null;
     return;
@@ -5379,13 +5388,14 @@ function getDispoChangeInfo(wk,name,sid,role,shift,dayId){
   if(new Date(availUa)<=new Date(assignUa))return null;
   const ct=getAssignTimes(wk,sid,role,name);
   if(!ct)return null;
+  const isLate=getAssignLate(wk,sid,role,name);
   const newRange=volDayRangeFor(wk,name,dayId);
-  if(!newRange)return{case:5};
+  if(!newRange)return{case:5,isLate};
   const newClampedS=Math.max(newRange.startMins,shift.fromH*60);
   const newClampedE=Math.min(newRange.endMins,shift.toH*60);
-  if(newClampedE<=newClampedS)return{case:5};
+  if(newClampedE<=newClampedS)return{case:5,isLate};
   if(newClampedS<=ct.s&&newClampedE>=ct.e)return null;
-  return{case:23,newS:newClampedS,newE:newClampedE};
+  return{case:23,isLate,newS:newClampedS,newE:newClampedE};
 }
 function volCoversShiftFor(wk,name,shift,dayId){
   if(isEmp(name)){
