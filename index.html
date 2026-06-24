@@ -3776,6 +3776,7 @@ function renderHoraire(){
         });
         dz.addEventListener('dragleave',e=>{if(!dz.contains(e.relatedTarget))dz.classList.remove('dok');});
         dz.addEventListener('drop',e=>{
+          console.log('DROP on dz id:',dz.id,'role:',role,'shift:',sh?.id);
           dz.classList.remove('dok');
           const name=e.dataTransfer.getData('text/plain');
           if(draggingLate){
@@ -4175,6 +4176,7 @@ function renderHoraire(){
         });
         dz.addEventListener('dragleave',e=>{if(!dz.contains(e.relatedTarget))dz.classList.remove('dok');});
         dz.addEventListener('drop',e=>{
+          console.log('DROP on dz id:',dz.id,'role:',role,'shift:',shift?.id);
           dz.classList.remove('dok');
           const name=e.dataTransfer.getData('text/plain');
           if(draggingLate){
