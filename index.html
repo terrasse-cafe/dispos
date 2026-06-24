@@ -4618,8 +4618,12 @@ function doAssign(wk,shift,role,name){
     }
   } else {
     const dragIv=draggingVolFreeIvs&&draggingVolFreeIvs.length===1?draggingVolFreeIvs[0]:null;
-    if(volAssignedToShift(wk,name,shift,dragIv)){alert(name+' est déjà assigné(e) à ce shift sur cette plage horaire.');return false;}
+    console.log('doAssign',name,'shift:',shift.id,'role:',role,'dragIv:',JSON.stringify(dragIv));
+    const alreadyAssigned=volAssignedToShift(wk,name,shift,dragIv);
+    console.log('doAssign alreadyAssigned:',alreadyAssigned);
+    if(alreadyAssigned){alert(name+' est déjà assigné(e) à ce shift sur cette plage horaire.');return false;}
     const ov=overlapMins(wk,name,shift);
+    console.log('doAssign ov:',JSON.stringify(ov));
     if(!ov){alert(name+' n\'est pas disponible sur ce shift.');return false;}
     addAssign(wk,shift.id,role,name);
     setAssignTimes(wk,shift.id,role,ov.s,ov.e,name);
