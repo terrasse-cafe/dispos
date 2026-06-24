@@ -3780,8 +3780,9 @@ function renderHoraire(){
           dz.classList.remove('dok');
           const name=e.dataTransfer.getData('text/plain');
           if(draggingLate){
+            console.log('drop blocked at: draggingLate branch');
             e.preventDefault();
-            if(!name)return;
+            if(!name){console.log('drop blocked at: no name (late)');return;}
             let lateS,lateE;
             if(draggingFromRole&&draggingFromRole.shiftId===sh.id){
               const et=getAssignTimes(wk,draggingFromRole.shiftId,draggingFromRole.role,name);
@@ -3803,10 +3804,11 @@ function renderHoraire(){
             return;
           }
           const _ov=isEmp(name)?{s:sh.fromH*60,e:sh.toH*60}:overlapFor(wk,name,sh,curDay);
-          if(!name||!_ov)return;
-          if(draggingFromRole&&draggingFromRole.shiftId===sh.id&&draggingFromRole.role===role)return;
+          console.log('drop _ov:',JSON.stringify(_ov),'name:',name);
+          if(!name||!_ov){console.log('drop blocked at: no name or no overlap _ov');return;}
+          if(draggingFromRole&&draggingFromRole.shiftId===sh.id&&draggingFromRole.role===role){console.log('drop blocked at: same role');return;}
           const isReassign=!!(draggingFromRole&&draggingFromRole.shiftId===sh.id);
-          if(!isEmp(name)&&!isReassign&&volAssignedToShift(wk,name,sh))return;
+          if(!isEmp(name)&&!isReassign&&volAssignedToShift(wk,name,sh)){console.log('drop blocked at: already assigned');return;}
           e.preventDefault();
           const _ue=[];
           if(draggingFromRole&&!(draggingFromRole.shiftId===sh.id&&draggingFromRole.role===role)){
@@ -4181,8 +4183,9 @@ function renderHoraire(){
           dz.classList.remove('dok');
           const name=e.dataTransfer.getData('text/plain');
           if(draggingLate){
+            console.log('drop blocked at: draggingLate branch');
             e.preventDefault();
-            if(!name)return;
+            if(!name){console.log('drop blocked at: no name (late)');return;}
             let lateS,lateE;
             if(draggingFromRole&&draggingFromRole.shiftId===shift.id){
               const et=getAssignTimes(wk,draggingFromRole.shiftId,draggingFromRole.role,name);
@@ -4203,11 +4206,12 @@ function renderHoraire(){
             renderHoraire();
             return;
           }
-          if(!name||!volCoversShift(wk,name,shift))return;
-          if(draggingFromRole&&draggingFromRole.shiftId===shift.id&&draggingFromRole.role===role)return;
+          console.log('drop volCoversShift:',volCoversShift(wk,name,shift),'name:',name);
+          if(!name||!volCoversShift(wk,name,shift)){console.log('drop blocked at: no name or no overlap volCoversShift');return;}
+          if(draggingFromRole&&draggingFromRole.shiftId===shift.id&&draggingFromRole.role===role){console.log('drop blocked at: same role');return;}
           // Réassignation depuis un chip du même shift → autoriser même si déjà sur ce shift
           const isReassign=!!(draggingFromRole&&draggingFromRole.shiftId===shift.id);
-          if(!isEmp(name)&&!isReassign&&volAssignedToShift(wk,name,shift))return;
+          if(!isEmp(name)&&!isReassign&&volAssignedToShift(wk,name,shift)){console.log('drop blocked at: already assigned');return;}
           e.preventDefault();
           // Si drag depuis un chip d'un autre rôle → retirer de l'ancien rôle
           const _ue=[];
