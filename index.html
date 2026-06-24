@@ -3764,6 +3764,7 @@ function renderHoraire(){
       if(!past){
         dz.addEventListener('dragover',e=>{
           if(!draggingVol)return;
+          console.log('dragover',draggingVol,'freeIvs:',JSON.stringify(draggingVolFreeIvs),'shift:',sh?.id,'role:',role);
           if(draggingLate){e.preventDefault();e.dataTransfer.dropEffect='move';dz.classList.add('dok');return;}
           if(draggingFromRole&&draggingFromRole.shiftId===sh.id&&draggingFromRole.role===role)return;
           const ov=isEmp(draggingVol)?{s:sh.fromH*60,e:sh.toH*60}:overlapFor(wk,draggingVol,sh,curDay);
@@ -4159,6 +4160,7 @@ function renderHoraire(){
       if(!past){
         dz.addEventListener('dragover',e=>{
           if(!draggingVol)return;
+          console.log('dragover',draggingVol,'freeIvs:',JSON.stringify(draggingVolFreeIvs),'shift:',shift?.id,'role:',role);
           if(draggingLate){e.preventDefault();e.dataTransfer.dropEffect='move';dz.classList.add('dok');return;}
           // Depuis chip du même rôle → ignorer
           if(draggingFromRole&&draggingFromRole.shiftId===shift.id&&draggingFromRole.role===role)return;
