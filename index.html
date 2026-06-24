@@ -4485,6 +4485,7 @@ function buildCards(wk,shifts){
     card.addEventListener('dragstart',e=>{
       clearDZHighlights();
       draggingVol=name;draggingVolFreeIvs=freeIvs;e.dataTransfer.setData('text/plain',name);e.dataTransfer.effectAllowed='move';
+      console.log('dragstart freeIvs:',JSON.stringify(draggingVolFreeIvs));
       setTimeout(()=>{card.classList.add('dragging');highlightDZs(wk,shifts);},0);
     });
     card.addEventListener('dragend',()=>{card.classList.remove('dragging');draggingVol=null;draggingFromRole=null;draggingVolFreeIvs=null;clearDZHighlights();document.getElementById('vol-cards').style.outline='';document.getElementById('emp-cards').style.outline='';});
