@@ -3817,6 +3817,7 @@ function renderHoraire(){
             removeAssign(wk,draggingFromRole.shiftId,draggingFromRole.role,name);
             deleteAssignment(wk,draggingFromRole.shiftId,draggingFromRole.role,name);
           }
+          console.log('calling doAssign with role:',role,'shift:',sh?.id);
           if(doAssign(wk,sh,role,name)){
             _ue.unshift({type:'remove',wk,sid:sh.id,role,name,locked:true});
             pushUndo(_ue);
@@ -4218,6 +4219,7 @@ function renderHoraire(){
             removeAssign(wk,draggingFromRole.shiftId,draggingFromRole.role,name);
             deleteAssignment(wk,draggingFromRole.shiftId,draggingFromRole.role,name);
           }
+          console.log('calling doAssign with role:',role,'shift:',shift?.id);
           if(doAssign(wk,shift,role,name)){
             _ue.unshift({type:'remove',wk,sid:shift.id,role,name,locked:true});
             pushUndo(_ue);
