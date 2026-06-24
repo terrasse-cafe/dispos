@@ -3720,7 +3720,8 @@ function renderHoraire(){
               ev.stopPropagation();
               draggingVol=assignedName;
               draggingFromRole={shiftId:sh.id,role,name:assignedName};
-              draggingVolFreeIvs=null;
+              const _ct=getAssignTimes(wk,sh.id,role,assignedName);
+              draggingVolFreeIvs=(_ct&&!isEmp(assignedName))?[{s:_ct.s,e:_ct.e}]:null;
               draggingLate=isLate;
               ev.dataTransfer.setData('text/plain',assignedName);
               ev.dataTransfer.effectAllowed='move';
@@ -4114,7 +4115,8 @@ function renderHoraire(){
               ev.stopPropagation();
               draggingVol=assignedName;
               draggingFromRole={shiftId:shift.id,role,name:assignedName};
-              draggingVolFreeIvs=null;
+              const _ct=getAssignTimes(wk,shift.id,role,assignedName);
+              draggingVolFreeIvs=(_ct&&!isEmp(assignedName))?[{s:_ct.s,e:_ct.e}]:null;
               draggingLate=isLate;
               ev.dataTransfer.setData('text/plain',assignedName);
               ev.dataTransfer.effectAllowed='move';
