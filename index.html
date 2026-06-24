@@ -3763,17 +3763,15 @@ function renderHoraire(){
       }
       if(!past){
         dz.addEventListener('dragover',e=>{
-          if(!draggingVol){console.log('dragover blocked: no draggingVol');return;}
-          console.log('dragover',draggingVol,'freeIvs:',JSON.stringify(draggingVolFreeIvs),'shift:',sh?.id,'role:',role);
+          if(!draggingVol)return;
           if(draggingLate){e.preventDefault();e.dataTransfer.dropEffect='move';dz.classList.add('dok');return;}
-          if(draggingFromRole&&draggingFromRole.shiftId===sh.id&&draggingFromRole.role===role){console.log('dragover blocked: same role');return;}
+          if(draggingFromRole&&draggingFromRole.shiftId===sh.id&&draggingFromRole.role===role)return;
           const ov=isEmp(draggingVol)?{s:sh.fromH*60,e:sh.toH*60}:overlapFor(wk,draggingVol,sh,curDay);
-          console.log('dragover ov:',JSON.stringify(ov));
-          if(!ov){console.log('dragover blocked: no overlap');e.dataTransfer.dropEffect='none';return;}
+          if(!ov){e.dataTransfer.dropEffect='none';return;}
           const isReassign=!!(draggingFromRole&&draggingFromRole.shiftId===sh.id);
-          const alreadyAssigned=!isEmp(draggingVol)&&!isReassign&&volAssignedToShift(wk,draggingVol,sh);
-          console.log('dragover isReassign:',isReassign,'alreadyAssigned:',alreadyAssigned);
-          if(alreadyAssigned){console.log('dragover blocked: already assigned');e.dataTransfer.dropEffect='none';return;}
+          const dragIv=draggingVolFreeIvs&&draggingVolFreeIvs.length===1?draggingVolFreeIvs[0]:null;
+          const alreadyAssigned=!isEmp(draggingVol)&&!isReassign&&volAssignedToShift(wk,draggingVol,sh,dragIv);
+          if(alreadyAssigned){e.dataTransfer.dropEffect='none';return;}
           e.preventDefault();e.dataTransfer.dropEffect='move';dz.classList.add('dok');
         });
         dz.addEventListener('dragleave',e=>{if(!dz.contains(e.relatedTarget))dz.classList.remove('dok');});
@@ -4162,19 +4160,17 @@ function renderHoraire(){
       // Drop zone — accepte toujours un nouveau bénévole (occupé ou non)
       if(!past){
         dz.addEventListener('dragover',e=>{
-          if(!draggingVol){console.log('dragover blocked: no draggingVol');return;}
-          console.log('dragover',draggingVol,'freeIvs:',JSON.stringify(draggingVolFreeIvs),'shift:',shift?.id,'role:',role);
+          if(!draggingVol)return;
           if(draggingLate){e.preventDefault();e.dataTransfer.dropEffect='move';dz.classList.add('dok');return;}
           // Depuis chip du même rôle → ignorer
-          if(draggingFromRole&&draggingFromRole.shiftId===shift.id&&draggingFromRole.role===role){console.log('dragover blocked: same role');return;}
+          if(draggingFromRole&&draggingFromRole.shiftId===shift.id&&draggingFromRole.role===role)return;
           const ov=isEmp(draggingVol)?{s:shift.fromH*60,e:shift.toH*60}:overlapFor(wk,draggingVol,shift,curDay);
-          console.log('dragover ov:',JSON.stringify(ov));
-          if(!ov){console.log('dragover blocked: no overlap');e.dataTransfer.dropEffect='none';return;}
+          if(!ov){e.dataTransfer.dropEffect='none';return;}
           // Réassignation depuis un chip du même shift → autoriser même si déjà sur ce shift
           const isReassign=!!(draggingFromRole&&draggingFromRole.shiftId===shift.id);
-          const alreadyAssigned=!isEmp(draggingVol)&&!isReassign&&volAssignedToShift(wk,draggingVol,shift);
-          console.log('dragover isReassign:',isReassign,'alreadyAssigned:',alreadyAssigned);
-          if(alreadyAssigned){console.log('dragover blocked: already assigned');e.dataTransfer.dropEffect='none';return;}
+          const dragIv=draggingVolFreeIvs&&draggingVolFreeIvs.length===1?draggingVolFreeIvs[0]:null;
+          const alreadyAssigned=!isEmp(draggingVol)&&!isReassign&&volAssignedToShift(wk,draggingVol,shift,dragIv);
+          if(alreadyAssigned){e.dataTransfer.dropEffect='none';return;}
           e.preventDefault();e.dataTransfer.dropEffect='move';dz.classList.add('dok');
         });
         dz.addEventListener('dragleave',e=>{if(!dz.contains(e.relatedTarget))dz.classList.remove('dok');});
