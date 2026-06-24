@@ -3767,7 +3767,20 @@ function renderHoraire(){
           if(!draggingVol)return;
           if(draggingLate){e.preventDefault();e.dataTransfer.dropEffect='move';dz.classList.add('dok');return;}
           if(draggingFromRole&&draggingFromRole.shiftId===sh.id&&draggingFromRole.role===role)return;
-          const ov=isEmp(draggingVol)?{s:sh.fromH*60,e:sh.toH*60}:overlapFor(wk,draggingVol,sh,curDay);
+          let ov;
+          if(isEmp(draggingVol)){
+            if(draggingVolFreeIvs&&draggingVolFreeIvs.length===1){
+              const iv=draggingVolFreeIvs[0];
+              const s=Math.max(iv.s,sh.fromH*60);const e=Math.min(iv.e,sh.toH*60);ov=e>s?{s,e}:null;
+            } else {
+              const empDayId=Object.keys(SHIFTS).find(d=>(SHIFTS[d]||[]).some(s=>s.id===sh.id))||curDay;
+              const es=empSchedule(draggingVol,empDayId);
+              if(es){const s=Math.max(es.s,sh.fromH*60);const e=Math.min(es.e,sh.toH*60);ov=e>s?{s,e}:null;}
+              else ov=null;
+            }
+          } else {
+            ov=overlapFor(wk,draggingVol,sh,curDay);
+          }
           if(!ov){e.dataTransfer.dropEffect='none';return;}
           const isReassign=!!(draggingFromRole&&draggingFromRole.shiftId===sh.id);
           const dragIv=draggingVolFreeIvs&&draggingVolFreeIvs.length===1?draggingVolFreeIvs[0]:null;
@@ -4167,7 +4180,20 @@ function renderHoraire(){
           if(draggingLate){e.preventDefault();e.dataTransfer.dropEffect='move';dz.classList.add('dok');return;}
           // Depuis chip du même rôle → ignorer
           if(draggingFromRole&&draggingFromRole.shiftId===shift.id&&draggingFromRole.role===role)return;
-          const ov=isEmp(draggingVol)?{s:shift.fromH*60,e:shift.toH*60}:overlapFor(wk,draggingVol,shift,curDay);
+          let ov;
+          if(isEmp(draggingVol)){
+            if(draggingVolFreeIvs&&draggingVolFreeIvs.length===1){
+              const iv=draggingVolFreeIvs[0];
+              const s=Math.max(iv.s,shift.fromH*60);const e=Math.min(iv.e,shift.toH*60);ov=e>s?{s,e}:null;
+            } else {
+              const empDayId=Object.keys(SHIFTS).find(d=>(SHIFTS[d]||[]).some(s=>s.id===shift.id))||curDay;
+              const es=empSchedule(draggingVol,empDayId);
+              if(es){const s=Math.max(es.s,shift.fromH*60);const e=Math.min(es.e,shift.toH*60);ov=e>s?{s,e}:null;}
+              else ov=null;
+            }
+          } else {
+            ov=overlapFor(wk,draggingVol,shift,curDay);
+          }
           if(!ov){e.dataTransfer.dropEffect='none';return;}
           // Réassignation depuis un chip du même shift → autoriser même si déjà sur ce shift
           const isReassign=!!(draggingFromRole&&draggingFromRole.shiftId===shift.id);
