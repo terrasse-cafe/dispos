@@ -4714,7 +4714,8 @@ function openTP(e,name,sid,role,shift,wk){
   const isLateAssign = getAssignLate(wk, sid, role, name);
   if (emp && !isLateAssign) {
     const es = empSchedule(name, empDayId);
-    fromMin = es ? es.s : shift.fromH*60;
+    const empDay=DAYS.find(d=>d.id===empDayId);
+    fromMin=empDay?empDay.gridH*60:shift.fromH*60;
     fromMax = es ? es.e - 30 : null;
     toMax   = es ? Math.min(es.e, shift.toH*60) : shift.toH*60;
   } else if (isLateAssign) {
