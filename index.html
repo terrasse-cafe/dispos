@@ -4674,6 +4674,13 @@ function tpOriginalTimes(wk,name,sid,shift,empDayId){
 }
 function updateResetBtn(){
   if(!tpCtx||!tpCtx.orig)return;
+  if(tpCtx.isManual){
+    const wrap=document.getElementById('tp-reset-wrap');
+    const fields=document.getElementById('tp-fields');
+    if(wrap)wrap.style.display='none';
+    if(fields)fields.classList.remove('has-reset');
+    return;
+  }
   const s=parseInt(document.getElementById('tp-start')?.value);
   const e=parseInt(document.getElementById('tp-end')?.value);
   const changed=s!==tpCtx.orig.s||e!==tpCtx.orig.e;
@@ -4684,6 +4691,8 @@ function updateResetBtn(){
 }
 function openTP(e,name,sid,role,shift,wk){
   tpCtx={name,sid,role,shift,wk};
+  const _isManual=getAssignLate(wk,sid,role,name);
+  tpCtx.isManual=_isManual;
   const emp=isEmp(name);
   const _ptp=getPerson(name);
   document.getElementById('tp-name').textContent=(_ptp?fullName(_ptp):name)+(emp?' (employé)':'');
