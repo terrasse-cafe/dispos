@@ -354,11 +354,10 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
 .tp-fields.has-reset{grid-template-columns:1fr 1fr 32px}
 .tp-fields label{display:block;font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
 .tp-fields select{width:100%;height:32px;padding:0 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font);background:var(--surface);outline:none;box-sizing:border-box}
-.tp-reset-btn{width:32px;height:32px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .1s;padding:0}
-.tp-reset-btn:hover{background:var(--border)}
+.tp-orig-notice{font-size:11px;color:var(--text-3);line-height:1.4}
 .tp-close:hover{color:var(--text)!important}
-.tp-remove{width:100%;padding:5px;border:none;background:none;font-size:11px;color:#DC2626;cursor:pointer;border-radius:var(--radius-sm);transition:background .1s}
-.tp-remove:hover{background:#FEF2F2;text-decoration:none}
+.tp-remove{width:100%;height:32px;padding:0 14px;border:1px solid #FECACA;border-radius:6px;background:transparent;font-family:var(--font);font-size:13px;font-weight:500;color:#DC2626;cursor:pointer;transition:background .12s,border-color .12s;display:flex;align-items:center;justify-content:center}
+.tp-remove:hover{background:#FEF2F2}
 #tp-note:focus{border-color:var(--accent-dark);outline:none}
 
 /* ── PIN MODAL ── */
@@ -759,14 +758,15 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
     <div><label>Début</label></div>
     <div><label>Fin</label></div>
     <div id="tp-reset-wrap" style="display:none">
-      <button class="tp-reset-btn" id="tp-reset-btn" title="Réinitialiser les heures"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M13.3333 8A5.3333 5.3333 0 1 1 8 2.6667M13.3333 2.6667V6H10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button class="btn btn-subtle btn-icon" id="tp-reset-btn" title="Réinitialiser les heures"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M13.3333 8A5.3333 5.3333 0 1 1 8 2.6667M13.3333 2.6667V6H10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     </div>
   </div>
+  <div id="tp-orig-notice" class="tp-orig-notice" style="display:none"></div>
   <div>
     <label style="font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px">Note / renfort</label>
     <textarea id="tp-note" rows="2" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;resize:vertical;outline:none;line-height:1.5;transition:border-color .15s"></textarea>
   </div>
-  <button class="tp-remove" onclick="removeAssignTP()">Retirer ce bénévole</button>
+  <button class="tp-remove" onclick="removeAssignTP()">Retirer</button>
 </div>
 
 <div id="chip-pref-tooltip"></div>
@@ -4672,13 +4672,16 @@ function tpOriginalTimes(wk,name,sid,shift,empDayId){
   if(rng)return{s:Math.max(rng.startMins,shift.fromH*60),e:Math.min(rng.endMins,shift.toH*60)};
   return{s:shift.fromH*60,e:shift.toH*60};
 }
+function fmtMins(m){const h=Math.floor(m/60),mn=m%60;return mn?`${h}h${String(mn).padStart(2,'0')}`:`${h}h`;}
 function updateResetBtn(){
   if(!tpCtx||!tpCtx.orig)return;
   if(tpCtx.isManual){
     const wrap=document.getElementById('tp-reset-wrap');
     const fields=document.getElementById('tp-fields');
+    const notice=document.getElementById('tp-orig-notice');
     if(wrap)wrap.style.display='none';
     if(fields)fields.classList.remove('has-reset');
+    if(notice)notice.style.display='none';
     return;
   }
   const s=parseInt(document.getElementById('tp-start')?.value);
@@ -4686,8 +4689,13 @@ function updateResetBtn(){
   const changed=s!==tpCtx.orig.s||e!==tpCtx.orig.e;
   const wrap=document.getElementById('tp-reset-wrap');
   const fields=document.getElementById('tp-fields');
-  if(wrap)wrap.style.display=changed?'block':'none';
+  const notice=document.getElementById('tp-orig-notice');
+  if(wrap)wrap.style.display=changed?'flex':'none';
   if(fields)fields.classList.toggle('has-reset',changed);
+  if(notice){
+    notice.style.display=changed?'block':'none';
+    if(changed)notice.textContent=`Heures originales : ${fmtMins(tpCtx.orig.s)} – ${fmtMins(tpCtx.orig.e)}`;
+  }
 }
 function openTP(e,name,sid,role,shift,wk){
   tpCtx={name,sid,role,shift,wk};
