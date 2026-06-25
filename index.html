@@ -758,7 +758,7 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
     <div><label>Début</label></div>
     <div><label>Fin</label></div>
     <div id="tp-reset-wrap" style="display:none">
-      <button class="btn btn-subtle btn-icon" id="tp-reset-btn" title="Réinitialiser les heures"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M13.3333 8A5.3333 5.3333 0 1 1 8 2.6667M13.3333 2.6667V6H10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button class="btn btn-subtle btn-icon" id="tp-reset-btn" title="Réinitialiser les heures"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#clip0_680_564)"><path d="M4.66602 6.66667H0.666016V2.66667M0.666016 6.66667L3.75935 3.76001C4.67996 2.84095 5.87432 2.24599 7.16247 2.06475C8.45062 1.88352 9.76278 2.12583 10.9012 2.75518C12.0397 3.38454 12.9428 4.36684 13.4744 5.55407C14.0061 6.74131 14.1375 8.06917 13.8488 9.33758C13.5602 10.606 12.8671 11.7462 11.8741 12.5865C10.8811 13.4268 9.64185 13.9216 8.34316 13.9963C7.04447 14.0711 5.75667 13.7217 4.67379 13.0009C3.59091 12.2801 2.77161 11.2269 2.33935 10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></g><defs><clipPath id="clip0_680_564"><rect width="16" height="16" fill="white"/></clipPath></defs></svg></button>
     </div>
   </div>
   <div id="tp-orig-notice" class="tp-orig-notice" style="display:none"></div>
@@ -4714,7 +4714,7 @@ function openTP(e,name,sid,role,shift,wk){
   const isLateAssign = getAssignLate(wk, sid, role, name);
   if (emp && !isLateAssign) {
     const es = empSchedule(name, empDayId);
-    fromMin = es ? Math.max(es.s, shift.fromH*60) : shift.fromH*60;
+    fromMin = es ? es.s : shift.fromH*60;
     fromMax = es ? es.e - 30 : null;
     toMax   = es ? Math.min(es.e, shift.toH*60) : shift.toH*60;
   } else if (isLateAssign) {
