@@ -4837,6 +4837,7 @@ function openTP(e,name,sid,role,shift,wk){
     _notice.textContent='Le bénévole a indiqué être disponible de '+mStr(_ci2.newS)+' à '+mStr(_ci2.newE)+' — heures mises à jour.';
     _tpStart.disabled=false;
     _tpEnd.disabled=false;
+    updateResetBtn();
   } else {
     _notice.style.display='none';
     _tpStart.disabled=false;
