@@ -4820,9 +4820,9 @@ function openTP(e,name,sid,role,shift,wk){
     _tpEnd.disabled=false;
   } else if(_ci2&&_ci2.case===5){
     _notice.style.display='block';
-    _notice.textContent='Ce bénévole n\'est plus disponible pour ce créneau';
-    _tpStart.disabled=true;
-    _tpEnd.disabled=true;
+    _notice.textContent='Le bénévole a indiqué dans l\'app qu\'il n\'est pas disponible ce jour.';
+    _tpStart.disabled=false;
+    _tpEnd.disabled=false;
   } else if(_ci2&&_ci2.case===23){
     const _note=(assigns[wk]?.[akey(sid,role)+'__n__'+name])||null;
     const _wasLocked=getAssignLocked(wk,sid,role,name);
@@ -4830,7 +4830,7 @@ function openTP(e,name,sid,role,shift,wk){
     saveAssignment(wk,sid,role,name,_ci2.newS,_ci2.newE,_note,_wasLocked);
     renderHoraire();
     _notice.style.display='block';
-    _notice.textContent='Disponibilités mises à jour — '+mStr(_ci2.newS)+'–'+mStr(_ci2.newE);
+    _notice.textContent='Le bénévole a indiqué être disponible de '+mStr(_ci2.newS)+' à '+mStr(_ci2.newE)+' — heures mises à jour.';
     _tpStart.disabled=false;
     _tpEnd.disabled=false;
     tpCtx.dispoCase=null;
