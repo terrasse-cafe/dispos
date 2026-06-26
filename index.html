@@ -1340,7 +1340,10 @@ function volRecurSchedule(wk,name,dayId){
   if(!d||d.on===false||d.s==null||d.e==null)return null;
   return{s:d.s,e:d.e};
 }
-function isVolRecurring(wk,name,dayId){return volRecurSchedule(wk,name,dayId)!==null;}
+function isVolRecurring(wk,name,dayId){
+  if((avail[wk]||{})[name])return false;
+  return volRecurSchedule(wk,name,dayId)!==null;
+}
 function hasRecurSchedule(name){
   const p=getPerson(name);
   if(!p||p.type!=='vol'||!p.schedule_json)return false;
