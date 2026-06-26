@@ -1701,7 +1701,7 @@ function applySlotOverrides() {
   });
 }
 
-async function saveAssignment(wk, shiftId, role, name, startMins, endMins, note=null, locked=false, late=false) {
+async function saveAssignment(wk, shiftId, role, name, startMins, endMins, note=null, locked=false, late=false, updatedAt=null) {
   if (!sb) return;
   const row = {
     week_key: wk,
@@ -1713,7 +1713,7 @@ async function saveAssignment(wk, shiftId, role, name, startMins, endMins, note=
     note: note ?? null,
     locked: locked,
     late: late,
-    updated_at: new Date().toISOString()
+    updated_at: updatedAt || new Date().toISOString()
   };
   // Unique sur (week_key, shift_id, role, person_name)
   const { error } = await sb.from('assignments').upsert(row, {onConflict:'week_key,shift_id,role,person_name'});
@@ -4652,10 +4652,14 @@ function doAssign(wk,shift,role,name){
     if(alreadyAssigned){return false;}
     const ov=overlapMins(wk,name,shift);
     if(!ov){return false;}
+    const _availEntry=(avail[wk]||{})[name];
+    const _preserveTs=_availEntry?.updated_at
+      ?new Date(new Date(_availEntry.updated_at).getTime()-1000).toISOString()
+      :null;
     addAssign(wk,shift.id,role,name);
     setAssignTimes(wk,shift.id,role,ov.s,ov.e,name);
     setAssignLocked(wk,shift.id,role,true,name);
-    saveAssignment(wk,shift.id,role,name,ov.s,ov.e,null,true);
+    saveAssignment(wk,shift.id,role,name,ov.s,ov.e,null,true,false,_preserveTs);
   }
   return true;
 }
