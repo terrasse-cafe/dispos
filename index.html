@@ -4828,16 +4828,15 @@ function openTP(e,name,sid,role,shift,wk){
     _tpStart.disabled=false;
     _tpEnd.disabled=false;
   } else if(_ci2&&_ci2.case===23){
-    const _note=(assigns[wk]?.[akey(sid,role)+'__n__'+name])||null;
-    const _wasLocked=getAssignLocked(wk,sid,role,name);
-    setAssignTimes(wk,sid,role,_ci2.newS,_ci2.newE,name);
-    saveAssignment(wk,sid,role,name,_ci2.newS,_ci2.newE,_note,_wasLocked);
-    renderHoraire();
+    _tpStart.value=_ci2.newS;
+    refreshEndSelect(_ci2.newS);
+    const _eSel=document.getElementById('tp-end');
+    if(_eSel)_eSel.value=_ci2.newE;
+    tpCtx.orig={s:_ci2.newS,e:_ci2.newE};
     _notice.style.display='block';
     _notice.textContent='Le bénévole a indiqué être disponible de '+mStr(_ci2.newS)+' à '+mStr(_ci2.newE)+' — heures mises à jour.';
     _tpStart.disabled=false;
     _tpEnd.disabled=false;
-    tpCtx.dispoCase=null;
   } else {
     _notice.style.display='none';
     _tpStart.disabled=false;
