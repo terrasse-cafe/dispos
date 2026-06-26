@@ -4652,12 +4652,14 @@ function doAssign(wk,shift,role,name){
     if(alreadyAssigned){return false;}
     const ov=overlapMins(wk,name,shift);
     if(!ov){return false;}
-    const _dayId=Object.keys(SHIFTS).find(d=>(SHIFTS[d]||[]).some(s=>s.id===shift.id))||curDay;
-    const _pendingChange=getDispoChangeInfo(wk,name,shift.id,role,shift,_dayId);
     const _availEntry=(avail[wk]||{})[name];
-    const _preserveTs=(_pendingChange&&_availEntry?.updated_at)
-      ?new Date(new Date(_availEntry.updated_at).getTime()-1000).toISOString()
-      :null;
+    const _availUa=_availEntry?.updated_at;
+    let _preserveTs=null;
+    if(_availUa){
+      const _auMap=assignUpdatedAt[wk]||{};
+      const _hasStale=Object.keys(_auMap).some(k=>k.endsWith('||'+name)&&new Date(_auMap[k])<new Date(_availUa));
+      if(_hasStale)_preserveTs=new Date(new Date(_availUa).getTime()-1000).toISOString();
+    }
     addAssign(wk,shift.id,role,name);
     setAssignTimes(wk,shift.id,role,ov.s,ov.e,name);
     setAssignLocked(wk,shift.id,role,true,name);
