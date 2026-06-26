@@ -4652,8 +4652,10 @@ function doAssign(wk,shift,role,name){
     if(alreadyAssigned){return false;}
     const ov=overlapMins(wk,name,shift);
     if(!ov){return false;}
+    const _dayId=Object.keys(SHIFTS).find(d=>(SHIFTS[d]||[]).some(s=>s.id===shift.id))||curDay;
+    const _pendingChange=getDispoChangeInfo(wk,name,shift.id,role,shift,_dayId);
     const _availEntry=(avail[wk]||{})[name];
-    const _preserveTs=_availEntry?.updated_at
+    const _preserveTs=(_pendingChange&&_availEntry?.updated_at)
       ?new Date(new Date(_availEntry.updated_at).getTime()-1000).toISOString()
       :null;
     addAssign(wk,shift.id,role,name);
