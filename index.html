@@ -1779,6 +1779,7 @@ function subscribeRealtime(wk) {
           else delete assigns[wk][k+'__l__'+r.person_name];
           if (r.late) assigns[wk][k+'__late__'+r.person_name] = true;
           else delete assigns[wk][k+'__late__'+r.person_name];
+          if (r.updated_at) assignUpdatedAt[wk][akey(r.shift_id,r.role)+'||'+r.person_name] = r.updated_at;
         }
         renderHoraire();
         if(document.getElementById('b-week-section')?.style.display!=='none')renderB();
