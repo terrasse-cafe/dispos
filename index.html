@@ -4235,7 +4235,7 @@ function renderHoraire(){
             renderHoraire();
             return;
           }
-          if(!name||!volCoversShift(wk,name,shift))return;
+          if(!name||(!draggingCase5&&!volCoversShift(wk,name,shift)))return;
           if(draggingFromRole&&draggingFromRole.shiftId===shift.id&&draggingFromRole.role===role)return;
           // Réassignation depuis un chip du même shift → autoriser même si déjà sur ce shift
           const isReassign=!!(draggingFromRole&&draggingFromRole.shiftId===shift.id);
