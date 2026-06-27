@@ -2720,7 +2720,7 @@ function computePlacesForShift(wk,sh){
   (sh._togSlots||[]).forEach(r=>{
     const lbl=roleDisplayLabel(r);
     const isFormation=lbl==='Bénévole en formation';
-    if(isFormation){if(isTrainingActive(wk,sh.id))roles.push(r);return;}
+    if(isFormation)return;
     if(isSunEventActive(wk,r))roles.push(r);
   });
   const totalRoles=roles.length;
@@ -2755,7 +2755,8 @@ function computePlacesForShift(wk,sh){
   }
 
   // 5. Ajouts manuels (assignés mais non capturés par les étapes précédentes)
-  const allRoles=[...(sh._slots||sh.roles),...(sh._optSlots||[]),...(sh._togSlots||[])];
+  const allRoles=[...(sh._slots||sh.roles),...(sh._optSlots||[]),...(sh._togSlots||[])]
+    .filter(r=>roleDisplayLabel(r)!=='Bénévole en formation');
   allRoles.forEach(role=>{
     getAssigns(wk,sh.id,role).forEach(name=>{
       if(!counted.has(name))counted.add(name);
