@@ -3799,7 +3799,6 @@ function renderHoraire(){
         dz.addEventListener('drop',e=>{
           dz.classList.remove('dok');
           const name=e.dataTransfer.getData('text/plain');
-          if(draggingLate&&!draggingCase5||draggingCase5&&sh.id!==draggingCase5ShiftId){return;}
           if(draggingLate&&!draggingCase5){
             e.preventDefault();
             if(!name)return;
@@ -4216,7 +4215,6 @@ function renderHoraire(){
         dz.addEventListener('drop',e=>{
           dz.classList.remove('dok');
           const name=e.dataTransfer.getData('text/plain');
-          if(draggingLate&&!draggingCase5||draggingCase5&&shift.id!==draggingCase5ShiftId){return;}
           if(draggingLate&&!draggingCase5){
             e.preventDefault();
             if(!name)return;
