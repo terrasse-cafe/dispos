@@ -2702,6 +2702,7 @@ function recurIcon(color){
 }
 
 function computePlacesForShift(wk,sh){
+  // 1. Nombre total de rôles dans le shift
   let roles=[...(sh._slots||sh.roles)];
   (sh._optSlots||[]).forEach(r=>roles.push(r));
   (sh._togSlots||[]).forEach(r=>{
@@ -2712,38 +2713,44 @@ function computePlacesForShift(wk,sh){
   });
   const totalRoles=roles.length;
   const dayId=Object.keys(SHIFTS).find(d=>(SHIFTS[d]||[]).some(s=>s.id===sh.id));
-  let empCount=0;
+  const shiftS=sh.fromH*60;
+  const shiftE=sh.toH*60;
+  const counted=new Set();
+
+  // 2. Employés (horaire fixe)
   if(dayId){
     directory.filter(p=>p.type==='emp'&&p.active!==false).forEach(p=>{
       const es=empSchedule(p.name,dayId);if(!es)return;
-      if(es.s<sh.toH*60&&es.e>sh.fromH*60)empCount++;
+      if(es.s<shiftE&&es.e>shiftS)counted.add(p.name);
     });
   }
+
+  // 3. Bénévoles ayant soumis via l'app
   const wkData=avail[wk]||{};
-  let volCount=0;
   Object.keys(wkData).forEach(name=>{
     if(isEmp(name))return;
+    if(counted.has(name))return;
     const rng=volDayRangeFor(wk,name,dayId);if(!rng)return;
-    if(rng.startMins<sh.toH*60&&rng.endMins>sh.fromH*60)volCount++;
+    if(rng.startMins<shiftE&&rng.endMins>shiftS)counted.add(name);
   });
-  let lateCount=0;
-  const allRolesInShift=[...(sh._slots||sh.roles),...(sh._optSlots||[]),...(sh._togSlots||[])];
-  const alreadyCounted=new Set();
-  allRolesInShift.forEach(role=>{
+
+  // 4. Bénévoles récurrents (schedule_json, non soumis via l'app cette semaine)
+  if(dayId){
+    directory.filter(p=>p.type==='vol'&&p.active!==false&&!counted.has(p.name)).forEach(p=>{
+      const rec=volRecurSchedule(wk,p.name,dayId);if(!rec)return;
+      if(rec.s<shiftE&&rec.e>shiftS)counted.add(p.name);
+    });
+  }
+
+  // 5. Ajouts manuels (assignés mais non capturés par les étapes précédentes)
+  const allRoles=[...(sh._slots||sh.roles),...(sh._optSlots||[]),...(sh._togSlots||[])];
+  allRoles.forEach(role=>{
     getAssigns(wk,sh.id,role).forEach(name=>{
-      if(!getAssignLate(wk,sh.id,role,name))return;
-      if(alreadyCounted.has(name))return;
-      alreadyCounted.add(name);
-      if(isEmp(name)){
-        const es=empSchedule(name,dayId);
-        if(!es||!(es.s<sh.toH*60&&es.e>sh.fromH*60))lateCount++;
-      }else{
-        const rng=volDayRangeFor(wk,name,dayId);
-        if(!rng||!(rng.startMins<sh.toH*60&&rng.endMins>sh.fromH*60))lateCount++;
-      }
+      if(!counted.has(name))counted.add(name);
     });
   });
-  return Math.max(0,totalRoles-empCount-volCount-lateCount);
+
+  return Math.max(0,totalRoles-counted.size);
 }
 
 function renderB(){
