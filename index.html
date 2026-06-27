@@ -754,6 +754,7 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
     </span>
   </div>
   <div id="tp-dispo-notice" style="display:none;font-size:12px;padding:8px 10px;border-radius:6px;background:#FFFBEB;border:1px solid #FCD34D;color:#92400E;line-height:1.5"></div>
+  <button id="tp-apply-btn" class="btn btn-subtle" style="display:none;width:100%;margin-top:6px">Appliquer les heures du bénévole</button>
   <div class="tp-fields" id="tp-fields">
     <div><label>Début</label></div>
     <div><label>Fin</label></div>
@@ -4652,18 +4653,10 @@ function doAssign(wk,shift,role,name){
     if(alreadyAssigned){return false;}
     const ov=overlapMins(wk,name,shift);
     if(!ov){return false;}
-    const _availEntry=(avail[wk]||{})[name];
-    const _availUa=_availEntry?.updated_at;
-    let _preserveTs=null;
-    if(_availUa){
-      const _auMap=assignUpdatedAt[wk]||{};
-      const _hasStale=Object.keys(_auMap).some(k=>k.endsWith('||'+name)&&new Date(_auMap[k])<new Date(_availUa));
-      if(_hasStale)_preserveTs=new Date(new Date(_availUa).getTime()-1000).toISOString();
-    }
     addAssign(wk,shift.id,role,name);
     setAssignTimes(wk,shift.id,role,ov.s,ov.e,name);
     setAssignLocked(wk,shift.id,role,true,name);
-    saveAssignment(wk,shift.id,role,name,ov.s,ov.e,null,true,false,_preserveTs);
+    saveAssignment(wk,shift.id,role,name,ov.s,ov.e,null,true);
   }
   return true;
 }
@@ -4823,6 +4816,8 @@ function openTP(e,name,sid,role,shift,wk){
   tpCtx.newDispoE=_ci2?.newE??null;
   if(_ci2&&_ci2.isLate){
     _notice.style.display='block';
+    const _applyBtnHide=document.getElementById('tp-apply-btn');
+    if(_applyBtnHide)_applyBtnHide.style.display='none';
     if(_ci2.case===5){
       _notice.textContent='Le bénévole a indiqué dans l\'app qu\'il n\'est pas disponible ce jour.';
     } else {
@@ -4833,23 +4828,39 @@ function openTP(e,name,sid,role,shift,wk){
     updateResetBtn();
   } else if(_ci2&&_ci2.case===5){
     _notice.style.display='block';
+    const _applyBtnHide=document.getElementById('tp-apply-btn');
+    if(_applyBtnHide)_applyBtnHide.style.display='none';
     _notice.textContent='Le bénévole a indiqué dans l\'app qu\'il n\'est pas disponible ce jour.';
     _tpStart.disabled=false;
     _tpEnd.disabled=false;
     updateResetBtn();
   } else if(_ci2&&_ci2.case===23){
-    _tpStart.value=_ci2.newS;
-    refreshEndSelect(_ci2.newS);
-    const _eSel=document.getElementById('tp-end');
-    if(_eSel)_eSel.value=_ci2.newE;
-    tpCtx.orig={s:_ci2.newS,e:_ci2.newE};
     _notice.style.display='block';
-    _notice.textContent='Le bénévole a indiqué être disponible de '+mStr(_ci2.newS)+' à '+mStr(_ci2.newE)+' — heures mises à jour.';
+    _notice.textContent='Le bénévole a indiqué être disponible de '+mStr(_ci2.newS)+' à '+mStr(_ci2.newE)+'.';
+    const _applyBtn=document.getElementById('tp-apply-btn');
+    if(_applyBtn){
+      _applyBtn.style.display='block';
+      _applyBtn.onclick=()=>{
+        _tpStart.value=_ci2.newS;
+        refreshEndSelect(_ci2.newS);
+        const _eSel=document.getElementById('tp-end');
+        if(_eSel)_eSel.value=_ci2.newE;
+        tpCtx.orig={s:_ci2.newS,e:_ci2.newE};
+        updateResetBtn();
+        const _note=(assigns[wk]?.[akey(sid,role)+'__n__'+name])||null;
+        const _wasLocked=getAssignLocked(wk,sid,role,name);
+        const _wasLate=getAssignLate(wk,sid,role,name);
+        setAssignTimes(wk,sid,role,_ci2.newS,_ci2.newE,name);
+        saveAssignment(wk,sid,role,name,_ci2.newS,_ci2.newE,_note,_wasLocked,_wasLate);
+        renderHoraire();
+      };
+    }
     _tpStart.disabled=false;
     _tpEnd.disabled=false;
-    updateResetBtn();
   } else {
     _notice.style.display='none';
+    const _applyBtnElse=document.getElementById('tp-apply-btn');
+    if(_applyBtnElse)_applyBtnElse.style.display='none';
     _tpStart.disabled=false;
     _tpEnd.disabled=false;
   }
@@ -5434,11 +5445,7 @@ function overlapFor(wk,name,shift,dayId){
 function getDispoChangeInfo(wk,name,sid,role,shift,dayId){
   if(isEmp(name))return null;
   const availEntry=(avail[wk]||{})[name];
-  const availUa=availEntry?.updated_at;
-  if(!availUa)return null;
-  const assignUa=(assignUpdatedAt[wk]||{})[akey(sid,role)+'||'+name];
-  if(!assignUa)return null;
-  if(new Date(availUa)<=new Date(assignUa))return null;
+  if(!availEntry)return null;
   const ct=getAssignTimes(wk,sid,role,name);
   if(!ct)return null;
   const isLate=getAssignLate(wk,sid,role,name);
