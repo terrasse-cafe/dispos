@@ -351,10 +351,8 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
 .tp-name{font-size:13px;font-weight:600}
 .tp-role{font-size:11px;color:var(--text-3);font-family:var(--mono)}
 .tp-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:end}
-.tp-fields.has-reset{grid-template-columns:1fr 1fr 32px}
 .tp-fields label{display:block;font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
 .tp-fields select{width:100%;height:32px;padding:0 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:var(--font);background:var(--surface);outline:none;box-sizing:border-box}
-.tp-orig-notice{font-size:11px;color:var(--text-3);line-height:1.4}
 .tp-close:hover{color:var(--text)!important}
 .tp-remove{width:100%;height:32px;padding:0 14px;border:1px solid #FECACA;border-radius:6px;background:transparent;font-family:var(--font);font-size:13px;font-weight:500;color:#DC2626;cursor:pointer;transition:background .12s,border-color .12s;display:flex;align-items:center;justify-content:center}
 .tp-remove:hover{background:#FEF2F2}
@@ -753,16 +751,16 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
       Manuel
     </span>
   </div>
-  <div id="tp-dispo-notice" style="display:none;font-size:12px;padding:8px 10px;border-radius:6px;background:#FFFBEB;border:1px solid #FCD34D;color:#92400E;line-height:1.5"></div>
-  <button id="tp-apply-btn" class="btn btn-subtle" style="display:none;width:100%;margin-top:6px">Appliquer les heures du bénévole</button>
   <div class="tp-fields" id="tp-fields">
     <div><label>Début</label></div>
     <div><label>Fin</label></div>
-    <div id="tp-reset-wrap" style="display:none">
-      <button class="btn btn-subtle btn-icon" id="tp-reset-btn" title="Réinitialiser les heures"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#clip0_680_564)"><path d="M4.66602 6.66667H0.666016V2.66667M0.666016 6.66667L3.75935 3.76001C4.67996 2.84095 5.87432 2.24599 7.16247 2.06475C8.45062 1.88352 9.76278 2.12583 10.9012 2.75518C12.0397 3.38454 12.9428 4.36684 13.4744 5.55407C14.0061 6.74131 14.1375 8.06917 13.8488 9.33758C13.5602 10.606 12.8671 11.7462 11.8741 12.5865C10.8811 13.4268 9.64185 13.9216 8.34316 13.9963C7.04447 14.0711 5.75667 13.7217 4.67379 13.0009C3.59091 12.2801 2.77161 11.2269 2.33935 10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></g><defs><clipPath id="clip0_680_564"><rect width="16" height="16" fill="white"/></clipPath></defs></svg></button>
+  </div>
+  <div id="tp-dispo-notice" style="display:none;font-size:12px;padding:8px 10px;border-radius:6px;background:#FFFBEB;border:1px solid #FCD34D;color:#92400E;line-height:1.5;margin-top:8px">
+    <span id="tp-dispo-notice-text"></span>
+    <div style="margin-top:8px">
+      <button id="tp-apply-btn" style="display:none;padding:4px 10px;border-radius:5px;border:1px solid #1C1917;background:transparent;color:#1C1917;font-size:12px;font-family:var(--font);font-weight:500;cursor:pointer;line-height:1.4">Appliquer</button>
     </div>
   </div>
-  <div id="tp-orig-notice" class="tp-orig-notice" style="display:none"></div>
   <div>
     <label style="font-size:10px;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px">Note / renfort</label>
     <textarea id="tp-note" rows="2" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;resize:vertical;outline:none;line-height:1.5;transition:border-color .15s"></textarea>
@@ -4679,27 +4677,55 @@ function tpOriginalTimes(wk,name,sid,shift,empDayId){
 }
 function fmtMins(m){const h=Math.floor(m/60),mn=m%60;return mn?`${h}h${String(mn).padStart(2,'0')}`:`${h}h`;}
 function updateResetBtn(){
-  if(!tpCtx||!tpCtx.orig)return;
-  if(tpCtx.isManual||tpCtx.dispoCase===5){
-    const wrap=document.getElementById('tp-reset-wrap');
-    const fields=document.getElementById('tp-fields');
-    const notice=document.getElementById('tp-orig-notice');
-    if(wrap)wrap.style.display='none';
-    if(fields)fields.classList.remove('has-reset');
-    if(notice)notice.style.display='none';
-    return;
-  }
+  if(!tpCtx)return;
+  const _noticeWrap=document.getElementById('tp-dispo-notice');
+  const _noticeText=document.getElementById('tp-dispo-notice-text');
+  const _applyBtn=document.getElementById('tp-apply-btn');
+  const hideAll=()=>{
+    if(_noticeWrap)_noticeWrap.style.display='none';
+    if(_applyBtn)_applyBtn.style.display='none';
+    tpCtx.dispoCase=null;
+  };
+  if(isEmp(tpCtx.name)){hideAll();return;}
+  const availEntry=(avail[tpCtx.wk]||{})[tpCtx.name];
+  if(!availEntry){hideAll();return;}
   const s=parseInt(document.getElementById('tp-start')?.value);
   const e=parseInt(document.getElementById('tp-end')?.value);
-  const changed=s!==tpCtx.orig.s||e!==tpCtx.orig.e;
-  const wrap=document.getElementById('tp-reset-wrap');
-  const fields=document.getElementById('tp-fields');
-  const notice=document.getElementById('tp-orig-notice');
-  if(wrap)wrap.style.display=changed?'flex':'none';
-  if(fields)fields.classList.toggle('has-reset',changed);
-  if(notice){
-    notice.style.display=changed?'block':'none';
-    if(changed)notice.textContent=`Heures originales : ${fmtMins(tpCtx.orig.s)} – ${fmtMins(tpCtx.orig.e)}`;
+  const _dayId=Object.keys(SHIFTS).find(d=>(SHIFTS[d]||[]).some(sh=>sh.id===tpCtx.sid))||curDay;
+  const newRange=volDayRangeFor(tpCtx.wk,tpCtx.name,_dayId);
+  if(!newRange){
+    tpCtx.dispoCase=5;
+    if(_noticeWrap)_noticeWrap.style.display='block';
+    if(_noticeText)_noticeText.textContent='Le bénévole a indiqué ne pas être disponible ce jour.';
+    if(_applyBtn)_applyBtn.style.display='none';
+    return;
+  }
+  const newClampedS=Math.max(newRange.startMins,tpCtx.shift.fromH*60);
+  const newClampedE=Math.min(newRange.endMins,tpCtx.shift.toH*60);
+  if(newClampedE<=newClampedS){
+    tpCtx.dispoCase=5;
+    if(_noticeWrap)_noticeWrap.style.display='block';
+    if(_noticeText)_noticeText.textContent='Le bénévole a indiqué ne pas être disponible ce jour.';
+    if(_applyBtn)_applyBtn.style.display='none';
+    return;
+  }
+  if(!isNaN(s)&&!isNaN(e)&&s===newClampedS&&e===newClampedE){
+    hideAll();
+    return;
+  }
+  tpCtx.dispoCase=23;
+  if(_noticeWrap)_noticeWrap.style.display='block';
+  if(_noticeText)_noticeText.textContent='Heures soumises par le bénévole : '+mStr(newClampedS)+'–'+mStr(newClampedE)+'.';
+  if(_applyBtn){
+    _applyBtn.style.display='inline-block';
+    _applyBtn.onclick=()=>{
+      const _tpS=document.getElementById('tp-start');
+      const _tpE=document.getElementById('tp-end');
+      if(_tpS)_tpS.value=newClampedS;
+      refreshEndSelect(newClampedS);
+      if(_tpE)_tpE.value=newClampedE;
+      updateResetBtn();
+    };
   }
 }
 function openTP(e,name,sid,role,shift,wk){
@@ -4756,17 +4782,6 @@ function openTP(e,name,sid,role,shift,wk){
   refreshEndSelect(safeStart);
   sSel.addEventListener('change', ev => { refreshEndSelect(parseInt(ev.target.value)); updateResetBtn(); });
   tpCtx.orig = orig;
-  const tpResetBtn = document.getElementById('tp-reset-btn');
-  if (tpResetBtn) {
-    tpResetBtn.onclick = () => {
-      const sSel2 = document.getElementById('tp-start');
-      if (sSel2) sSel2.value = orig.s;
-      refreshEndSelect(orig.s);
-      const eSel2 = document.getElementById('tp-end');
-      if (eSel2) eSel2.value = orig.e;
-      updateResetBtn();
-    };
-  }
   updateResetBtn();
   // Load existing note
   document.getElementById('tp-note').value=getAssignNote(wk,sid,role,name)||'';
@@ -4802,68 +4817,14 @@ function openTP(e,name,sid,role,shift,wk){
   tpCtx._reposition=_tpReposition;
   if(_tpHScroll)_tpHScroll.addEventListener('scroll',_tpReposition);
   window.addEventListener('scroll',_tpReposition,{passive:true});
-  const _ci2=getDispoChangeInfo(wk,name,sid,role,shift,curDay);
   const _lateNotice=document.getElementById('tp-late-notice');
   if(_lateNotice){
     const isLateAssign=getAssignLate(wk,sid,role,name);
     _lateNotice.style.display=isLateAssign?'flex':'none';
   }
-  const _notice=document.getElementById('tp-dispo-notice');
-  const _tpStart=document.getElementById('tp-start');
-  const _tpEnd=document.getElementById('tp-end');
-  tpCtx.dispoCase=_ci2?_ci2.case:null;
-  tpCtx.newDispoS=_ci2?.newS??null;
-  tpCtx.newDispoE=_ci2?.newE??null;
-  if(_ci2&&_ci2.isLate){
-    _notice.style.display='block';
-    const _applyBtnHide=document.getElementById('tp-apply-btn');
-    if(_applyBtnHide)_applyBtnHide.style.display='none';
-    if(_ci2.case===5){
-      _notice.textContent='Le bénévole a indiqué dans l\'app qu\'il n\'est pas disponible ce jour.';
-    } else {
-      _notice.textContent='Le bénévole a indiqué dans l\'app être disponible de '+mStr(_ci2.newS)+' à '+mStr(_ci2.newE)+'.';
-    }
-    _tpStart.disabled=false;
-    _tpEnd.disabled=false;
-    updateResetBtn();
-  } else if(_ci2&&_ci2.case===5){
-    _notice.style.display='block';
-    const _applyBtnHide=document.getElementById('tp-apply-btn');
-    if(_applyBtnHide)_applyBtnHide.style.display='none';
-    _notice.textContent='Le bénévole a indiqué dans l\'app qu\'il n\'est pas disponible ce jour.';
-    _tpStart.disabled=false;
-    _tpEnd.disabled=false;
-    updateResetBtn();
-  } else if(_ci2&&_ci2.case===23){
-    _notice.style.display='block';
-    _notice.textContent='Le bénévole a indiqué être disponible de '+mStr(_ci2.newS)+' à '+mStr(_ci2.newE)+'.';
-    const _applyBtn=document.getElementById('tp-apply-btn');
-    if(_applyBtn){
-      _applyBtn.style.display='block';
-      _applyBtn.onclick=()=>{
-        _tpStart.value=_ci2.newS;
-        refreshEndSelect(_ci2.newS);
-        const _eSel=document.getElementById('tp-end');
-        if(_eSel)_eSel.value=_ci2.newE;
-        tpCtx.orig={s:_ci2.newS,e:_ci2.newE};
-        updateResetBtn();
-        const _note=(assigns[wk]?.[akey(sid,role)+'__n__'+name])||null;
-        const _wasLocked=getAssignLocked(wk,sid,role,name);
-        const _wasLate=getAssignLate(wk,sid,role,name);
-        setAssignTimes(wk,sid,role,_ci2.newS,_ci2.newE,name);
-        saveAssignment(wk,sid,role,name,_ci2.newS,_ci2.newE,_note,_wasLocked,_wasLate);
-        renderHoraire();
-      };
-    }
-    _tpStart.disabled=false;
-    _tpEnd.disabled=false;
-  } else {
-    _notice.style.display='none';
-    const _applyBtnElse=document.getElementById('tp-apply-btn');
-    if(_applyBtnElse)_applyBtnElse.style.display='none';
-    _tpStart.disabled=false;
-    _tpEnd.disabled=false;
-  }
+  document.getElementById('tp-start').disabled=false;
+  document.getElementById('tp-end').disabled=false;
+  updateResetBtn();
 }
 function _tpCleanup(){
   if(!tpCtx||!tpCtx._reposition)return;
@@ -4873,11 +4834,6 @@ function _tpCleanup(){
 }
 function closeTP(){
   if(!tpCtx){document.getElementById('time-pop').classList.remove('open');return;}
-  if(tpCtx.dispoCase===5&&!getAssignLate(tpCtx.wk,tpCtx.sid,tpCtx.role,tpCtx.name)){
-    document.getElementById('time-pop').classList.remove('open');
-    _tpCleanup();tpCtx=null;
-    return;
-  }
   // Auto-save à la fermeture
   const s=parseInt(document.getElementById('tp-start')?.value);
   const e=parseInt(document.getElementById('tp-end')?.value);
