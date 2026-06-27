@@ -1807,6 +1807,18 @@ function subscribeRealtimeVol(wk){
         }
       }
     )
+    .on('postgres_changes',{event:'*',schema:'public',table:'org_config'},
+      async payload=>{
+        const key=payload.new?.key||payload.old?.key;
+        if(key==='sunday_event_roles'){
+          await loadSundayEventRoles();
+          if(document.getElementById('b-week-section')?.style.display!=='none')renderB();
+        }else if(key==='slot_overrides'){
+          await loadSlotOverrides();
+          if(document.getElementById('b-week-section')?.style.display!=='none')renderB();
+        }
+      }
+    )
     .subscribe();
 }
 
