@@ -1381,7 +1381,8 @@ let draggingVol=null;
 let draggingFromRole=null; // {shiftId, role, name} quand on drag depuis un bloc assigné
 let draggingVolFreeIvs=null; // plages libres résiduelles au moment du drag depuis une vol-card
 let draggingLate=false; // true quand on drag depuis le panneau "Ajout manuel" ou une chip tardive
-let draggingCase5=false; // true quand le vol draggé n'a plus de dispo soumise pour ce jour
+let draggingCase5=false; // true quand le vol draggé n'a plus de dispo soumise pour ce shift
+let draggingCase5ShiftId=null; // shiftId source pour limiter le drop au même shift
 let undoStack=[]; // max 20 entrées — chaque entrée est un tableau d'actions inverses
 let redoStack=[];
 let _finBlobUrl=null;
@@ -3728,6 +3729,7 @@ function renderHoraire(){
               draggingVolFreeIvs=_ct?[{s:_ct.s,e:_ct.e}]:null;
               draggingLate=isLate;
               draggingCase5=!isLate&&!isEmp(assignedName)&&!volDayRange(wk,assignedName);
+              draggingCase5ShiftId=draggingCase5?sh.id:null;
               ev.dataTransfer.setData('text/plain',assignedName);
               ev.dataTransfer.effectAllowed='move';
               setTimeout(()=>chip.style.opacity='.35',0);
@@ -3735,7 +3737,7 @@ function renderHoraire(){
             });
             chip.addEventListener('dragend',()=>{
               chip.style.opacity='';
-              draggingVol=null;draggingFromRole=null;draggingVolFreeIvs=null;draggingLate=false;draggingCase5=false;clearDZHighlights();
+              draggingVol=null;draggingFromRole=null;draggingVolFreeIvs=null;draggingLate=false;draggingCase5=false;draggingCase5ShiftId=null;clearDZHighlights();
               const tt=document.getElementById('chip-pref-tooltip');
               if(tt){clearTimeout(chip._ttTimer);tt.classList.remove('visible');}
             });
@@ -3770,7 +3772,7 @@ function renderHoraire(){
       if(!past){
         dz.addEventListener('dragover',e=>{
           if(!draggingVol)return;
-          if(draggingLate||draggingCase5){e.preventDefault();e.dataTransfer.dropEffect='move';dz.classList.add('dok');return;}
+          if(draggingLate||(draggingCase5&&sh.id===draggingCase5ShiftId)){e.preventDefault();e.dataTransfer.dropEffect='move';dz.classList.add('dok');return;}
           if(draggingFromRole&&draggingFromRole.shiftId===sh.id&&draggingFromRole.role===role)return;
           let ov;
           if(isEmp(draggingVol)){
@@ -3797,6 +3799,7 @@ function renderHoraire(){
         dz.addEventListener('drop',e=>{
           dz.classList.remove('dok');
           const name=e.dataTransfer.getData('text/plain');
+          if(draggingLate&&!draggingCase5||draggingCase5&&sh.id!==draggingCase5ShiftId){return;}
           if(draggingLate&&!draggingCase5){
             e.preventDefault();
             if(!name)return;
@@ -4137,6 +4140,7 @@ function renderHoraire(){
               draggingVolFreeIvs=_ct?[{s:_ct.s,e:_ct.e}]:null;
               draggingLate=isLate;
               draggingCase5=!isLate&&!isEmp(assignedName)&&!volDayRange(wk,assignedName);
+              draggingCase5ShiftId=draggingCase5?shift.id:null;
               ev.dataTransfer.setData('text/plain',assignedName);
               ev.dataTransfer.effectAllowed='move';
               setTimeout(()=>chip.style.opacity='.35',0);
@@ -4144,7 +4148,7 @@ function renderHoraire(){
             });
             chip.addEventListener('dragend',()=>{
               chip.style.opacity='';
-              draggingVol=null;draggingFromRole=null;draggingVolFreeIvs=null;draggingLate=false;draggingCase5=false;clearDZHighlights();
+              draggingVol=null;draggingFromRole=null;draggingVolFreeIvs=null;draggingLate=false;draggingCase5=false;draggingCase5ShiftId=null;clearDZHighlights();
               const tt=document.getElementById('chip-pref-tooltip');
               if(tt){clearTimeout(chip._ttTimer);tt.classList.remove('visible');}
             });
@@ -4183,7 +4187,7 @@ function renderHoraire(){
       if(!past){
         dz.addEventListener('dragover',e=>{
           if(!draggingVol)return;
-          if(draggingLate||draggingCase5){e.preventDefault();e.dataTransfer.dropEffect='move';dz.classList.add('dok');return;}
+          if(draggingLate||(draggingCase5&&shift.id===draggingCase5ShiftId)){e.preventDefault();e.dataTransfer.dropEffect='move';dz.classList.add('dok');return;}
           // Depuis chip du même rôle → ignorer
           if(draggingFromRole&&draggingFromRole.shiftId===shift.id&&draggingFromRole.role===role)return;
           let ov;
@@ -4212,6 +4216,7 @@ function renderHoraire(){
         dz.addEventListener('drop',e=>{
           dz.classList.remove('dok');
           const name=e.dataTransfer.getData('text/plain');
+          if(draggingLate&&!draggingCase5||draggingCase5&&shift.id!==draggingCase5ShiftId){return;}
           if(draggingLate&&!draggingCase5){
             e.preventDefault();
             if(!name)return;
@@ -4235,7 +4240,7 @@ function renderHoraire(){
             renderHoraire();
             return;
           }
-          if(!name||(!draggingCase5&&!volCoversShift(wk,name,shift)))return;
+          if(!name||(!draggingCase5&&!volCoversShift(wk,name,shift))||(draggingCase5&&shift.id!==draggingCase5ShiftId))return;
           if(draggingFromRole&&draggingFromRole.shiftId===shift.id&&draggingFromRole.role===role)return;
           // Réassignation depuis un chip du même shift → autoriser même si déjà sur ce shift
           const isReassign=!!(draggingFromRole&&draggingFromRole.shiftId===shift.id);
@@ -4699,7 +4704,7 @@ function updateResetBtn(){
   if(!newRange){
     tpCtx.dispoCase=5;
     if(_noticeWrap)_noticeWrap.style.display='block';
-    if(_noticeText)_noticeText.textContent='Le bénévole a indiqué ne pas être disponible ce jour.';
+    if(_noticeText)_noticeText.textContent='Le bénévole n\'est plus disponible pour ce shift.';
     if(_applyBtn)_applyBtn.style.display='none';
     return;
   }
@@ -4708,7 +4713,7 @@ function updateResetBtn(){
   if(newClampedE<=newClampedS){
     tpCtx.dispoCase=5;
     if(_noticeWrap)_noticeWrap.style.display='block';
-    if(_noticeText)_noticeText.textContent='Le bénévole a indiqué ne pas être disponible ce jour.';
+    if(_noticeText)_noticeText.textContent='Le bénévole n\'est plus disponible pour ce shift.';
     if(_applyBtn)_applyBtn.style.display='none';
     return;
   }
