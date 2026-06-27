@@ -3820,7 +3820,7 @@ function renderHoraire(){
             renderHoraire();
             return;
           }
-          const _ov=isEmp(name)?{s:sh.fromH*60,e:sh.toH*60}:overlapFor(wk,name,sh,curDay);
+          const _ov=isEmp(name)?{s:sh.fromH*60,e:sh.toH*60}:draggingCase5?(draggingVolFreeIvs&&draggingVolFreeIvs.length===1?draggingVolFreeIvs[0]:{s:sh.fromH*60,e:sh.toH*60}):overlapFor(wk,name,sh,curDay);
           if(!name||!_ov)return;
           if(draggingFromRole&&draggingFromRole.shiftId===sh.id&&draggingFromRole.role===role)return;
           const isReassign=!!(draggingFromRole&&draggingFromRole.shiftId===sh.id);
@@ -4652,7 +4652,7 @@ function doAssign(wk,shift,role,name){
     const dragIv=draggingVolFreeIvs&&draggingVolFreeIvs.length===1?draggingVolFreeIvs[0]:null;
     const alreadyAssigned=volAssignedToShift(wk,name,shift,dragIv);
     if(alreadyAssigned){return false;}
-    const ov=overlapMins(wk,name,shift);
+    const ov=draggingCase5?(draggingVolFreeIvs&&draggingVolFreeIvs.length===1?draggingVolFreeIvs[0]:null):overlapMins(wk,name,shift);
     if(!ov){return false;}
     addAssign(wk,shift.id,role,name);
     setAssignTimes(wk,shift.id,role,ov.s,ov.e,name);
