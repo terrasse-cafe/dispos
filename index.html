@@ -4702,7 +4702,7 @@ function updateResetBtn(){
   if(!newRange){
     tpCtx.dispoCase=5;
     if(_noticeWrap)_noticeWrap.style.display='block';
-    if(_noticeText)_noticeText.textContent='Le bénévole n\'est plus disponible pour ce shift.';
+    if(_noticeText)_noticeText.textContent='Le bénévole n\'est pas disponible pour ce shift.';
     if(_applyBtn)_applyBtn.style.display='none';
     return;
   }
@@ -4711,7 +4711,7 @@ function updateResetBtn(){
   if(newClampedE<=newClampedS){
     tpCtx.dispoCase=5;
     if(_noticeWrap)_noticeWrap.style.display='block';
-    if(_noticeText)_noticeText.textContent='Le bénévole n\'est plus disponible pour ce shift.';
+    if(_noticeText)_noticeText.textContent='Le bénévole n\'est pas disponible pour ce shift.';
     if(_applyBtn)_applyBtn.style.display='none';
     return;
   }
