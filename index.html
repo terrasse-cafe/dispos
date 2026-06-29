@@ -4747,9 +4747,9 @@ function updateResetBtn(){
     _applyBtn.style.display='inline-block';
     _applyBtn.onclick=()=>{
       const _tpS=document.getElementById('tp-start');
-      const _tpE=document.getElementById('tp-end');
       if(_tpS)_tpS.value=newClampedS;
       refreshEndSelect(newClampedS);
+      const _tpE=document.getElementById('tp-end');
       if(_tpE)_tpE.value=newClampedE;
       updateResetBtn();
     };
