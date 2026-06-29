@@ -4748,7 +4748,7 @@ function updateResetBtn(){
     _applyBtn.onclick=()=>{
       const _tpS=document.getElementById('tp-start');
       if(_tpS)_tpS.value=newClampedS;
-      refreshEndSelect(newClampedS);
+      if(tpCtx.refreshEndSelect)tpCtx.refreshEndSelect(newClampedS);
       const _tpE=document.getElementById('tp-end');
       if(_tpE)_tpE.value=newClampedE;
       updateResetBtn();
@@ -4802,6 +4802,7 @@ function openTP(e,name,sid,role,shift,wk){
     eSel.id = 'tp-end'; containers[1].appendChild(eSel);
     eSel.addEventListener('change', updateResetBtn);
   };
+  tpCtx.refreshEndSelect = refreshEndSelect;
 
   containers[0].innerHTML = '<label>Début</label>';
   const sSel = buildTimeSelect(day, 'from', safeStart, fromMin, fromMax !== null ? Math.min(fromMax, toMax-30) : toMax-30);
