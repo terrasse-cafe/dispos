@@ -2822,16 +2822,28 @@ function renderB(){
       });
       card.appendChild(badgeRow);
     }
+    // Bornes personnalisées si bénévole récurrent avec schedule_json
+    const _vn=document.getElementById('vol-select').value;
+    const _vp=_vn?getPerson(_vn):null;
+    const _cafO=day.oH*60+day.oM, _cafC=day.cH*60+day.cM;
+    let fromMin=null, toMax=null;
+    if(_vp&&_vp.type==='vol'&&_vp.schedule_json){
+      const sj=_vp.schedule_json[day.id];
+      if(sj&&sj.on!==false&&sj.s!=null&&sj.e!=null){
+        if(sj.s<_cafO) fromMin=sj.s;
+        if(sj.e>_cafC) toMax=sj.e;
+      }
+    }
     const body=document.createElement('div');body.className='b-day-card-body';body.style.display=enabled?'grid':'none';
     const fromField=document.createElement('div');fromField.className='b-field';fromField.innerHTML='<label>'+t('from_lbl')+'</label>';
-    let fromSel=buildTimeSelect(day,'from',dayData?dayData.from:undefined);fromField.appendChild(fromSel);
+    let fromSel=buildTimeSelect(day,'from',dayData?dayData.from:undefined,fromMin);fromField.appendChild(fromSel);
     const toField=document.createElement('div');toField.className='b-field';toField.innerHTML='<label>'+t('to_lbl')+'</label>';
-    let toSel=buildTimeSelect(day,'to',dayData?dayData.to:undefined,dayData?dayData.from:undefined);toField.appendChild(toSel);
+    let toSel=buildTimeSelect(day,'to',dayData?dayData.to:undefined,dayData?dayData.from:undefined,toMax);toField.appendChild(toSel);
     body.appendChild(fromField);body.appendChild(toField);card.appendChild(body);
     function saveDay(){bSel[wk][day.id]={from:parseInt(fromSel.value),to:parseInt(toSel.value)};updateBSummary();}
     function updateToSelect(){
       const cf=parseInt(fromSel.value),ct=parseInt(toSel.value);
-      const newToSel=buildTimeSelect(day,'to',ct<=cf?cf+30:ct,cf);
+      const newToSel=buildTimeSelect(day,'to',ct<=cf?cf+30:ct,cf,toMax);
       toField.replaceChild(newToSel,toSel);toSel=newToSel;
       toSel.addEventListener('change',saveDay);saveDay();
     }
