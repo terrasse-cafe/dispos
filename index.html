@@ -552,7 +552,6 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
         </div>
       </div>
       <div id="b-past-notice">Semaine passée — les disponibilités ne sont plus modifiables.</div>
-      <div id="b-gt-banner" style="display:none;background:#D1FAE5;border:1px solid #6EE7B7;border-radius:8px;padding:10px 14px;margin-bottom:1rem;font-size:14px;font-weight:500;color:#065F46">Grande tablée cette semaine ✨</div>
       <div style="margin-bottom:1.5rem">
         <div id="b-quota-label" style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:10px">Nombre de quarts souhaités</div>
         <div style="display:flex;gap:8px;flex-wrap:nowrap" id="b-shift-chips"></div>
@@ -611,8 +610,8 @@ button:disabled:focus{opacity:0.4;cursor:default;background:transparent;box-shad
   <div id="org-horaire" class="pane visible">
     <div class="topbar">
       <select class="mode-dropdown" id="mode-dropdown" onchange="setGrandeTablee(this.value==='gt')">
-        <option value="reg">Semaine régulière</option>
-        <option value="gt">Grande tablée</option>
+        <option value="reg">Jeudi à dimanche</option>
+        <option value="gt">Semaine complète</option>
       </select>
       <div class="week-nav" id="o-week-nav">
         <button class="wbtn" onclick="oShift(-1)" title="Semaine précédente"><svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
@@ -2431,7 +2430,7 @@ function buildShiftChips(){
       buildShiftChips();
       const showWeek=opt.value!==0;
       document.getElementById('b-week-section').style.display=showWeek?'block':'none';
-      if(showWeek)renderB();else{const _gtb=document.getElementById('b-gt-banner');if(_gtb)_gtb.style.display=isGrandeTablee(wkey(bMon))?'block':'none';}
+      if(showWeek)renderB();
     };
     wrap.appendChild(btn);
   });
@@ -2907,8 +2906,7 @@ function renderB(){
   const locked=isWeekLocked(wk);
   applyBPastState(readOnly,locked);
   const gtMode=isGrandeTablee(wk);
-  const gtBanner=document.getElementById('b-gt-banner');
-  if(gtBanner)gtBanner.style.display=gtMode?'block':'none';
+
   const wrap=document.getElementById('b-days-wrap');wrap.innerHTML='';
   (gtMode?GT_DAYS:DAYS).forEach(day=>{
     const isClosed=(closedDays[wk]||new Set()).has(day.id);
@@ -3028,7 +3026,6 @@ async function copyPrevWeek(){
   if(showWeek)renderB();
 }
 function applyBPastState(readOnly,locked=false){
-  const _gtb=document.getElementById('b-gt-banner');if(_gtb)_gtb.style.display=isGrandeTablee(wkey(bMon))?'block':'none';
   const inactive=readOnly||locked;
   const notice=document.getElementById('b-past-notice');
   if(locked){
